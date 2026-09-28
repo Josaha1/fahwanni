@@ -14,6 +14,8 @@ import { LocationBar } from "@/components/location-bar";
 import { OfflineSupport } from "@/components/offline-support";
 import { SearchBox } from "@/components/search-box";
 import { SeasonChip } from "@/components/season-chip";
+import { YesterdayLine } from "@/components/yesterday-line";
+import { FavouritesOverview } from "@/components/favourites-overview";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
@@ -98,6 +100,7 @@ export function WeatherApp() {
         {showStormBanner && <StormBanner place={place} />}
         <CurrentCard weather={weather} />
         <SeasonChip lat={place.lat} lon={place.lon} />
+        {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>
           <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
@@ -106,6 +109,7 @@ export function WeatherApp() {
           <AqiCard air={weather.air} />
           <SunCard snapshot={weather.snapshot} />
           <AlertsCard alerts={weather.snapshot.alerts} timeZone={weather.snapshot.timeZone} />
+          <FavouritesOverview current={place} onSelect={selectPlace} isDark={isDark} />
         </>}
       </div>
       <section aria-label={t("เบอร์ฉุกเฉิน")} className="mt-8 border-t border-border pt-4">
