@@ -7,9 +7,11 @@ import { AlertsCard } from "@/components/alerts-card";
 import { AqiCard } from "@/components/aqi-card";
 import { CurrentCard } from "@/components/current-card";
 import { DailyList } from "@/components/daily-list";
+import { FavouritesRow } from "@/components/favourites-row";
 import { HourlyStrip } from "@/components/hourly-strip";
 import { LocationBar } from "@/components/location-bar";
 import { SearchBox } from "@/components/search-box";
+import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useWeather } from "@/hooks/use-weather";
@@ -73,10 +75,12 @@ export function WeatherApp() {
     <main className="app-shell">
       <h1 className="mb-6 text-3xl">{t("ฟ้าวันนี้")}</h1>
       <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={useCurrentLocation} locating={locating} />
+      <FavouritesRow place={place} onSelect={selectPlace} />
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
         <CurrentCard weather={weather} />
         {weather.snapshot && <>
+          <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />
           <DailyList snapshot={weather.snapshot} isDark={isDark} />
