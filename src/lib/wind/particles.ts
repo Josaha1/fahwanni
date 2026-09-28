@@ -1,4 +1,4 @@
-import { windColor } from "../map/neon-palette";
+import { windColor } from "../map/palette";
 import { sampleAt, type WindGrid } from "./grid";
 
 export interface Particle {
@@ -70,7 +70,7 @@ export function currentHourIndex(hours: string[], nowIso: string): number {
   return index;
 }
 
-/** Wind colour follows the shared neon palette; speed is in m/s. */
+/** Wind colour follows the shared map palette; speed is in m/s. */
 export function speedColor(speed: number): string {
   return windColor(speed);
 }

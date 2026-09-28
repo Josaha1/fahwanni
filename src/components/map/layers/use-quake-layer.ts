@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { Map } from "maplibre-gl";
 import type { Quake } from "@/lib/quakes/usgs";
-import { NEON } from "@/lib/map/neon-palette";
+import { DATA } from "@/lib/map/palette";
 import { useStyleEffect } from "../use-style-effect";
 
 const SOURCE = "quakes";
@@ -17,12 +17,12 @@ export function useQuakeLayer(map: Map | null, quakes: Quake[], enabled: boolean
     if (!live.getSource(SOURCE)) return;
     if (!live.getLayer("quake-circle")) live.addLayer({ id: "quake-circle", type: "circle", source: SOURCE, paint: {
       "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 4, 5, 6, 12, 7.5, 20],
-      "circle-color": NEON.quake, "circle-blur": 0.45,
-      "circle-opacity": 0.8, "circle-stroke-width": 1.5, "circle-stroke-color": NEON.quake,
+      "circle-color": DATA.quake,
+      "circle-opacity": 0.8, "circle-stroke-width": 1.5, "circle-stroke-color": DATA.quake,
     } });
     if (!live.getLayer("quake-label")) live.addLayer({ id: "quake-label", type: "symbol", source: SOURCE, filter: [">=", ["get", "mag"], 5],
       layout: { "text-field": ["get", "label"], "text-offset": [0, 1.3], "text-size": 12, "text-font": ["Noto Sans Regular"] },
-      paint: { "text-color": NEON.quake, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
+      paint: { "text-color": DATA.quake, "text-halo-color": DATA.quakeHalo, "text-halo-width": 1.5 } });
   }, (live) => {
     for (const id of ["quake-circle", "quake-label"]) if (live.getLayer(id)) live.removeLayer(id);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGrid, gridPoints } from "./grid";
-import { windColor } from "../map/neon-palette";
+import { windColor } from "../map/palette";
 import { currentHourIndex, MAX_AGE, spawnArea, spawnParticle, speedColor, stepParticle, windMotion } from "./particles";
 
 function uniformGrid(speedKmh: number, fromDeg: number) {
@@ -95,7 +95,7 @@ describe("currentHourIndex", () => {
 });
 
 describe("speedColor", () => {
-  it("uses the shared neon colours as wind strengthens", () => {
+  it("uses the shared map colours as wind strengthens", () => {
     expect(speedColor(2)).not.toBe(speedColor(15));
     for (const speed of [0, 3, 8, 14]) expect(speedColor(speed)).toBe(windColor(speed));
   });

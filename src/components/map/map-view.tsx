@@ -12,7 +12,8 @@ import { levelToRgba } from "@/lib/nowcast/intensity";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
-import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
+import { NEON } from "@/lib/map/neon-style";
+import { legendGradient } from "@/lib/map/legend";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { useMapData } from "./use-map-data";
@@ -253,7 +254,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
                 <span>{t("ฝนเบา → ฝนหนัก")}</span>
                 {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
               </div>
-              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: rainLegendGradient() }} aria-hidden="true" />
+              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: legendGradient("rain") }} aria-hidden="true" />
             </div>
           </div>
         )}

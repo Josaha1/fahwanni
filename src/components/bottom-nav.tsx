@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/i18n/client";
-import { NEON } from "@/lib/map/neon-palette";
+import { NEON } from "@/lib/map/neon-style";
 
 export function BottomNav() {
   const pathname = usePathname();

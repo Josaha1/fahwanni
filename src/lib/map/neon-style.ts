@@ -1,5 +1,24 @@
 import type { LayerSpecification, StyleSpecification } from "maplibre-gl";
-import { NEON } from "./neon-palette";
+
+export const NEON = {
+  bg: "#070b1a",
+  water: "#0a1030",
+  land: "#0d1330",
+  landAlt: "#111a3d",
+  roadDim: "#1c2452",
+  road: "#2a3470",
+  border: "#38e8ff",
+  borderGlow: "rgba(56, 232, 255, 0.22)",
+  coast: "#38e8ff",
+  river: "#1fb6ff",
+  label: "#dfe8ff",
+  labelMuted: "#8fa2d6",
+  halo: "#05070f",
+  accent: "#ff3df2",
+  quake: "#ffb020",
+  pin: "#38e8ff",
+  sky: { sky: "#2a0a4a", horizon: "#05060f", fog: "#0a0f2a" },
+} as const;
 
 type LineLayer = Extract<LayerSpecification, { type: "line" }>;
 

@@ -1,4 +1,4 @@
-import { RAIN_RAMP } from "../map/neon-palette";
+import { RAIN_RAMP } from "../map/palette";
 
 /**
  * Radar pixels ↔ intensity levels for the nowcast. Levels: 0 dry, 1 light, 2 moderate,

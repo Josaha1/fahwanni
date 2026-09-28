@@ -1,11 +1,22 @@
 import type { LayerSpecification, StyleSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import ofmDark from "./fixture-ofm-dark.json";
-import { NEON } from "./neon-palette";
-import { neonStyle } from "./neon-style";
+import { contrastRatio } from "./palette";
+import { NEON, neonStyle } from "./neon-style";
 
 const base = ofmDark as StyleSpecification;
 const glowIds = ["boundary_country_z0-4", "boundary_country_z5-", "highway_motorway_inner"];
+
+describe("neon contrast", () => {
+  it.each([
+    ["label on halo", NEON.label, NEON.halo, 4.5],
+    ["label on background", NEON.label, NEON.bg, 4.5],
+    ["muted label on background", NEON.labelMuted, NEON.bg, 3],
+    ["border on background", NEON.border, NEON.bg, 3],
+  ])("keeps %s above %s:1", (_name, foreground, background, minimum) => {
+    expect(contrastRatio(foreground, background)).toBeGreaterThanOrEqual(minimum);
+  });
+});
 
 function layer(style: StyleSpecification, id: string): LayerSpecification {
   const found = style.layers.find((item) => item.id === id);
