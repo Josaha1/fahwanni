@@ -1,40 +1,27 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode, type RefObject } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { AttributionControl, Map, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { version } from "maplibre-gl/package.json";
-import { baseStyle, STYLE_URLS, type BaseTheme } from "@/lib/map/base-style";
+import { STYLE_URLS, type BaseTheme } from "@/lib/map/base-style";
 import { TERRAIN_ATTRIBUTION } from "@/lib/map/terrain";
+import { loadBaseStyle, useAppMapTheme } from "./use-base-style";
 
 // Turbopack does not emit the worker/shared modules v6 loads via import.meta.url; they are copied
 // to public/vendor by scripts/copy-maplibre-worker.mjs.
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
-const stylePromises: Partial<Record<BaseTheme, Promise<StyleSpecification>>> = {};
-
-function loadBaseStyle(theme: BaseTheme): Promise<StyleSpecification> {
-  if (!stylePromises[theme]) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    stylePromises[theme] = fetch(STYLE_URLS[theme], { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("map style unavailable"); return response.json() as Promise<StyleSpecification>; })
-      .then((json) => baseStyle(theme, json))
-      .catch((error) => { delete stylePromises[theme]; throw error; })
-      .finally(() => window.clearTimeout(timeout));
-  }
-  return stylePromises[theme];
-}
-
 export type MapStatus = "loading" | "ready" | "error";
 
 interface MapContextValue {
   map: Map | null;
+  theme: BaseTheme;
   status: MapStatus;
   retry: () => void;
 }
 
-const MapContext = createContext<MapContextValue>({ map: null, status: "loading", retry: () => {} });
+const MapContext = createContext<MapContextValue>({ map: null, theme: "dark", status: "loading", retry: () => {} });
 
 export function useMapContext(): MapContextValue {
   return useContext(MapContext);
@@ -52,25 +39,34 @@ export function MapProvider({ containerRef, initialCenter, children }: {
   children: ReactNode;
 }) {
   const [center] = useState(initialCenter);
-  const [style, setStyle] = useState<StyleSpecification | string | null>(null);
+  const appTheme = useAppMapTheme();
+  const [initialStyle, setInitialStyle] = useState<{ style: StyleSpecification | string; theme: BaseTheme } | null>(null);
   const [map, setMap] = useState<Map | null>(null);
+  const [theme, setTheme] = useState<BaseTheme>("dark");
+  const activeTheme = useRef<BaseTheme>("dark");
   const [status, setStatus] = useState<MapStatus>("loading");
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    if (initialStyle) return;
     let active = true;
-    loadBaseStyle("dark").catch(() => STYLE_URLS.dark).then((loaded) => { if (active) setStyle(loaded); });
+    loadBaseStyle(appTheme).catch(() => STYLE_URLS[appTheme]).then((loaded) => {
+      if (active) {
+        setTheme(appTheme);
+        setInitialStyle({ style: loaded, theme: appTheme });
+      }
+    });
     return () => { active = false; };
-  }, []);
+  }, [appTheme, initialStyle]);
 
   useEffect(() => {
-    if (!containerRef.current || !style) return;
+    if (!containerRef.current || !initialStyle) return;
     let created: Map | undefined;
     let waitingForStyle = true;
     try {
       created = new Map({
         container: containerRef.current,
-        style,
+        style: initialStyle.style,
         center,
         zoom: 6,
         minZoom: 3,
@@ -82,6 +78,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
         attributionControl: false,
       });
       const live = created;
+      activeTheme.current = initialStyle.theme;
       live.addControl(new NavigationControl(), "top-right");
       live.addControl(new AttributionControl({ compact: true, customAttribution: [
         '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
@@ -110,13 +107,26 @@ export function MapProvider({ containerRef, initialCenter, children }: {
       const timer = window.setTimeout(() => setStatus("error"), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [containerRef, style, center, attempt]);
+  }, [containerRef, initialStyle, center, attempt]);
+
+  useEffect(() => {
+    if (!map || appTheme === activeTheme.current) return;
+    let active = true;
+    loadBaseStyle(appTheme).then((loaded) => {
+      if (!active) return;
+      map.setStyle(loaded, { diff: false });
+      activeTheme.current = appTheme;
+      setTheme(appTheme);
+    }).catch(() => { /* Keep the current style when the next theme is unavailable. */ });
+    return () => { active = false; };
+  }, [map, appTheme]);
 
   const retry = useCallback(() => {
     setStatus("loading");
+    setTheme(initialStyle?.theme ?? "dark");
     setAttempt((value) => value + 1);
-  }, []);
+  }, [initialStyle]);
 
-  const value = useMemo(() => ({ map, status, retry }), [map, status, retry]);
+  const value = useMemo(() => ({ map, theme, status, retry }), [map, theme, status, retry]);
   return <MapContext.Provider value={value}>{children}</MapContext.Provider>;
 }

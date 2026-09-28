@@ -3,7 +3,7 @@ import type { LayerSpecification, StyleSpecification } from "maplibre-gl";
 import { describe, expect, it } from "vitest";
 import ofmDark from "./fixture-ofm-dark.json";
 import ofmPositron from "./fixture-ofm-positron.json";
-import { BASE, baseStyle, STYLE_URLS, type BaseTheme } from "./base-style";
+import { BASE, baseStyle, mapThemeFor, STYLE_URLS, type BaseTheme } from "./base-style";
 import { contrastRatio } from "./palette";
 
 const fixtures: Record<BaseTheme, StyleSpecification> = {
@@ -106,4 +106,13 @@ it("uses the approved OpenFreeMap style URLs", () => {
     light: "https://tiles.openfreemap.org/styles/positron",
     dark: "https://tiles.openfreemap.org/styles/dark",
   });
+});
+
+it.each([
+  ["light", "light"],
+  ["dark", "dark"],
+  ["night", "dark"],
+  [undefined, "dark"],
+] as const)("maps app theme %s to %s basemap", (appTheme, expected) => {
+  expect(mapThemeFor(appTheme)).toBe(expected);
 });

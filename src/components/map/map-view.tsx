@@ -54,7 +54,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const { place } = useLastPlace();
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
-  const { map: mapInstance, status, retry } = useMapContext();
+  const { map: mapInstance, theme, status, retry } = useMapContext();
   const { manifest, wind, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
   const { activeIndex, playing, rainOn, overlays } = mapState;
@@ -135,11 +135,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
-      style={{ "--neon-bg": BASE.dark.bg, "--neon-label": BASE.dark.label, "--neon-muted": BASE.dark.labelMuted, "--neon-pin": DATA.pin, "--neon-accent": DATA.storm } as React.CSSProperties}>
+      style={{ "--neon-bg": BASE[theme].bg, "--neon-label": BASE[theme].label, "--neon-muted": BASE[theme].labelMuted, "--neon-pin": DATA.pin, "--neon-accent": DATA.storm } as React.CSSProperties}>
       <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
       </header>
-      <div className="relative min-h-0 flex-1" style={{ backgroundColor: BASE.dark.bg }}>
+      <div className="relative min-h-0 flex-1" style={{ backgroundColor: BASE[theme].bg }}>
         <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
         <div className="absolute left-3 top-3 z-10" style={{ maxWidth: "calc(100% - 5rem)" }}>
           <button type="button" aria-expanded={layersOpen} aria-controls="map-layer-chips"
@@ -260,7 +260,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
           </div>
         )}
         {status !== "ready" && (
-          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: BASE.dark.bg, color: BASE.dark.label }} role="status">
+          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
             {status === "error" ? (
               <div className="text-center">
                 <p>{t("โหลดแผนที่ไม่สำเร็จ")}</p>

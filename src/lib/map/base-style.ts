@@ -21,6 +21,10 @@ export const BASE = {
 
 export type BaseTheme = "light" | "dark";
 
+export function mapThemeFor(appTheme: string | undefined): BaseTheme {
+  return appTheme === "light" ? "light" : "dark";
+}
+
 export const STYLE_URLS = {
   light: "https://tiles.openfreemap.org/styles/positron",
   dark: "https://tiles.openfreemap.org/styles/dark",
