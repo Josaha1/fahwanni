@@ -1,0 +1,123 @@
+{
+  "current": {
+    "currentTime": "2026-09-28T08:00:00Z",
+    "timeZone": { "id": "Asia/Bangkok", "version": "2026a" },
+    "isDaytime": true,
+    "weatherCondition": {
+      "iconBaseUri": "https://maps.gstatic.com/weather/v1/partly_cloudy",
+      "description": { "text": "เมฆบางส่วน", "languageCode": "th" },
+      "type": "PARTLY_CLOUDY"
+    },
+    "temperature": { "degrees": 33, "unit": "CELSIUS" },
+    "feelsLikeTemperature": { "degrees": 39, "unit": "CELSIUS" },
+    "dewPoint": { "degrees": 25, "unit": "CELSIUS" },
+    "heatIndex": { "degrees": 42, "unit": "CELSIUS" },
+    "windChill": { "degrees": 33, "unit": "CELSIUS" },
+    "relativeHumidity": 72,
+    "uvIndex": 8,
+    "precipitation": {
+      "probability": { "percent": 60, "type": "RAIN" },
+      "qpf": { "quantity": 3.5, "unit": "MILLIMETERS" }
+    },
+    "thunderstormProbability": 55,
+    "airPressure": { "meanSeaLevelMillibars": 1009 },
+    "wind": {
+      "direction": { "degrees": 225, "cardinal": "SW" },
+      "speed": { "value": 18, "unit": "KILOMETERS_PER_HOUR" },
+      "gust": { "value": 43, "unit": "KILOMETERS_PER_HOUR" }
+    },
+    "visibility": { "distance": 10, "unit": "KILOMETERS" },
+    "cloudCover": 45,
+    "currentConditionsHistory": {
+      "temperatureChange": { "degrees": 2, "unit": "CELSIUS" },
+      "maxTemperature": { "degrees": 35, "unit": "CELSIUS" },
+      "minTemperature": { "degrees": 27, "unit": "CELSIUS" },
+      "qpf": { "quantity": 2, "unit": "MILLIMETERS" }
+    },
+    "futureField": "ignored"
+  },
+  "hours": {
+    "forecastHours": [{
+      "interval": { "startTime": "2026-09-28T09:00:00Z", "endTime": "2026-09-28T10:00:00Z" },
+      "displayDateTime": { "year": 2026, "month": 9, "day": 28, "hours": 16, "utcOffset": "25200s" },
+      "isDaytime": true,
+      "weatherCondition": {
+        "iconBaseUri": "https://maps.gstatic.com/weather/v1/rain",
+        "description": { "text": "ฝนตก", "languageCode": "th" },
+        "type": "RAIN"
+      },
+      "temperature": { "degrees": 86, "unit": "FAHRENHEIT" },
+      "feelsLikeTemperature": { "degrees": 95, "unit": "FAHRENHEIT" },
+      "dewPoint": { "degrees": 75, "unit": "FAHRENHEIT" },
+      "heatIndex": { "degrees": 99, "unit": "FAHRENHEIT" },
+      "precipitation": {
+        "probability": { "percent": 80, "type": "RAIN" },
+        "qpf": { "quantity": 0.5, "unit": "INCHES" },
+        "snowQpf": { "quantity": 0, "unit": "MILLIMETERS" }
+      },
+      "thunderstormProbability": 65,
+      "wind": {
+        "direction": { "degrees": 180, "cardinal": "S" },
+        "speed": { "value": 10, "unit": "MILES_PER_HOUR" },
+        "gust": { "value": 20, "unit": "MILES_PER_HOUR" }
+      },
+      "relativeHumidity": 85,
+      "uvIndex": 5,
+      "cloudCover": 90,
+      "visibility": { "distance": 5, "unit": "KILOMETERS" },
+      "airPressure": { "meanSeaLevelMillibars": 1008 }
+    }],
+    "timeZone": { "id": "Asia/Bangkok" },
+    "nextPageToken": "later"
+  },
+  "days": {
+    "forecastDays": [{
+      "interval": { "startTime": "2026-09-28T00:00:00Z", "endTime": "2026-09-29T00:00:00Z" },
+      "displayDate": { "year": 2026, "month": 9, "day": 28 },
+      "daytimeForecast": {
+        "interval": { "startTime": "2026-09-28T06:00:00Z", "endTime": "2026-09-28T18:00:00Z" },
+        "weatherCondition": { "type": "RAIN", "description": { "text": "ฝนตก", "languageCode": "th" } },
+        "relativeHumidity": 80,
+        "uvIndex": 7,
+        "precipitation": { "probability": { "percent": 70, "type": "RAIN" }, "qpf": { "quantity": 12, "unit": "MILLIMETERS" } },
+        "thunderstormProbability": 40,
+        "wind": { "speed": { "value": 16, "unit": "KILOMETERS_PER_HOUR" } },
+        "cloudCover": 75
+      },
+      "nighttimeForecast": {
+        "interval": { "startTime": "2026-09-28T18:00:00Z", "endTime": "2026-09-29T06:00:00Z" },
+        "weatherCondition": { "type": "CLOUDY" },
+        "relativeHumidity": 90,
+        "precipitation": { "probability": { "percent": 20, "type": "RAIN" } }
+      },
+      "maxTemperature": { "degrees": 35, "unit": "CELSIUS" },
+      "minTemperature": { "degrees": 27, "unit": "CELSIUS" },
+      "feelsLikeMaxTemperature": { "degrees": 41, "unit": "CELSIUS" },
+      "feelsLikeMinTemperature": { "degrees": 29, "unit": "CELSIUS" },
+      "maxHeatIndex": { "degrees": 43, "unit": "CELSIUS" },
+      "sunEvents": { "sunriseTime": "2026-09-28T05:59:00+07:00", "sunsetTime": "2026-09-28T18:04:00+07:00" },
+      "moonEvents": { "moonPhase": "FULL_MOON", "moonriseTimes": ["2026-09-28T18:30:00+07:00"], "moonsetTimes": [] }
+    }],
+    "timeZone": { "id": "Asia/Bangkok" }
+  },
+  "alerts": {
+    "weatherAlerts": [{
+      "alertId": "th-123",
+      "alertTitle": { "text": "ฝนตกหนัก", "languageCode": "th" },
+      "eventType": "HEAVY_RAIN",
+      "areaName": "กรุงเทพมหานคร",
+      "instruction": ["หลีกเลี่ยงพื้นที่น้ำท่วม"],
+      "safetyRecommendations": [{ "directive": "อยู่ในอาคาร", "subtext": "เมื่อเกิดฟ้าผ่า" }],
+      "timezoneOffset": "25200s",
+      "startTime": "2026-09-28T09:00:00Z",
+      "expirationTime": "2026-09-28T18:00:00Z",
+      "dataSource": { "publisher": "TMD", "name": "Thai Meteorological Department", "authorityUri": "https://www.tmd.go.th" },
+      "polygon": { "vertices": [] },
+      "description": "คาดว่าจะมีฝนตกหนัก",
+      "severity": "SEVERE",
+      "certainty": "LIKELY",
+      "urgency": "IMMEDIATE"
+    }],
+    "regionCode": "TH"
+  }
+}
