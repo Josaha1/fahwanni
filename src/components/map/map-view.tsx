@@ -1,23 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState, type RefObject } from "react";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
-import type { RadarManifest } from "@/lib/radar/types";
-import type { WindGrid } from "@/lib/wind/grid";
 import { renderPrecipImage } from "@/lib/precip/render";
-import { buildTimeline, defaultIndex, nextPlayIndex, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
+import { buildTimeline, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
-import type { Storm } from "@/lib/storms/normalize";
-import type { Quake } from "@/lib/quakes/usgs";
 import { terrainAvailable } from "@/lib/map/terrain";
+import { initialMapState, mapReducer } from "@/lib/map/map-state";
 import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
+import { useMapData } from "./use-map-data";
 import { MapProvider, useMapContext } from "./map-provider";
 import { bearingWord } from "@/lib/storms/present";
 import { useRadarLayer } from "./layers/use-radar-layer";
@@ -55,15 +53,15 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, status, retry } = useMapContext();
-  const [manifest, setManifest] = useState<RadarManifest | null>(null);
-  const [radarOn, setRadarOn] = useState(true);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const { manifest, wind, storms, quakes, initialIndex } = useMapData();
+  const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
+  const { activeIndex, playing, rainOn, overlays } = mapState;
+  const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
+  const rainVisible = mapState.primary === "rain" && rainOn;
   const [layersOpen, setLayersOpen] = useState(() => initialControlOpen("fah-map-layers-open"));
   const [panelOpen, setPanelOpen] = useState(() => initialControlOpen("fah-map-panel-open"));
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
-  const [wind, setWind] = useState<WindGrid | null>(null);
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const modelImages = useMemo(() => {
     if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ScalarImage | null)[];
@@ -94,7 +92,6 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
-  const [windOn, setWindOn] = useState(true);
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
@@ -102,14 +99,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const motion = windMotion({ reducedMotion, ...device });
   const windHour = wind ? currentHourIndex(wind.hours, nowIso) : 0;
   const terrainOk = terrainAvailable(device.deviceMemory);
-  const [terrainOn, setTerrainOn] = useState(false);
-  const [storms, setStorms] = useState<Storm[]>([]);
-  const [stormsOn, setStormsOn] = useState(true);
-  const [quakes, setQuakes] = useState<Quake[]>([]);
-  const [quakesOn, setQuakesOn] = useState(true);
-
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, radarOn);
-  useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, radarOn, "model-rain", 1);
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
+  useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
   useStormLayer(mapInstance, storms, stormsOn);
   useQuakeLayer(mapInstance, quakes, quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
@@ -117,33 +108,12 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/radar", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("radar unavailable"); return response.json() as Promise<RadarManifest>; })
-      .then((data) => {
-        setManifest(data);
-        const radarTimes = lastRadarFrames(data.provider === "rainviewer" ? data.frames : []).map((frame) => frame.time);
-        setActiveIndex(defaultIndex(buildTimeline(radarTimes, [], new Date().toISOString())));
-      })
-      .catch(() => { if (!controller.signal.aborted) setManifest(null); });
-    fetch("/api/wind", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
-      .then(setWind)
-      .catch(() => { if (!controller.signal.aborted) setWind(null); });
-    fetch("/api/storms", { signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ storms?: Storm[] }> : { storms: [] })
-      .then((data) => setStorms(data.storms ?? []))
-      .catch(() => {});
-    fetch("/api/quakes", { signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ quakes?: Quake[] }> : { quakes: [] })
-      .then((data) => setQuakes(data.quakes ?? []))
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+    if (manifest) dispatch({ type: "resetIndex", index: initialIndex });
+  }, [manifest, initialIndex]);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => { setReducedMotion(query.matches); if (query.matches) setPlaying(false); };
+    const update = () => { setReducedMotion(query.matches); if (query.matches) dispatch({ type: "stop" }); };
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
@@ -155,11 +125,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   }, []);
 
   useEffect(() => {
-    if (!playing || reducedMotion || !frames.length || !radarOn) return;
-    const timer = window.setTimeout(() => setActiveIndex((index) => nextPlayIndex(stops, index)),
+    if (!playing || reducedMotion || !frames.length || !rainVisible) return;
+    const timer = window.setTimeout(() => dispatch({ type: "tick", stops }),
       activeStop?.kind === "radar" && activeStop.index === frames.length - 1 ? 1500 : 600);
     return () => window.clearTimeout(timer);
-  }, [playing, reducedMotion, radarOn, frames.length, activeIndex, activeStop, stops]);
+  }, [playing, reducedMotion, rainVisible, frames.length, activeIndex, activeStop, stops]);
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
@@ -177,30 +147,30 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
             <span aria-hidden="true">{layersOpen ? "✕" : "☰"}</span>
           </button>
           <div id="map-layer-chips" hidden={!layersOpen} className="mt-2 flex flex-wrap gap-2">
-            <button type="button" disabled={!available} aria-pressed={available && radarOn}
-              onClick={() => { setRadarOn((on) => !on); setPlaying(false); }}
+            <button type="button" disabled={!available} aria-pressed={available && rainVisible}
+              onClick={() => dispatch({ type: "toggleRain" })}
               className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
               {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
             </button>
             <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn}
-              onClick={() => setWindOn((on) => !on)}
+              onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })}
               className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
               {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
             </button>
             {storms.length > 0 && (
-              <button type="button" aria-pressed={stormsOn} onClick={() => setStormsOn((on) => !on)}
+              <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })}
                 className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
                 {t("พายุ")} ({storms.length})
               </button>
             )}
             {quakes.length > 0 && (
-              <button type="button" aria-pressed={quakesOn} onClick={() => setQuakesOn((on) => !on)}
+              <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })}
                 className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
                 {t("แผ่นดินไหว")} ({quakes.length})
               </button>
             )}
             {terrainOk && (
-              <button type="button" aria-pressed={terrainOn} onClick={() => setTerrainOn((on) => !on)}
+              <button type="button" aria-pressed={terrainOn} onClick={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
                 aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
                 className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
                 3D
@@ -211,11 +181,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
         {mapInstance && wind && windOn && status === "ready" && (
           <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />
         )}
-        {available && radarOn && (
+        {available && rainVisible && (
           <div className={`neon-glass absolute z-10 rounded-2xl p-3 ${panelOpen ? "inset-x-3 bottom-[4.5rem] mx-auto max-w-md" : "bottom-3 left-3"}`}
             style={!panelOpen ? { maxWidth: "calc(100% - 1.5rem)" } : undefined}>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setPlaying((value) => !value)} disabled={reducedMotion || !frames.length}
+              <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || !frames.length}
                 aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")}
                 className="neon-play grid size-9 shrink-0 place-items-center rounded-full disabled:opacity-50">
                 {playing ? "Ⅱ" : "▶"}
@@ -230,7 +200,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
               {panelOpen && <>
                 <div className="min-w-0 flex-1">
                   <input type="range" min={0} max={stops.length - 1} value={Math.min(activeIndex, stops.length - 1)}
-                    onChange={(event) => { setPlaying(false); setActiveIndex(Number(event.target.value)); }}
+                    onChange={(event) => dispatch({ type: "setIndex", index: Number(event.target.value) })}
                     aria-label={t("เวลาฝน")}
                     aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
                     className="neon-range w-full" />
@@ -264,7 +234,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
                       const label = item.kind === "radar" ? t("ตอนนี้") : formatTime(item.time, "Asia/Bangkok", t.locale).slice(0, 2);
                       const [r, g, b] = levelToRgba(item.level);
                       return (
-                        <button key={`${item.kind}-${item.time}`} type="button" onClick={() => { setPlaying(false); setActiveIndex(index); }}
+                        <button key={`${item.kind}-${item.time}`} type="button" onClick={() => dispatch({ type: "setIndex", index })}
                           aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
                           aria-pressed={activeIndex === index}
                           className="neon-series-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] focus-visible:outline-2">
