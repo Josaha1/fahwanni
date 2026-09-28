@@ -1,6 +1,6 @@
 # Plan: ฟ้าวันนี้ Phase 2 — map, radar, wind, 3D, storms, Blender icons
 
-Status: APPROVED (2026-09-28)
+Status: DONE (2026-09-28) — tasks 1–16 and 18–25; task 17 (optional hero video) not built
 
 ## Context
 Phase 1 (docs/plans/weather-app.md) is done. User asked for rain radar + wind, a rotatable 3D map,
