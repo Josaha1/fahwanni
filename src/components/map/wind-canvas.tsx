@@ -118,5 +118,5 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
     };
   }, [map, grid, hourIndex, animate, count]);
 
-  return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true" />;
+  return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true" />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
@@ -27,17 +27,22 @@ import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
+import { useIsDesktop } from "./ui/use-is-desktop";
+import { MapSheet, type SheetPosition } from "./ui/map-sheet";
+import { MapSidePanel } from "./ui/map-side-panel";
+import { MapPanelContent } from "./ui/map-panel-content";
+import { ActionRail } from "./ui/action-rail";
 
-function initialControlOpen(key: string): boolean {
+function initialSheetPosition(): SheetPosition {
   try {
-    const saved = localStorage.getItem(key);
-    if (saved !== null) return saved === "true";
+    const saved = localStorage.getItem("fah-map-sheet");
+    if (saved === "peek" || saved === "half") return saved;
   } catch { /* Private browsing can deny storage. */ }
-  return !window.matchMedia("(max-width: 640px)").matches;
+  return window.matchMedia("(max-width: 640px)").matches ? "peek" : "half";
 }
 
-function rememberControlOpen(key: string, open: boolean): void {
-  try { localStorage.setItem(key, String(open)); } catch { /* Keep the control usable without storage. */ }
+function rememberSheetPosition(position: SheetPosition): void {
+  try { localStorage.setItem("fah-map-sheet", position); } catch { /* Keep the sheet usable without storage. */ }
 }
 
 export function MapView() {
@@ -60,8 +65,9 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const { activeIndex, playing, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
   const rainVisible = mapState.primary === "rain" && rainOn;
-  const [layersOpen, setLayersOpen] = useState(() => initialControlOpen("fah-map-layers-open"));
-  const [panelOpen, setPanelOpen] = useState(() => initialControlOpen("fah-map-panel-open"));
+  const isDesktop = useIsDesktop();
+  const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
+  const focusLayers = useRef(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
@@ -133,143 +139,120 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     return () => window.clearTimeout(timer);
   }, [playing, reducedMotion, rainVisible, frames.length, activeIndex, activeStop, stops]);
 
-  return (
-    <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
-      style={{ "--neon-bg": BASE[theme].bg, "--neon-label": BASE[theme].label, "--neon-muted": BASE[theme].labelMuted, "--neon-pin": DATA.pin, "--neon-accent": DATA.storm } as React.CSSProperties}>
-      <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
-        <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
-      </header>
-      <div className="relative min-h-0 flex-1" style={{ backgroundColor: BASE[theme].bg }}>
-        <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
-        <div className="absolute left-3 top-3 z-10" style={{ maxWidth: "calc(100% - 5rem)" }}>
-          <button type="button" aria-expanded={layersOpen} aria-controls="map-layer-chips"
-            aria-label={layersOpen ? t("ซ่อนชั้นข้อมูล") : t("ชั้นข้อมูล")}
-            onClick={() => { const open = !layersOpen; setLayersOpen(open); rememberControlOpen("fah-map-layers-open", open); }}
-            className="neon-glass neon-toggle grid size-10 place-items-center rounded-full text-lg">
-            <span aria-hidden="true">{layersOpen ? "✕" : "☰"}</span>
-          </button>
-          <div id="map-layer-chips" hidden={!layersOpen} className="mt-2 flex flex-wrap gap-2">
-            <button type="button" disabled={!available} aria-pressed={available && rainVisible}
-              onClick={() => dispatch({ type: "toggleRain" })}
-              className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
-              {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
-            </button>
-            <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn}
-              onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })}
-              className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
-              {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
-            </button>
-            {storms.length > 0 && (
-              <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })}
-                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
-                {t("พายุ")} ({storms.length})
-              </button>
-            )}
-            {quakes.length > 0 && (
-              <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })}
-                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
-                {t("แผ่นดินไหว")} ({quakes.length})
-              </button>
-            )}
-            {terrainOk && (
-              <button type="button" aria-pressed={terrainOn} onClick={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
-                aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
-                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
-                3D
-              </button>
-            )}
-          </div>
+  useEffect(() => {
+    if (!focusLayers.current || (!isDesktop && sheetPosition !== "half")) return;
+    const frame = window.requestAnimationFrame(() => {
+      const heading = document.getElementById("map-layers");
+      heading?.scrollIntoView({ block: "nearest" });
+      heading?.focus({ preventScroll: true });
+      focusLayers.current = false;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isDesktop, sheetPosition]);
+
+  const setPosition = (position: SheetPosition) => {
+    setSheetPosition(position);
+    rememberSheetPosition(position);
+  };
+  const openLayers = () => {
+    focusLayers.current = true;
+    if (!isDesktop && sheetPosition !== "half") setPosition("half");
+    else {
+      const heading = document.getElementById("map-layers");
+      heading?.scrollIntoView({ block: "nearest" });
+      heading?.focus({ preventScroll: true });
+      focusLayers.current = false;
+    }
+  };
+  const compact = !isDesktop && sheetPosition === "peek";
+  const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || !frames.length}
+    aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} className="map-play shrink-0 disabled:opacity-50">
+    {playing ? "Ⅱ" : "▶"}
+  </button>;
+  const timeline = <div className="flex min-w-0 items-center gap-2">
+    {playButton}
+    {compact && <span className="min-w-0 flex-1 truncate text-sm font-semibold">{activeTimeLabel}</span>}
+    {!compact && <>
+      <div className="min-w-0 flex-1">
+        <input type="range" min={0} max={Math.max(0, stops.length - 1)} value={Math.min(activeIndex, Math.max(0, stops.length - 1))}
+          onChange={(event) => dispatch({ type: "setIndex", index: Number(event.target.value) })}
+          disabled={!available} aria-label={t("เวลาฝน")}
+          aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
+          className="map-range w-full" />
+        <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
+          <span style={{ width: `${shares.radar * 100}%`, backgroundColor: DATA.pin }} />
+          <span style={{ width: `${shares.model * 100}%`, backgroundColor: "#7c3aed", opacity: 0.6 }} />
         </div>
-        {mapInstance && wind && windOn && status === "ready" && (
-          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />
-        )}
-        {available && rainVisible && (
-          <div className={`neon-glass absolute z-10 rounded-2xl p-3 ${panelOpen ? "inset-x-3 bottom-[4.5rem] mx-auto max-w-md" : "bottom-3 left-3"}`}
-            style={!panelOpen ? { maxWidth: "calc(100% - 1.5rem)" } : undefined}>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || !frames.length}
-                aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")}
-                className="neon-play grid size-9 shrink-0 place-items-center rounded-full disabled:opacity-50">
-                {playing ? "Ⅱ" : "▶"}
-              </button>
-              {!panelOpen && <span className="min-w-0 flex-1 truncate text-sm font-semibold">{activeTimeLabel}</span>}
-              <button type="button" aria-expanded={panelOpen} aria-controls="map-timeline-details"
-                aria-label={panelOpen ? t("ย่อแผงเวลา") : t("ขยายแผงเวลา")}
-                onClick={() => { const open = !panelOpen; setPanelOpen(open); rememberControlOpen("fah-map-panel-open", open); }}
-                className="neon-toggle order-last grid size-9 shrink-0 place-items-center rounded-full text-lg">
-                <span aria-hidden="true">{panelOpen ? "⌄" : "⌃"}</span>
-              </button>
-              {panelOpen && <>
-                <div className="min-w-0 flex-1">
-                  <input type="range" min={0} max={stops.length - 1} value={Math.min(activeIndex, stops.length - 1)}
-                    onChange={(event) => dispatch({ type: "setIndex", index: Number(event.target.value) })}
-                    aria-label={t("เวลาฝน")}
-                    aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
-                    className="neon-range w-full" />
-                  <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
-                    <span style={{ width: `${shares.radar * 100}%`, backgroundColor: DATA.pin }} />
-                    <span style={{ width: `${shares.model * 100}%`, backgroundColor: DATA.storm, opacity: 0.6 }} />
-                  </div>
-                </div>
-                <span className="w-32 shrink-0 text-right text-sm font-semibold max-[400px]:w-24">
-                  {activeTimeLabel}
-                  {activeStop && <small className="neon-muted block text-xs font-normal">{t(stopLabelKey(activeStop))}</small>}
-                </span>
-              </>}
-            </div>
-            <div id="map-timeline-details" hidden={!panelOpen}>
-              {radarSummary && (
-                <p className="mt-2 text-sm font-semibold" aria-live="polite">
-                  {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
-                    : radarSummary.nearestKm !== undefined
-                      ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
-                      : t("ไม่มีฝนในรัศมี 100 กม.")}
-                  {radarSummary.heavyNearby && <span className="ml-1" style={{ color: DATA.storm }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
-                </p>
-              )}
-              {series.length > 0 && (
-                <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
-                  <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
-                  <div className="mt-1 flex min-w-0 gap-0.5 pb-1">
-                    {series.map((item) => {
-                      const index = stops.findIndex((stop) => stop.kind === item.kind && stop.time === item.time);
-                      const label = item.kind === "radar" ? t("ตอนนี้") : formatTime(item.time, "Asia/Bangkok", t.locale).slice(0, 2);
-                      const [r, g, b] = levelToRgba(item.level);
-                      return (
-                        <button key={`${item.kind}-${item.time}`} type="button" onClick={() => dispatch({ type: "setIndex", index })}
-                          aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
-                          aria-pressed={activeIndex === index}
-                          className="neon-series-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] focus-visible:outline-2">
-                          <span className="flex h-7 w-2 items-end rounded-sm bg-white/10" aria-hidden="true">
-                            {item.level > 0 && <span className="w-full rounded-sm" style={{ height: `${item.level * 25}%`, backgroundColor: `rgb(${r} ${g} ${b})` }} />}
-                          </span>
-                          <span className="whitespace-nowrap text-center leading-tight">{label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="neon-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
-                </section>
-              )}
-              <div className="neon-muted mt-2 flex items-center justify-between gap-3 text-xs">
-                <span>{t("ฝนเบา → ฝนหนัก")}</span>
-                {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
-              </div>
-              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: legendGradient("rain") }} aria-hidden="true" />
-            </div>
-          </div>
-        )}
-        {status !== "ready" && (
-          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
-            {status === "error" ? (
-              <div className="text-center">
-                <p>{t("โหลดแผนที่ไม่สำเร็จ")}</p>
-                <button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button>
-              </div>
-            ) : t("กำลังโหลดแผนที่…")}
-          </div>
-        )}
       </div>
-    </main>
-  );
+      <span className="w-32 shrink-0 text-right text-sm font-semibold max-[400px]:w-24">
+        {activeTimeLabel}
+        {activeStop && <small className="map-muted block text-xs font-normal">{t(stopLabelKey(activeStop))}</small>}
+      </span>
+    </>}
+    {!isDesktop && <button type="button" aria-expanded={sheetPosition === "half"} aria-controls="map-timeline-details"
+      aria-label={sheetPosition === "half" ? t("ย่อแผงเวลา") : t("ขยายแผงเวลา")}
+      onClick={() => setPosition(sheetPosition === "half" ? "peek" : "half")}
+      className="map-sheet-toggle map-icon-btn shrink-0 text-lg">
+      <span aria-hidden="true">{sheetPosition === "half" ? "⌄" : "⌃"}</span>
+    </button>}
+  </div>;
+  const details = <div>
+    {radarSummary && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+      {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
+        : radarSummary.nearestKm !== undefined
+          ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
+          : t("ไม่มีฝนในรัศมี 100 กม.")}
+      {radarSummary.heavyNearby && <span className="ml-1" style={{ color: DATA.storm }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
+    </p>}
+    {series.length > 0 && <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
+      <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
+      <div className="mt-1 flex min-w-0 gap-0.5 pb-1">
+        {series.map((item) => {
+          const index = stops.findIndex((stop) => stop.kind === item.kind && stop.time === item.time);
+          const label = item.kind === "radar" ? t("ตอนนี้") : formatTime(item.time, "Asia/Bangkok", t.locale).slice(0, 2);
+          const [r, g, b] = levelToRgba(item.level);
+          return <button key={`${item.kind}-${item.time}`} type="button" onClick={() => dispatch({ type: "setIndex", index })}
+            aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
+            aria-pressed={activeIndex === index} className="map-series-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px]">
+            <span className="flex h-7 w-2 items-end rounded-sm" style={{ background: "rgb(127 127 127 / .2)" }} aria-hidden="true">
+              {item.level > 0 && <span className="w-full rounded-sm" style={{ height: `${item.level * 25}%`, backgroundColor: `rgb(${r} ${g} ${b})` }} />}
+            </span>
+            <span className="whitespace-nowrap text-center leading-tight">{label}</span>
+          </button>;
+        })}
+      </div>
+      <p className="map-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
+    </section>}
+    <div className="map-muted mt-2 flex items-center justify-between gap-3 text-xs">
+      <span>{t("ฝนเบา → ฝนหนัก")}</span>
+      {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
+    </div>
+    <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: legendGradient("rain") }} aria-hidden="true" />
+  </div>;
+  const layers = <>
+    <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
+      {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
+    </button>
+    <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn} onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })} className="map-chip text-sm disabled:opacity-60">
+      {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
+    </button>
+    {storms.length > 0 && <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })} className="map-chip text-sm">{t("พายุ")} ({storms.length})</button>}
+    {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
+  </>;
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} timeline={timeline} details={details} layers={layers} />;
+
+  return <main className="map-shell" style={{
+    "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
+    "--map-label": BASE[theme].label, "--map-muted": BASE[theme].labelMuted, "--map-accent": DATA.pin,
+  } as CSSProperties}>
+    <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
+    {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
+    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={sheetPosition}>{panelContent}</MapSheet>}
+    <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
+      onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })} />
+    {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
+      {status === "error" ? <div className="text-center"><p>{t("โหลดแผนที่ไม่สำเร็จ")}</p><button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button></div>
+        : t("กำลังโหลดแผนที่…")}
+    </div>}
+  </main>;
 }

@@ -79,7 +79,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
       });
       const live = created;
       activeTheme.current = initialStyle.theme;
-      live.addControl(new NavigationControl(), "top-right");
+      live.addControl(new NavigationControl(), "bottom-right");
       live.addControl(new AttributionControl({ compact: true, customAttribution: [
         '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
         '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
