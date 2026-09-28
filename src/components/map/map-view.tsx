@@ -14,7 +14,6 @@ import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";
-import { legendGradient } from "@/lib/map/legend";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { useMapData } from "./use-map-data";
@@ -34,6 +33,8 @@ import { MapPanelContent } from "./ui/map-panel-content";
 import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 import { PointCard } from "./ui/point-card";
+import { LegendChip } from "./ui/legend-chip";
+import { LegendDialog } from "./ui/legend-dialog";
 import { useProbe } from "./use-probe";
 
 function initialSheetPosition(): SheetPosition {
@@ -72,6 +73,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
   const focusLayers = useRef(false);
+  const legendButton = useRef<HTMLButtonElement>(null);
+  const legendDialog = useRef<HTMLDialogElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
@@ -240,11 +243,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       </div>
       <p className="map-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
     </section>}
-    <div className="map-muted mt-2 flex items-center justify-between gap-3 text-xs">
-      <span>{t("ฝนเบา → ฝนหนัก")}</span>
-      {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
-    </div>
-    <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: legendGradient("rain") }} aria-hidden="true" />
+    {frames.length > 0 && <p className="map-muted mt-2 text-right text-xs">{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</p>}
   </div>;
   const layers = <>
     <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
@@ -268,6 +267,9 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
     {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
+    {(mapState.primary !== "rain" || rainOn) && <LegendChip primary={mapState.primary} buttonRef={legendButton} onOpen={() => legendDialog.current?.showModal()} />}
+    <LegendDialog primary={mapState.primary} active={{ wind: windOn && Boolean(wind), storms: stormsOn && storms.length > 0, quakes: quakesOn && quakes.length > 0 }}
+      dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })} />

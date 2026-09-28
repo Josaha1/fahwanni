@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { translator } from "../../i18n/core";
-import { PM25_COLORS, RAIN_RAMP, TEMP_STOPS } from "./palette";
-import { legendFor, legendGradient } from "./legend";
+import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
+import { legendFor, legendGradient, overlayLegend } from "./legend";
 
 describe("legendFor", () => {
   it("describes rain with radar colours, Thai keys, and numeric rates", () => {
@@ -45,6 +45,36 @@ describe("legendFor", () => {
       for (const key of [title, unit, note, ...steps.map((step) => step.label)]) {
         if (key && /[\u0e00-\u0e7f]/.test(key)) expect(en(key)).not.toBe(key);
       }
+    }
+  });
+});
+
+describe("overlayLegend", () => {
+  it("always includes the location symbols and only requested overlay sections", () => {
+    expect(overlayLegend({ wind: false, storms: false, quakes: false })).toEqual([{ title: "สัญลักษณ์", rows: [
+      { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
+      { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
+    ] }]);
+    const all = overlayLegend({ wind: true, storms: true, quakes: true });
+    expect(all.map((section) => section.title)).toEqual(["สัญลักษณ์", "ลม", "พายุ", "แผ่นดินไหว"]);
+    expect(all[1].rows.map((row) => row.swatch)).toEqual([1, 5, 10, 16].map((speed) => ({ kind: "line", color: windColor(speed) })));
+    expect(all[2].rows.map((row) => row.swatch)).toEqual([
+      { kind: "line", color: DATA.storm },
+      { kind: "line", color: DATA.storm, dashed: true },
+      { kind: "fill", color: DATA.storm, opacity: 0.12 },
+    ]);
+    expect(all[3].rows.map((row) => row.swatch)).toEqual([
+      { kind: "circle", color: DATA.quake, size: 10 },
+      { kind: "circle", color: DATA.quake, size: 20 },
+    ]);
+    expect(overlayLegend({ wind: false, storms: true, quakes: false }).map((section) => section.title)).toEqual(["สัญลักษณ์", "พายุ"]);
+  });
+
+  it("has English translations for every Thai row and section", () => {
+    const en = translator("en");
+    for (const section of overlayLegend({ wind: true, storms: true, quakes: true })) {
+      expect(en(section.title)).not.toBe(section.title);
+      for (const row of section.rows) expect(en(row.label)).not.toBe(row.label);
     }
   });
 });

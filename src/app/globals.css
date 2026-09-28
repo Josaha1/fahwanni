@@ -143,6 +143,10 @@ body:has(.map-shell) { background: #eef1f5; background-image: none; }
 .map-shell { position: relative; width: 100%; height: calc(100dvh - var(--nav-h, 88px)); overflow: hidden; background: var(--map-bg); color: var(--map-label); }
 .map-shell [hidden] { display: none; }
 .map-panel { background: var(--map-panel); color: var(--map-label); border: 1px solid var(--map-panel-border); border-radius: 20px; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 12px; }
+.map-legend-chip { position: absolute; z-index: 5; top: calc(64px + env(safe-area-inset-top)); left: 12px; min-width: 180px; max-width: 240px; padding: 8px 10px; border-radius: 14px; color: var(--map-label); }
+.map-legend-dialog { width: min(420px, calc(100vw - 24px)); max-height: 80dvh; overflow: auto; color: var(--map-label); }
+.map-legend-dialog::backdrop { background: rgb(0 0 0 / .35); }
+@media (min-width: 1024px) { .map-legend-chip { top: auto; left: 392px; bottom: 16px; } }
 .map-search-position { position: absolute; z-index: 5; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 68px; }
 .map-search-pill { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; border-radius: 999px; border: 1px solid var(--map-panel-border); background: var(--map-panel); color: var(--map-label); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
 .map-search-pill > button:first-child { min-height: 44px; }

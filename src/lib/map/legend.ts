@@ -1,7 +1,37 @@
-import { PM25_COLORS, RAIN_RAMP, TEMP_STOPS } from "./palette";
+import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 
 export type PrimaryLayer = "rain" | "temp" | "pm25";
 export type Legend = { title: string; unit: string; note?: string; steps: { color: string; label: string; value: string }[] };
+export type Swatch =
+  | { kind: "line"; color: string; dashed?: boolean }
+  | { kind: "fill"; color: string; opacity: number }
+  | { kind: "circle"; color: string; size: number }
+  | { kind: "pin" }
+  | { kind: "probe" };
+export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
+
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean }): OverlayLegend[] {
+  const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
+    { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
+    { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
+  ] }];
+  if (active.wind) sections.push({ title: "ลม", rows: [
+    { swatch: { kind: "line", color: windColor(1) }, label: "ลมสงบ–อ่อน (ต่ำกว่า 11 กม./ชม.)" },
+    { swatch: { kind: "line", color: windColor(5) }, label: "ลมอ่อน–ปานกลาง (11–29 กม./ชม.)" },
+    { swatch: { kind: "line", color: windColor(10) }, label: "ลมแรง (29–50 กม./ชม.)" },
+    { swatch: { kind: "line", color: windColor(16) }, label: "ลมแรงมาก (50+ กม./ชม.)" },
+  ] });
+  if (active.storms) sections.push({ title: "พายุ", rows: [
+    { swatch: { kind: "line", color: DATA.storm }, label: "เส้นทางที่ผ่านมา" },
+    { swatch: { kind: "line", color: DATA.storm, dashed: true }, label: "เส้นทางคาดการณ์" },
+    { swatch: { kind: "fill", color: DATA.storm, opacity: 0.12 }, label: "พื้นที่ที่อาจได้รับผลกระทบ" },
+  ] });
+  if (active.quakes) sections.push({ title: "แผ่นดินไหว", rows: [
+    { swatch: { kind: "circle", color: DATA.quake, size: 10 }, label: "แผ่นดินไหว (วงใหญ่ = รุนแรงกว่า)" },
+    { swatch: { kind: "circle", color: DATA.quake, size: 20 }, label: "ขนาด 5 ขึ้นไปมีป้ายบอกขนาด" },
+  ] });
+  return sections;
+}
 
 export function legendFor(primary: PrimaryLayer): Legend {
   switch (primary) {
