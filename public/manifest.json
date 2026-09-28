@@ -1,12 +1,13 @@
 {
-  "name": "ลูกรัก (Lookrak)",
-  "short_name": "ลูกรัก",
-  "description": "ลูกรัก — แอปช่วยดูแลและเตือนเวลาให้ยา",
+  "name": "ฟ้าวันนี้",
+  "short_name": "ฟ้าวันนี้",
+  "description": "พยากรณ์อากาศ ฝุ่น PM2.5 และคำแนะนำสำหรับทุกวัน",
   "lang": "th",
-  "start_url": "/app/today",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#F7EFE4",
-  "background_color": "#F7EFE4",
+  "theme_color": "#F7FBFF",
+  "background_color": "#F7FBFF",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -23,16 +24,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "วันนี้ในลูกรัก",
-      "url": "/app/today"
-    },
-    {
-      "name": "เพิ่มยาในลูกรัก",
-      "url": "/app/today?add=1"
     }
   ]
 }

@@ -1,18 +1,23 @@
-/*
- * Which requests the Lookrak service worker may answer from its cache. Kept in its own file so it
- * can be unit-tested. Everything not listed goes straight to the network, untouched.
- *   "static" — content-hashed build assets and icons: cache first.
- *   "page"   — full-page loads of the Today screen: network first, cached copy when offline.
- */
-self.lookrakRoute = function lookrakRoute(request, origin) {
+/* Only the home page, build assets, app icons, and weather icons use the offline cache. */
+self.fahRoute = function fahRoute(request, origin) {
   if (request.method !== "GET") return null;
   const url = new URL(request.url);
-  if (url.origin !== origin) return null;
+  if (url.origin === "https://maps.gstatic.com") {
+    return url.pathname.startsWith("/weather/") ? "static" : null;
+  }
+  if (url.origin !== origin || url.pathname.startsWith("/api/")) return null;
   if (url.pathname.startsWith("/_next/static/")) return "static";
-  if (url.pathname.startsWith("/emoji/")) return "static";
-  if (url.pathname.startsWith("/mascots/")) return "static";
-  if (/^\/(icon-192|icon-512|icon-maskable-512|apple-touch-icon)\.png$/.test(url.pathname)) return "static";
+  if (/^\/icon[^/]*\.png$/.test(url.pathname) || url.pathname === "/apple-touch-icon.png" || url.pathname === "/manifest.webmanifest") return "static";
   const rsc = url.searchParams.has("_rsc") || (request.headers && request.headers.get("RSC"));
-  if (request.mode === "navigate" && !rsc && (url.pathname === "/app/today" || url.pathname === "/app")) return "page";
+  if (url.pathname === "/" && request.mode === "navigate" && !rsc) return "page";
   return null;
+};
+
+self.fahWarmable = function fahWarmable(url, origin) {
+  if (typeof url !== "string") return false;
+  try {
+    return self.fahRoute({ method: "GET", url: new URL(url, origin).href }, origin) === "static";
+  } catch {
+    return false;
+  }
 };
