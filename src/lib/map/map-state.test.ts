@@ -46,10 +46,10 @@ describe("map state", () => {
     expect(mapReducer(state, { type: "setIndex", index: 2 })).toEqual({ ...state, activeIndex: 2, playing: false });
   });
 
-  it("ticks through radar stops using the existing playback order", () => {
+  it("ticks through radar and model stops before looping", () => {
     const state = { ...initialMapState(), playing: true };
     expect(mapReducer(state, { type: "tick", stops }).activeIndex).toBe(1);
-    expect(mapReducer({ ...state, activeIndex: 1 }, { type: "tick", stops }).activeIndex).toBe(0);
+    expect(mapReducer({ ...state, activeIndex: 1 }, { type: "tick", stops }).activeIndex).toBe(2);
     expect(mapReducer({ ...state, activeIndex: 2 }, { type: "tick", stops }).activeIndex).toBe(0);
     expect(mapReducer(state, { type: "tick", stops: [] }).activeIndex).toBe(0);
     expect(mapReducer(state, { type: "tick", stops }).playing).toBe(true);

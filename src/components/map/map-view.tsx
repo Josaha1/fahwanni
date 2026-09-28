@@ -6,10 +6,10 @@ import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
 import { renderPrecipImage } from "@/lib/precip/render";
-import { buildTimeline, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
+import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLabelKey, windHourFor } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
-import { currentHourIndex, windMotion } from "@/lib/wind/particles";
+import { windMotion } from "@/lib/wind/particles";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
 import { BASE } from "@/lib/map/base-style";
@@ -90,7 +90,10 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     return images.every(Boolean) ? images : [];
   }, [wind]);
   const modelHours = useMemo(() => modelImages.length ? wind?.precipHours?.slice(0, modelImages.length) ?? [] : [], [modelImages, wind]);
-  const stops = useMemo(() => buildTimeline(frames.map((frame) => frame.time), modelHours, nowIso), [frames, modelHours, nowIso]);
+  const stops = useMemo(() => buildLayerTimeline(mapState.primary, {
+    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: undefined,
+  }, nowIso), [mapState.primary, frames, modelHours, nowIso]);
+  const defaultIdx = defaultIndexFor(mapState.primary, stops, nowIso);
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
   const shares = segmentShares(stops);
@@ -106,7 +109,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
   });
   const motion = windMotion({ reducedMotion, ...device });
-  const windHour = wind ? currentHourIndex(wind.hours, nowIso) : 0;
+  const windHour = wind ? windHourFor(activeStop, wind.hours, nowIso) : 0;
   const terrainOk = terrainAvailable(device.deviceMemory);
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
   useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
@@ -119,6 +122,13 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   useEffect(() => {
     if (manifest) dispatch({ type: "resetIndex", index: initialIndex });
   }, [manifest, initialIndex]);
+
+  const previousPrimary = useRef(mapState.primary);
+  useEffect(() => {
+    if (previousPrimary.current === mapState.primary) return;
+    previousPrimary.current = mapState.primary;
+    dispatch({ type: "resetIndex", index: defaultIdx });
+  }, [mapState.primary, defaultIdx]);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -134,11 +144,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   }, []);
 
   useEffect(() => {
-    if (!playing || reducedMotion || !frames.length || !rainVisible) return;
+    if (!playing || reducedMotion || stops.length <= 1 || (mapState.primary === "rain" && !rainOn)) return;
     const timer = window.setTimeout(() => dispatch({ type: "tick", stops }),
-      activeStop?.kind === "radar" && activeStop.index === frames.length - 1 ? 1500 : 600);
+      playDelayMs(stops, activeIndex, defaultIdx));
     return () => window.clearTimeout(timer);
-  }, [playing, reducedMotion, rainVisible, frames.length, activeIndex, activeStop, stops]);
+  }, [playing, reducedMotion, mapState.primary, rainOn, stops, activeIndex, defaultIdx]);
 
   useEffect(() => {
     if (!focusLayers.current || (!isDesktop && sheetPosition !== "half")) return;
@@ -166,7 +176,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     }
   };
   const compact = !isDesktop && sheetPosition === "peek";
-  const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || !frames.length}
+  const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || stops.length <= 1}
     aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} className="map-play shrink-0 disabled:opacity-50">
     {playing ? "Ⅱ" : "▶"}
   </button>;
