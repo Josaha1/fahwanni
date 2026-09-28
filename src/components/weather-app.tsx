@@ -16,6 +16,7 @@ import { SearchBox } from "@/components/search-box";
 import { SeasonChip } from "@/components/season-chip";
 import { YesterdayLine } from "@/components/yesterday-line";
 import { FavouritesOverview } from "@/components/favourites-overview";
+import { BestTimeCard } from "@/components/best-time-card";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
@@ -104,6 +105,7 @@ export function WeatherApp() {
         {weather.snapshot && <>
           <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
+          <BestTimeCard snapshot={weather.snapshot} air={weather.air} />
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />
           <DailyList snapshot={weather.snapshot} isDark={isDark} />
           <AqiCard air={weather.air} />
