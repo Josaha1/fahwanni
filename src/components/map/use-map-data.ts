@@ -13,6 +13,7 @@ export function useMapData() {
   const [manifest, setManifest] = useState<RadarManifest | null>(null);
   const [initialIndex, setInitialIndex] = useState(0);
   const [wind, setWind] = useState<WindGrid | null>(null);
+  const [windSettled, setWindSettled] = useState(false);
   const [pm25, setPm25] = useState<Pm25Grid | null>(null);
   const [pm25Status, setPm25Status] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const pm25Request = useRef<Promise<void> | null>(null);
@@ -33,7 +34,8 @@ export function useMapData() {
     fetch("/api/wind", { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
       .then(setWind)
-      .catch(() => { if (!controller.signal.aborted) setWind(null); });
+      .catch(() => { if (!controller.signal.aborted) setWind(null); })
+      .finally(() => { if (!controller.signal.aborted) setWindSettled(true); });
     fetch("/api/storms", { signal: controller.signal })
       .then((response) => response.ok ? response.json() as Promise<{ storms?: Storm[] }> : { storms: [] })
       .then((data) => setStorms(data.storms ?? []))
@@ -60,5 +62,5 @@ export function useMapData() {
     return request;
   }, [pm25]);
 
-  return { manifest, wind, pm25, pm25Status, loadPm25, storms, quakes, initialIndex };
+  return { manifest, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex };
 }

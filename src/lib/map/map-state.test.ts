@@ -17,6 +17,14 @@ describe("map state", () => {
     });
   });
 
+  it("uses URL layer and overlay overrides without changing other defaults", () => {
+    expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, terrain: true } })).toEqual({
+      primary: "temp", rainOn: true,
+      overlays: { wind: false, storms: false, quakes: true, terrain: true },
+      activeIndex: 0, playing: false,
+    });
+  });
+
   it("sets each primary and stops playback", () => {
     for (const primary of ["temp", "pm25", "rain"] as const) {
       const state = { ...initialMapState(), playing: true };

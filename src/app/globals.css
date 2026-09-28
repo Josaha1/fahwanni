@@ -141,6 +141,8 @@ h1, h2 { font-family: var(--font-mitr), sans-serif; font-weight: 600; line-heigh
 body:has(.map-shell) { background: #eef1f5; background-image: none; }
 :is([data-theme="dark"], [data-theme="night"]) body:has(.map-shell) { background: #0f1720; }
 .map-shell { position: relative; width: 100%; height: calc(100dvh - var(--nav-h, 88px)); overflow: hidden; background: var(--map-bg); color: var(--map-label); }
+.map-shell--immersive { position: fixed; inset: 0; z-index: 30; height: 100dvh; }
+body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-shell [hidden] { display: none; }
 .map-panel { background: var(--map-panel); color: var(--map-label); border: 1px solid var(--map-panel-border); border-radius: 20px; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 12px; }
 .map-legend-chip { position: absolute; z-index: 5; top: calc(64px + env(safe-area-inset-top)); left: 12px; min-width: 180px; max-width: 240px; padding: 8px 10px; border-radius: 14px; color: var(--map-label); }

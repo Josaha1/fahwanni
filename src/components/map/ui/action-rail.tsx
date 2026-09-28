@@ -1,13 +1,17 @@
 import { useT } from "@/i18n/client";
 
-export function ActionRail({ onLayers, terrainOk, terrainOn, onTerrain }: {
+export function ActionRail({ onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare }: {
   onLayers: () => void;
   terrainOk: boolean;
   terrainOn: boolean;
   onTerrain: () => void;
+  immersive: boolean;
+  onFullscreen: () => void;
+  onShare: () => void;
 }) {
   const t = useT();
   const terrainLabel = terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ");
+  const fullscreenLabel = immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ");
   return (
     <div className="map-action-rail">
       <button type="button" className="map-icon-btn" onClick={onLayers} aria-label={t("ชั้นข้อมูล")} title={t("ชั้นข้อมูล")}>
@@ -17,6 +21,16 @@ export function ActionRail({ onLayers, terrainOk, terrainOn, onTerrain }: {
       </button>
       {terrainOk && <button type="button" className="map-icon-btn text-sm font-semibold" onClick={onTerrain}
         aria-pressed={terrainOn} aria-label={terrainLabel} title={terrainLabel}>3D</button>}
+      <button type="button" className="map-icon-btn" onClick={onFullscreen} aria-pressed={immersive} aria-label={fullscreenLabel} title={fullscreenLabel}>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {immersive ? <><path d="M9 3v6H3M15 3v6h6M3 15h6v6M21 15h-6v6" /></> : <><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6" /></>}
+        </svg>
+      </button>
+      <button type="button" className="map-icon-btn" onClick={onShare} aria-label={t("แชร์มุมมองนี้")} title={t("แชร์มุมมองนี้")}>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
+        </svg>
+      </button>
     </div>
   );
 }

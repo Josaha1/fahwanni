@@ -17,6 +17,7 @@ import { levelToRgba } from "@/lib/nowcast/intensity";
 import { windMotion } from "@/lib/wind/particles";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
+import { formatUrlView, parseUrlView, type UrlView } from "@/lib/map/url-state";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";
 import { WindCanvas } from "./wind-canvas";
@@ -58,21 +59,23 @@ function rememberSheetPosition(position: SheetPosition): void {
 export function MapView() {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
+  const [urlView] = useState(() => parseUrlView(window.location.search));
   return (
-    <MapProvider containerRef={container} initialCenter={[place.lon, place.lat]}>
-      <MapScreen container={container} />
+    <MapProvider containerRef={container} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
+      ? [urlView.lon, urlView.lat] : [place.lon, place.lat]} initialZoom={urlView.z}>
+      <MapScreen container={container} urlView={urlView} />
     </MapProvider>
   );
 }
 
-function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> }) {
+function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView }) {
   const { place } = useLastPlace();
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
-  const { manifest, wind, pm25, pm25Status, loadPm25, storms, quakes, initialIndex } = useMapData();
-  const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
+  const { manifest, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex } = useMapData();
+  const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ primary: view.layer, overlays: view.ov }));
   const { activeIndex, playing, primary, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
   const rainVisible = primary === "rain" && rainOn;
@@ -81,6 +84,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const focusLayers = useRef(false);
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
+  const pendingTime = useRef(urlView.t);
+  const [immersive, setImmersive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
@@ -173,11 +178,34 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   useQuakeLayer(mapInstance, quakes, quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
-  usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion);
+  usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
   useEffect(() => {
-    if (manifest) dispatch({ type: "resetIndex", index: initialIndex });
-  }, [manifest, initialIndex]);
+    if (urlView.layer !== "pm25" || pm25Status !== "idle") return;
+    loadPm25().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      pendingTime.current = undefined;
+      toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
+      dispatch({ type: "setPrimary", primary: "rain" });
+    });
+  }, [urlView.layer, pm25Status, loadPm25, t]);
+
+  useEffect(() => {
+    if (manifest && !pendingTime.current && primary === "rain") dispatch({ type: "resetIndex", index: initialIndex });
+  }, [manifest, initialIndex, primary]);
+
+  useEffect(() => {
+    if (!pendingTime.current || !stops.length || (primary === "rain" && !windSettled)) return;
+    const target = Date.parse(pendingTime.current);
+    let nearest = -1;
+    let distance = 90 * 60_000 + 1;
+    stops.forEach((stop, index) => {
+      const difference = Math.abs(Date.parse(stop.time) - target);
+      if (difference < distance) { nearest = index; distance = difference; }
+    });
+    pendingTime.current = undefined;
+    dispatch({ type: "resetIndex", index: distance <= 90 * 60_000 ? nearest : defaultIdx });
+  }, [stops, defaultIdx, primary, windSettled]);
 
   const visibleSheetPosition = probe && !isDesktop ? "half" : sheetPosition;
 
@@ -207,6 +235,78 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       playDelayMs(stops, activeIndex, defaultIdx));
     return () => window.clearTimeout(timer);
   }, [playing, reducedMotion, mapState.primary, rainOn, stops, activeIndex, defaultIdx]);
+
+  const viewQuery = useCallback(() => {
+    if (!mapInstance) return null;
+    const center = mapInstance.getCenter();
+    return formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
+      t: activeStop?.time ?? pendingTime.current, ov: overlays });
+  }, [mapInstance, primary, activeStop?.time, overlays]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    let timer: number;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const query = viewQuery();
+        if (query) window.history.replaceState(null, "", `/map${query}`);
+      }, 300);
+    };
+    mapInstance.on("moveend", schedule);
+    schedule();
+    return () => { mapInstance.off("moveend", schedule); window.clearTimeout(timer); };
+  }, [mapInstance, viewQuery]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    const frame = window.requestAnimationFrame(() => mapInstance.resize());
+    return () => window.cancelAnimationFrame(frame);
+  }, [mapInstance, immersive]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setImmersive(false);
+      mapInstance?.resize();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !immersive || probe || legendDialog.current?.open) return;
+      setImmersive(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [immersive, probe, mapInstance]);
+
+  const toggleFullscreen = () => {
+    if (immersive) {
+      setImmersive(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    } else {
+      setImmersive(true);
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
+  };
+
+  const shareView = async () => {
+    const query = viewQuery();
+    if (!query) return;
+    const url = `${window.location.origin}/map${query}`;
+    try {
+      if (navigator.share) await navigator.share({ title: t("ฟ้าวันนี้ — แผนที่"), url });
+      else {
+        await navigator.clipboard.writeText(url);
+        toast.success(t("คัดลอกลิงก์แล้ว"));
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error(t("แชร์ไม่สำเร็จ"));
+    }
+  };
 
   useEffect(() => {
     if (!focusLayers.current || (!isDesktop && visibleSheetPosition !== "half")) return;
@@ -325,7 +425,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} primaryPicker={primaryPicker} layers={layers}
     card={card} onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
-  return <main className="map-shell" style={{
+  return <main className={`map-shell${immersive ? " map-shell--immersive" : ""}`} style={{
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
     "--map-label": BASE[theme].label, "--map-muted": BASE[theme].labelMuted, "--map-accent": DATA.pin,
   } as CSSProperties}>
@@ -337,7 +437,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
-      onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })} />
+      onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
+      immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} />
     {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
       {status === "error" ? <div className="text-center"><p>{t("โหลดแผนที่ไม่สำเร็จ")}</p><button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button></div>
         : t("กำลังโหลดแผนที่…")}

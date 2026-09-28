@@ -32,13 +32,15 @@ export function useMapContext(): MapContextValue {
  * again only on retry): it never depends on the place or the language, so changing either moves
  * the view or relabels instead of rebuilding every layer.
  */
-export function MapProvider({ containerRef, initialCenter, children }: {
+export function MapProvider({ containerRef, initialCenter, initialZoom = 6, children }: {
   containerRef: RefObject<HTMLDivElement | null>;
   /** Read once when the map is created. */
   initialCenter: [number, number];
+  initialZoom?: number;
   children: ReactNode;
 }) {
   const [center] = useState(initialCenter);
+  const [zoom] = useState(initialZoom);
   const appTheme = useAppMapTheme();
   const [initialStyle, setInitialStyle] = useState<{ style: StyleSpecification | string; theme: BaseTheme } | null>(null);
   const [map, setMap] = useState<Map | null>(null);
@@ -68,7 +70,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
         container: containerRef.current,
         style: initialStyle.style,
         center,
-        zoom: 6,
+        zoom,
         minZoom: 3,
         maxZoom: 12,
         maxPitch: 60,
@@ -109,7 +111,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
       const timer = window.setTimeout(() => setStatus("error"), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [containerRef, initialStyle, center, attempt]);
+  }, [containerRef, initialStyle, center, zoom, attempt]);
 
   useEffect(() => {
     if (!map || appTheme === activeTheme.current) return;

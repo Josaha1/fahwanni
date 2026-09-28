@@ -18,11 +18,11 @@ export type MapAction =
   | { type: "stop" }
   | { type: "resetIndex"; index: number };
 
-export function initialMapState(): MapState {
+export function initialMapState(override?: Partial<Pick<MapState, "primary" | "overlays">>): MapState {
   return {
-    primary: "rain",
+    primary: override?.primary ?? "rain",
     rainOn: true,
-    overlays: { wind: true, storms: true, quakes: true, terrain: false },
+    overlays: { wind: true, storms: true, quakes: true, terrain: false, ...override?.overlays },
     activeIndex: 0,
     playing: false,
   };
