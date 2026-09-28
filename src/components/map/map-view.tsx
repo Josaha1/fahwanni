@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
@@ -33,6 +33,8 @@ import { MapSidePanel } from "./ui/map-side-panel";
 import { MapPanelContent } from "./ui/map-panel-content";
 import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
+import { PointCard } from "./ui/point-card";
+import { useProbe } from "./use-probe";
 
 function initialSheetPosition(): SheetPosition {
   try {
@@ -61,6 +63,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
+  const { probe, select, close, probeCenter } = useProbe(mapInstance);
   const { manifest, wind, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
   const { activeIndex, playing, rainOn, overlays } = mapState;
@@ -113,7 +116,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const terrainOk = terrainAvailable(device.deviceMemory);
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
   useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
-  useStormLayer(mapInstance, storms, stormsOn);
+  const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
+  useStormLayer(mapInstance, storms, stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
@@ -122,6 +126,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   useEffect(() => {
     if (manifest) dispatch({ type: "resetIndex", index: initialIndex });
   }, [manifest, initialIndex]);
+
+  const visibleSheetPosition = probe && !isDesktop ? "half" : sheetPosition;
 
   const previousPrimary = useRef(mapState.primary);
   useEffect(() => {
@@ -151,7 +157,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   }, [playing, reducedMotion, mapState.primary, rainOn, stops, activeIndex, defaultIdx]);
 
   useEffect(() => {
-    if (!focusLayers.current || (!isDesktop && sheetPosition !== "half")) return;
+    if (!focusLayers.current || (!isDesktop && visibleSheetPosition !== "half")) return;
     const frame = window.requestAnimationFrame(() => {
       const heading = document.getElementById("map-layers");
       heading?.scrollIntoView({ block: "nearest" });
@@ -159,7 +165,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       focusLayers.current = false;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [isDesktop, sheetPosition]);
+  }, [isDesktop, visibleSheetPosition]);
 
   const setPosition = (position: SheetPosition) => {
     setSheetPosition(position);
@@ -175,7 +181,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       focusLayers.current = false;
     }
   };
-  const compact = !isDesktop && sheetPosition === "peek";
+  const compact = !isDesktop && visibleSheetPosition === "peek";
   const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion || stops.length <= 1}
     aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} className="map-play shrink-0 disabled:opacity-50">
     {playing ? "Ⅱ" : "▶"}
@@ -200,11 +206,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
         {activeStop && <small className="map-muted block text-xs font-normal">{t(stopLabelKey(activeStop))}</small>}
       </span>
     </>}
-    {!isDesktop && <button type="button" aria-expanded={sheetPosition === "half"} aria-controls="map-timeline-details"
-      aria-label={sheetPosition === "half" ? t("ย่อแผงเวลา") : t("ขยายแผงเวลา")}
+    {!isDesktop && <button type="button" aria-expanded={visibleSheetPosition === "half"} aria-controls="map-timeline-details"
+      aria-label={visibleSheetPosition === "half" ? t("ย่อแผงเวลา") : t("ขยายแผงเวลา")}
       onClick={() => setPosition(sheetPosition === "half" ? "peek" : "half")}
       className="map-sheet-toggle map-icon-btn shrink-0 text-lg">
-      <span aria-hidden="true">{sheetPosition === "half" ? "⌄" : "⌃"}</span>
+      <span aria-hidden="true">{visibleSheetPosition === "half" ? "⌄" : "⌃"}</span>
     </button>}
   </div>;
   const details = <div>
@@ -250,7 +256,10 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     {storms.length > 0 && <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })} className="map-chip text-sm">{t("พายุ")} ({storms.length})</button>}
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
   </>;
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} layers={layers} />;
+  const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
+    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} storms={storms} quakes={quakes} />;
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} layers={layers}
+    card={card} onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
   return <main className="map-shell" style={{
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
@@ -259,7 +268,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
     {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
-    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={sheetPosition}>{panelContent}</MapSheet>}
+    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })} />
     {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">

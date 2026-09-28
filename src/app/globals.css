@@ -168,6 +168,9 @@ body:has(.map-shell) { background: #eef1f5; background-image: none; }
 :is([data-theme="dark"], [data-theme="night"]) .map-shell .maplibregl-map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button) { filter: invert(1); }
 .map-shell .maplibregl-map .maplibregl-ctrl-attrib { max-width: min(85vw, 320px); }
 .map-shell .maplibregl-marker { z-index: 2; }
+.map-shell .maplibregl-canvas-container { cursor: crosshair; }
+.map-probe-marker { width: 18px; height: 18px; border: 3px solid var(--map-accent); border-radius: 50%; background: rgb(255 255 255 / .8); pointer-events: none; }
+.map-point-card { box-shadow: none; }
 @media (max-width: 1023px) { .map-shell .maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in) { display: none; } }
 .neon-typhoon { width: 56px; height: 56px; background-image: url("/anim/typhoon.webp"); background-repeat: no-repeat; background-size: 2400% 100%; background-position: 0 0; filter: drop-shadow(0 0 8px var(--map-accent)) drop-shadow(0 0 14px var(--map-accent)); animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }
 @media (prefers-reduced-motion: reduce) { .neon-typhoon { animation: none; } }

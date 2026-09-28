@@ -7,10 +7,10 @@ import { DATA } from "@/lib/map/palette";
 import { useStyleEffect } from "../use-style-effect";
 
 const SOURCE = "quakes";
-type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
+type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { id: string; mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
 
 export function useQuakeLayer(map: Map | null, quakes: Quake[], enabled: boolean) {
-  const data = useMemo<QuakeCollection>(() => ({ type: "FeatureCollection", features: enabled ? quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) : [] }), [quakes, enabled]);
+  const data = useMemo<QuakeCollection>(() => ({ type: "FeatureCollection", features: enabled ? quakes.map((q) => ({ type: "Feature", properties: { id: q.id, mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) : [] }), [quakes, enabled]);
 
   useStyleEffect(map, (live) => {
     if (!live.getSource(SOURCE) && data.features.length) live.addSource(SOURCE, { type: "geojson", data });

@@ -12,7 +12,7 @@ import { useStyleEffect } from "../use-style-effect";
 const SOURCE = "storms";
 const LAYERS = ["storm-cone", "storm-track", "storm-forecast", "storm-label"] as const;
 
-export function useStormLayer(map: Map | null, storms: Storm[], enabled: boolean) {
+export function useStormLayer(map: Map | null, storms: Storm[], enabled: boolean, onSelect?: (id: string, trigger: HTMLElement) => void) {
   const t = useT();
   const data = useMemo<StormCollection>(() => enabled ? stormsToGeoJSON(storms) : { type: "FeatureCollection", features: [] }, [storms, enabled]);
 
@@ -33,10 +33,15 @@ export function useStormLayer(map: Map | null, storms: Storm[], enabled: boolean
     const markers = storms.map((storm) => {
       const element = document.createElement("div");
       element.className = "neon-typhoon";
-      element.setAttribute("role", "img");
+      element.setAttribute("role", "button");
+      element.tabIndex = 0;
       element.setAttribute("aria-label", t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name }));
+      element.addEventListener("click", (event) => { event.stopPropagation(); onSelect?.(storm.id, element); });
+      element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") { event.preventDefault(); onSelect?.(storm.id, element); }
+      });
       return new Marker({ element, anchor: "center" }).setLngLat([storm.position.lon, storm.position.lat]).addTo(map);
     });
     return () => markers.forEach((marker) => marker.remove());
-  }, [map, storms, enabled, t]);
+  }, [map, storms, enabled, t, onSelect]);
 }

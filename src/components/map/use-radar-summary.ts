@@ -3,20 +3,11 @@
 import { useEffect, useState } from "react";
 import type { RadarFrame } from "@/lib/radar/types";
 import { classifyPixel, globalPixel, kmPerPixel, summarizeRadar, type RadarSample, type RadarSummary } from "@/lib/radar/summary";
+import { loadTile } from "./radar-tile";
 
 const Z = 6;
 const RADIUS_KM = 100;
 const STEP = 2; // sample every 2nd pixel (~5 km) — plenty for "where is the rain"
-
-function loadTile(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous"; // RainViewer tiles send Access-Control-Allow-Origin: *
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
-}
 
 /**
  * Reads the newest radar frame's pixels around a place (same z6 tiles the map already
