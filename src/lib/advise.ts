@@ -1,4 +1,6 @@
 import { TZDate } from "@date-fns/tz";
+import { pm25Level } from "./air";
+import { describeCondition } from "./condition";
 import type { WeatherHour, WeatherSnapshot } from "./weather/types";
 
 export interface Advice {
@@ -45,6 +47,9 @@ export function advise(snapshot: WeatherSnapshot, air: { pm25?: number } = {}, n
     result.push(params ? { id, severity, params } : { id, severity });
   };
 
+  const conditionGroup = describeCondition(snapshot.conditionType).group;
+  const rainingNow = conditionGroup === "rain" || conditionGroup === "storm";
+  if (rainingNow) add("raining-now", "tip");
   if (next6.some((hour) => (hour.rainChance ?? 0) >= 40)) add("umbrella", "tip");
   if (next6.some((hour) => (hour.thunderChance ?? 0) >= 50)) add("storm", "warn");
 
@@ -65,7 +70,8 @@ export function advise(snapshot: WeatherSnapshot, air: { pm25?: number } = {}, n
     add("sticky", "tip");
   }
 
-  const rainStart = next24.find((hour) => (hour.rainChance ?? 0) >= 50 && hour.startTime);
+  const rainStart = rainingNow ? undefined : next24.find((hour) =>
+    (hour.rainChance ?? 0) >= 50 && hour.startTime && Date.parse(hour.startTime) > nowMs);
 
   const commuteRain = next24.find((hour) => {
     if (!hour.startTime || (hour.rainChance ?? 0) < 40) return false;
@@ -99,7 +105,7 @@ export function advise(snapshot: WeatherSnapshot, air: { pm25?: number } = {}, n
   }
 
   if (air.pm25 !== undefined && air.pm25 > 25) {
-    const band = air.pm25 > 75 ? "very-unhealthy" : air.pm25 > 37.5 ? "unhealthy" : "sensitive";
+    const band = pm25Level(air.pm25);
     add("pm25", air.pm25 > 37.5 ? "warn" : "tip", { band });
   }
 

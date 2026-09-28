@@ -9,6 +9,7 @@ export const advice: Record<string, string> = {
   "พรุ่งนี้อากาศเย็นลง เตรียมเสื้อคลุม": "Tomorrow will be cooler. Bring a light jacket",
   "อากาศร้อนชื้น ดื่มน้ำและพักเป็นระยะ": "It is hot and humid. Drink water and take breaks",
   "ฝนน่าจะเริ่มตกราว {hour} น.": "Rain may start around {hour}",
+  "ตอนนี้ฝนกำลังตก พกร่มถ้าต้องออกไปข้างนอก": "It is raining now. Take an umbrella if you go out",
   "ระวังฝนช่วงเดินทาง ราว {hour} น.": "Watch for rain on your commute around {hour}",
   "วันนี้ตากผ้าได้": "Good weather for drying laundry today",
   "ไม่ควรตากผ้า อาจมีฝนหรืออากาศชื้น": "Avoid hanging laundry outside. Rain or humidity is possible",

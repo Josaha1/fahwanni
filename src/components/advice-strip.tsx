@@ -12,7 +12,7 @@ export function AdviceStrip({ snapshot, air }: { snapshot: WeatherSnapshot; air?
   const warning = (item: typeof items[number]) => (
     <p key={item.id} className={`advice-warning ${["storm", "flood"].includes(item.id) ||
       (item.id === "heat" && ["danger", "extreme"].includes(String(item.params?.band))) ||
-      (item.id === "pm25" && ["unhealthy", "very-unhealthy"].includes(String(item.params?.band)))
+      (item.id === "pm25" && ["starting-to-affect", "affects-health"].includes(String(item.params?.band)))
       ? "advice-warning-danger" : "advice-warning-soft"}`}>
       {adviceText(item, t)}
     </p>

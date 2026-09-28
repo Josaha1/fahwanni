@@ -16,10 +16,10 @@ describe("weather words", () => {
   });
 
   it.each([
-    ["good", "ดี", "Good"], ["moderate", "ปานกลาง", "Moderate"],
-    ["sensitive", "เริ่มมีผลต่อสุขภาพ", "Unhealthy for sensitive groups"],
-    ["unhealthy", "มีผลต่อสุขภาพ", "Unhealthy"],
-    ["very-unhealthy", "มีผลต่อสุขภาพมาก", "Very unhealthy"],
+    ["very-good", "ดีมาก", "Very good"], ["good", "ดี", "Good"],
+    ["moderate", "ปานกลาง", "Moderate"],
+    ["starting-to-affect", "เริ่มมีผลกระทบต่อสุขภาพ", "Starting to affect health"],
+    ["affects-health", "มีผลกระทบต่อสุขภาพ", "Affects health"],
   ] as const)("labels PM2.5 level %s", (level, thai, english) => {
     expect(pm25LevelWord(level, th)).toBe(thai);
     expect(pm25LevelWord(level, en)).toBe(english);

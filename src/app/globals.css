@@ -30,16 +30,16 @@
   --heat-warning-ink: #884000;
   --heat-danger: #FFE0DF;
   --heat-danger-ink: #912C32;
+  --pm25-very-good: #DDF3F5;
+  --pm25-very-good-ink: #14566A;
   --pm25-good: #E3F5E9;
   --pm25-good-ink: #165B35;
   --pm25-moderate: #FFF3C6;
   --pm25-moderate-ink: #665000;
-  --pm25-sensitive: #FFE6CF;
-  --pm25-sensitive-ink: #884000;
-  --pm25-unhealthy: #FFE0DF;
-  --pm25-unhealthy-ink: #912C32;
-  --pm25-very-unhealthy: #EFE1F6;
-  --pm25-very-unhealthy-ink: #643079;
+  --pm25-starting-to-affect: #FFE6CF;
+  --pm25-starting-to-affect-ink: #884000;
+  --pm25-affects-health: #FFE0DF;
+  --pm25-affects-health-ink: #912C32;
   --radius-card: 22px;
   --shadow-card: 0 10px 22px -16px rgba(45,58,90,.35);
 }
@@ -71,16 +71,16 @@
   --heat-warning-ink: #FFE5CF;
   --heat-danger: #642E34;
   --heat-danger-ink: #FFE0DF;
+  --pm25-very-good: #244D5B;
+  --pm25-very-good-ink: #DDF6FF;
   --pm25-good: #254C3A;
   --pm25-good-ink: #D8F8E3;
   --pm25-moderate: #564920;
   --pm25-moderate-ink: #FFF0B3;
-  --pm25-sensitive: #613D27;
-  --pm25-sensitive-ink: #FFE5CF;
-  --pm25-unhealthy: #642E34;
-  --pm25-unhealthy-ink: #FFE0DF;
-  --pm25-very-unhealthy: #4A3158;
-  --pm25-very-unhealthy-ink: #F5E4FF;
+  --pm25-starting-to-affect: #613D27;
+  --pm25-starting-to-affect-ink: #FFE5CF;
+  --pm25-affects-health: #642E34;
+  --pm25-affects-health-ink: #FFE0DF;
 }
 
 [data-theme="night"] {
@@ -153,11 +153,11 @@ h1, h2 { font-family: var(--font-mitr), sans-serif; font-weight: 600; line-heigh
   box-shadow: var(--shadow-card);
 }
 
+.pm25-very-good { background: var(--pm25-very-good); color: var(--pm25-very-good-ink); }
 .pm25-good { background: var(--pm25-good); color: var(--pm25-good-ink); }
 .pm25-moderate { background: var(--pm25-moderate); color: var(--pm25-moderate-ink); }
-.pm25-sensitive { background: var(--pm25-sensitive); color: var(--pm25-sensitive-ink); }
-.pm25-unhealthy { background: var(--pm25-unhealthy); color: var(--pm25-unhealthy-ink); }
-.pm25-very-unhealthy { background: var(--pm25-very-unhealthy); color: var(--pm25-very-unhealthy-ink); }
+.pm25-starting-to-affect { background: var(--pm25-starting-to-affect); color: var(--pm25-starting-to-affect-ink); }
+.pm25-affects-health { background: var(--pm25-affects-health); color: var(--pm25-affects-health-ink); }
 .heat-chip-caution { background: var(--heat-caution); color: var(--heat-caution-ink); }
 .heat-chip-warning { background: var(--heat-warning); color: var(--heat-warning-ink); }
 .heat-chip-danger, .heat-chip-extreme { background: var(--heat-danger); color: var(--heat-danger-ink); }

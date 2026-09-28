@@ -13,6 +13,7 @@ export function adviceText(advice: Advice, t: T): string {
     case "wind": return t("ลมกระโชกแรง ระวังสิ่งของปลิว");
     case "cooler": return t("พรุ่งนี้อากาศเย็นลง เตรียมเสื้อคลุม");
     case "sticky": return t("อากาศร้อนชื้น ดื่มน้ำและพักเป็นระยะ");
+    case "raining-now": return t("ตอนนี้ฝนกำลังตก พกร่มถ้าต้องออกไปข้างนอก");
     case "rain-start": return t("ฝนน่าจะเริ่มตกราว {hour} น.", { hour: advice.params?.hour ?? "" });
     case "commute-rain": return t("ระวังฝนช่วงเดินทาง ราว {hour} น.", { hour: advice.params?.hour ?? "" });
     case "laundry-ok": return t("วันนี้ตากผ้าได้");
@@ -21,8 +22,8 @@ export function adviceText(advice: Advice, t: T): string {
     case "exercise-no": return t("เลี่ยงออกกำลังกายกลางแจ้ง อากาศอาจไม่ปลอดภัย");
     case "flood": return t("ฝนตกหนักต่อเนื่อง ระวังน้ำท่วมขัง");
     case "pm25":
-      if (advice.params?.band === "very-unhealthy") return t("ฝุ่น PM2.5 สูงมาก เลี่ยงกิจกรรมกลางแจ้งและใส่หน้ากาก N95");
-      if (advice.params?.band === "unhealthy") return t("ฝุ่น PM2.5 เกินมาตรฐาน ใส่หน้ากาก N95");
+      if (advice.params?.band === "affects-health") return t("ฝุ่น PM2.5 สูงมาก เลี่ยงกิจกรรมกลางแจ้งและใส่หน้ากาก N95");
+      if (advice.params?.band === "starting-to-affect") return t("ฝุ่น PM2.5 เกินมาตรฐาน ใส่หน้ากาก N95");
       return t("ฝุ่น PM2.5 เริ่มสูง คนกลุ่มเสี่ยงควรลดกิจกรรมกลางแจ้ง");
     default: return "";
   }

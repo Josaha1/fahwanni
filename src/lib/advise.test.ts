@@ -65,8 +65,8 @@ describe("advise", () => {
     }
     for (const [value, severity, band] of [
       [15, undefined, undefined], [15.1, undefined, undefined], [25, undefined, undefined],
-      [25.1, "tip", "sensitive"], [37.5, "tip", "sensitive"],
-      [37.6, "warn", "unhealthy"], [75, "warn", "unhealthy"], [75.1, "warn", "very-unhealthy"],
+      [25.1, "tip", "moderate"], [37.5, "tip", "moderate"],
+      [37.6, "warn", "starting-to-affect"], [75, "warn", "starting-to-affect"], [75.1, "warn", "affects-health"],
     ] as const) {
       expect(advise(base(), { pm25: value }, now).find((item) => item.id === "pm25"))
         .toEqual(severity ? { id: "pm25", severity, params: { band } } : undefined);
@@ -81,8 +81,8 @@ describe("advise", () => {
     expect(advise({ ...snapshot, timeZone: "UTC" }, {}, now)).toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "09:00" } });
     expect(advise({ ...base(), hours: [hour("13", 50), hour("09", 50)] }, {}, now))
       .toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "16:00" } });
-    const distinct = advise({ ...base(), hours: [hour("08", 50), hour("09", 40)] }, {}, now);
-    expect(distinct).toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "15:00" } });
+    const distinct = advise({ ...base(), hours: [hour("10", 50), hour("09", 40)] }, {}, now);
+    expect(distinct).toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "17:00" } });
     expect(distinct).toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "16:00" } });
   });
 
@@ -101,6 +101,20 @@ describe("advise", () => {
       expect(advise({ ...base(), hours: [currentHour] }, {}, "2026-09-28T11:17:00Z"))
         .toContainEqual({ id: "umbrella", severity: "tip" });
     }
+  });
+
+  it.each(["LIGHT_RAIN", "LIGHT_THUNDERSTORM_RAIN"])("shows raining now for current %s and skips rain-start", (conditionType) => {
+    const advice = advise({ ...base(), conditionType, timeZone: "UTC", hours: [hour("12", 65), hour("13", 70)] }, {}, "2026-09-28T12:17:00Z");
+    expect(advice).toContainEqual({ id: "raining-now", severity: "tip" });
+    expect(advice.map((item) => item.id)).not.toContain("rain-start");
+  });
+
+  it("only announces rain-start for an hour starting after now", () => {
+    const current = hour("12", 65);
+    const snapshot = { ...base(), conditionType: "CLOUDY", timeZone: "UTC", hours: [current] };
+    expect(advise(snapshot, {}, "2026-09-28T12:17:00Z").map((item) => item.id)).not.toContain("rain-start");
+    expect(advise({ ...snapshot, hours: [current, hour("13", 70)] }, {}, "2026-09-28T12:17:00Z"))
+      .toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "13:00" } });
   });
 
   it("uses the snapshot timezone for laundry daytime", () => {

@@ -15,11 +15,11 @@ export function heatBandWord(band: HeatBand, t: T): string {
 
 export function pm25LevelWord(level: Pm25Level, t: T): string {
   switch (level) {
+    case "very-good": return t("ดีมาก");
     case "good": return t("ดี");
     case "moderate": return t("ปานกลาง");
-    case "sensitive": return t("เริ่มมีผลต่อสุขภาพ");
-    case "unhealthy": return t("มีผลต่อสุขภาพ");
-    case "very-unhealthy": return t("มีผลต่อสุขภาพมาก");
+    case "starting-to-affect": return t("เริ่มมีผลกระทบต่อสุขภาพ");
+    case "affects-health": return t("มีผลกระทบต่อสุขภาพ");
   }
 }
 

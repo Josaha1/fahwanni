@@ -26,6 +26,7 @@ export const common: Record<string, string> = {
   "พระอาทิตย์ตก": "Sunset",
   "ดัชนี UV": "UV index",
   "ค่าฝุ่น PM2.5": "PM2.5",
+  "AQI (ไทย) {aqi} · {category}": "AQI (Thailand) {aqi} · {category}",
   "คำแนะนำวันนี้": "Today's advice",
   "ดูคำแนะนำทั้งหมด ({n})": "See all advice ({n})",
   "ประกาศเตือนภัย": "Weather alerts",

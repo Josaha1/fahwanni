@@ -15,6 +15,11 @@ export function AqiCard({ air }: { air?: AirSnapshot }) {
         <span className="text-sm">µg/m³</span>
       </div>
       <p className="mt-1 font-semibold">{pm25LevelWord(level, t)}</p>
+      {air.localAqi?.code === "tha_pcd" && (
+        <p className="mt-1 text-sm">{t("AQI (ไทย) {aqi} · {category}", {
+          aqi: air.localAqi.aqi, category: air.localAqi.category ?? "—",
+        })}</p>
+      )}
     </section>
   );
 }

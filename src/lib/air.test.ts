@@ -51,14 +51,15 @@ describe("air response normalization", () => {
 
 describe("Thai PM2.5 levels", () => {
   it.each([
-    [15, "good"],
-    [15.1, "moderate"],
-    [25, "moderate"],
-    [25.1, "sensitive"],
-    [37.5, "sensitive"],
-    [37.6, "unhealthy"],
-    [75, "unhealthy"],
-    [75.1, "very-unhealthy"],
+    [0, "very-good"],
+    [15, "very-good"],
+    [15.1, "good"],
+    [25, "good"],
+    [25.1, "moderate"],
+    [37.5, "moderate"],
+    [37.6, "starting-to-affect"],
+    [75, "starting-to-affect"],
+    [75.1, "affects-health"],
   ] as const)("maps %s µg/m³ to %s", (value, level) => {
     expect(pm25Level(value)).toBe(level);
   });
