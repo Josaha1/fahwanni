@@ -3,6 +3,7 @@
 import { useRef, useState, useSyncExternalStore } from "react";
 import { InstallButton } from "@/components/install-button";
 import { LanguageSwitch } from "@/components/language-switch";
+import { useFarmerMode } from "@/hooks/use-farmer-mode";
 import { useT } from "@/i18n/client";
 
 type ThemeChoice = "auto" | "light" | "dark";
@@ -19,6 +20,7 @@ export function SettingsSheet() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [theme, setTheme] = useState<ThemeChoice>("auto");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [farmer, setFarmer] = useFarmerMode();
   // Read from <html data-text> (set before paint by the layout script) so hydration picks it up.
   const largeText = useSyncExternalStore(subscribeTextSize, () => document.documentElement.dataset.text === "large", () => false);
 
@@ -84,6 +86,13 @@ export function SettingsSheet() {
           <div className="flex flex-wrap gap-2">
             <button type="button" className="chip" aria-pressed={!largeText} onClick={() => largeText && toggleLargeText()}>{t("ปกติ")}</button>
             <button type="button" className="chip" aria-pressed={largeText} onClick={() => !largeText && toggleLargeText()}>{t("ตัวใหญ่")}</button>
+          </div>
+        </div>
+        <div>
+          <p className="mb-2 font-semibold">{t("โหมดเกษตรกร")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="chip" aria-pressed={!farmer} onClick={() => setFarmer(false)}>{t("ปิด")}</button>
+            <button type="button" className="chip" aria-pressed={farmer} onClick={() => setFarmer(true)}>{t("เปิด")}</button>
           </div>
         </div>
         <div>
