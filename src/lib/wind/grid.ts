@@ -18,6 +18,13 @@ export interface WindGrid {
   precip?: number[][];
   /** Probability of precipitation, %, same shape as precip. */
   prob?: number[][];
+  /** Hourly temperature timestamps. Optional: CDN copies from before this field existed may
+   *  still be served for up to 3 h after a deploy. */
+  tempHours?: string[];
+  /** Temperature in °C, rounded to integers; per hour then per grid point (same order as u/v). */
+  temp?: number[][];
+  /** Apparent temperature in °C, same shape as temp. */
+  feels?: number[][];
   source: "open-meteo";
   attribution: { text: string; url: string };
 }
@@ -55,6 +62,8 @@ const locationSchema = z.object({
     wind_direction_10m: z.array(z.number().nullable()),
     precipitation: z.array(z.number().nullable()).optional(),
     precipitation_probability: z.array(z.number().nullable()).optional(),
+    temperature_2m: z.array(z.number().nullable()).optional(),
+    apparent_temperature: z.array(z.number().nullable()).optional(),
   }),
 });
 
@@ -91,6 +100,21 @@ export function buildGrid(locations: unknown[], stepHours = 3): WindGrid | null 
       for (let h = 0; h < n; h++) {
         grid.precip[h].push(round(hourly.precipitation![h] ?? 0));
         grid.prob[h].push(Math.round(hourly.precipitation_probability![h] ?? 0));
+      }
+    }
+  }
+  const tempCount = Math.min(24, parsed.data[0].hourly.time.length);
+  if (parsed.data.every(({ hourly }) => hourly.temperature_2m && hourly.apparent_temperature &&
+    hourly.temperature_2m.length >= tempCount && hourly.apparent_temperature.length >= tempCount &&
+    hourly.temperature_2m.slice(0, tempCount).every((value) => value !== null) &&
+    hourly.apparent_temperature.slice(0, tempCount).every((value) => value !== null))) {
+    grid.tempHours = parsed.data[0].hourly.time.slice(0, tempCount).map(toIso);
+    grid.temp = grid.tempHours.map(() => []);
+    grid.feels = grid.tempHours.map(() => []);
+    for (const { hourly } of parsed.data) {
+      for (let hour = 0; hour < tempCount; hour++) {
+        grid.temp[hour].push(Math.round(hourly.temperature_2m![hour]!));
+        grid.feels[hour].push(Math.round(hourly.apparent_temperature![hour]!));
       }
     }
   }

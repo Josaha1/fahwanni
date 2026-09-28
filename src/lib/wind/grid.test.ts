@@ -129,3 +129,55 @@ describe("buildGrid precipitation", () => {
     expect(JSON.stringify(grid).length).toBeLessThan(60_000);
   });
 });
+
+describe("buildGrid temperature", () => {
+  const withTemp = (temperature: number, apparent: number, hours = 24) => ({
+    hourly: {
+      ...location(10, 180, hours).hourly,
+      temperature_2m: Array(hours).fill(temperature),
+      apparent_temperature: Array(hours).fill(apparent),
+    },
+  });
+
+  it("keeps every hourly temperature and apparent temperature in grid order", () => {
+    const grid = buildGrid(gridPoints().map((_, index) => withTemp(index === 0 ? 28.6 : 24.4, index === 0 ? 32.5 : 26.3)))!;
+    expect(grid.tempHours).toHaveLength(24);
+    expect(grid.tempHours![1]).toBe("2026-09-28T01:00:00.000Z");
+    expect(grid.temp).toHaveLength(24);
+    expect(grid.temp![23]).toHaveLength(361);
+    expect(grid.temp![0].slice(0, 2)).toEqual([29, 24]);
+    expect(grid.feels![23].slice(0, 2)).toEqual([33, 26]);
+    expect(JSON.stringify(grid)).not.toContain("NaN");
+  });
+
+  it("omits all temperature fields when any location has a missing or null value", () => {
+    const locations = gridPoints().map(() => withTemp(29, 33));
+    locations[0].hourly.apparent_temperature[1] = null as unknown as number;
+    const grid = buildGrid(locations)!;
+    expect(grid.tempHours).toBeUndefined();
+    expect(grid.temp).toBeUndefined();
+    expect(grid.feels).toBeUndefined();
+
+    const missing = gridPoints().map(() => withTemp(29, 33));
+    delete (missing[0].hourly as Partial<typeof missing[0]["hourly"]>).temperature_2m;
+    expect(buildGrid(missing)!.temp).toBeUndefined();
+  });
+
+  it("accepts the old response shape without temperature fields", () => {
+    const old = gridPoints().map(() => location(10, 180));
+    const grid = buildGrid(old)!;
+    expect(grid.u[0]).toHaveLength(361);
+    expect(grid.tempHours).toBeUndefined();
+    expect(grid.temp).toBeUndefined();
+    expect(grid.feels).toBeUndefined();
+  });
+
+  it("parses all fixture locations with temperature data", () => {
+    for (const first of fixture) {
+      const grid = buildGrid(gridPoints().map(() => first), 1)!;
+      expect(grid.tempHours).toHaveLength(first.hourly.time.length);
+      expect(grid.temp![0][0]).toBe(Math.round(first.hourly.temperature_2m[0]));
+      expect(grid.feels![0][0]).toBe(Math.round(first.hourly.apparent_temperature[0]));
+    }
+  });
+});

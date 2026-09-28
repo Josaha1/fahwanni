@@ -60,3 +60,17 @@ it("serves the last good grid when Open-Meteo returns 429 after expiry", async (
   expect(await response.json()).toEqual(grid);
   expect(fetchWindGrid).toHaveBeenCalledTimes(2);
 });
+
+it("serves temperature data and still accepts a cached grid without it", async () => {
+  const withTemp = { ...grid, tempHours: grid.hours, temp: [[29]], feels: [[33]] };
+  vi.mocked(fetchWindGrid).mockResolvedValueOnce(withTemp);
+  const GET = await loadRoute();
+  expect(await (await GET()).json()).toEqual(withTemp);
+
+  vi.resetModules();
+  vi.mocked(fetchWindGrid).mockResolvedValueOnce(grid);
+  const legacyGET = await loadRoute();
+  const legacy = await (await legacyGET()).json();
+  expect(legacy).toEqual(grid);
+  expect(legacy).not.toHaveProperty("temp");
+});
