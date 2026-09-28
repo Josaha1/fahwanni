@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AttributionControl, Map, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { version } from "maplibre-gl/package.json";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Marker } from "maplibre-gl";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
@@ -18,31 +16,14 @@ import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
-import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
+import { HILLSHADE_LAYER, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
-import { neonStyle } from "@/lib/map/neon-style";
 import { HOLOGRAM_URL, hologramCoordinates, hologramOpacity } from "@/lib/map/hologram";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
+import { MapProvider, useMapContext } from "./map-provider";
 import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
 
-setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
-
-const DARK_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
-let neonStylePromise: Promise<StyleSpecification> | undefined;
-
-function loadNeonStyle(): Promise<StyleSpecification> {
-  if (!neonStylePromise) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    neonStylePromise = fetch(DARK_STYLE_URL, { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("map style unavailable"); return response.json() as Promise<StyleSpecification>; })
-      .then(neonStyle)
-      .catch((error) => { neonStylePromise = undefined; throw error; })
-      .finally(() => window.clearTimeout(timeout));
-  }
-  return neonStylePromise;
-}
 const radarId = (index: number) => `rain-radar-${index}`;
 const modelId = (index: number) => `model-rain-${index}`;
 type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
@@ -70,11 +51,19 @@ function rememberControlOpen(key: string, open: boolean): void {
 
 export function MapView() {
   const { place } = useLastPlace();
+  const container = useRef<HTMLDivElement>(null);
+  return (
+    <MapProvider containerRef={container} initialCenter={[place.lon, place.lat]}>
+      <MapScreen container={container} />
+    </MapProvider>
+  );
+}
+
+function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> }) {
+  const { place } = useLastPlace();
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
-  const container = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [attempt, setAttempt] = useState(0);
+  const { map: mapInstance, status, retry } = useMapContext();
   const [manifest, setManifest] = useState<RadarManifest | null>(null);
   const [radarOn, setRadarOn] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -114,8 +103,6 @@ export function MapView() {
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
-  const [mapStyle, setMapStyle] = useState<StyleSpecification | string | null>(null);
-  const [mapInstance, setMapInstance] = useState<Map | null>(null);
   const [windOn, setWindOn] = useState(true);
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
@@ -209,14 +196,6 @@ export function MapView() {
   }, [terrainOn, mapInstance, reducedMotion]);
 
   useEffect(() => {
-    let active = true;
-    loadNeonStyle().catch(() => DARK_STYLE_URL).then((style) => {
-      if (active) setMapStyle(style);
-    });
-    return () => { active = false; };
-  }, []);
-
-  useEffect(() => {
     if (!mapInstance || !stormsOn) return;
     const markers = storms.map((storm) => {
       const element = document.createElement("div");
@@ -228,36 +207,37 @@ export function MapView() {
     return () => markers.forEach((marker) => marker.remove());
   }, [mapInstance, storms, stormsOn, t]);
 
+  // The pin lives as long as the map; a new place moves it and the camera instead of rebuilding.
+  const marker = useRef<Marker | null>(null);
   useEffect(() => {
-    if (!container.current || !mapStyle) return;
-    let map: Map | undefined;
-    let marker: Marker | undefined;
-    let waitingForStyle = true;
-    try {
-      map = new Map({
-        container: container.current,
-        style: mapStyle,
-        center: [place.lon, place.lat],
-        zoom: 6,
-        minZoom: 3,
-        maxZoom: 12,
-        maxPitch: 60,
-        maxBounds: [[80, -5], [130, 30]],
-        pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
-        fadeDuration: 100,
-        attributionControl: false,
-      });
-      const liveMap = map;
-      liveMap.addControl(new NavigationControl(), "top-right");
-      liveMap.addControl(new AttributionControl({ compact: true, customAttribution: [
-        '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
-        '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
-        TERRAIN_ATTRIBUTION,
-        '<a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer">Earthquakes: USGS</a>',
-      ] }), "bottom-right");
-      const attribution = liveMap.getContainer().querySelector(".maplibregl-ctrl-attrib");
-      attribution?.classList.remove("maplibregl-compact-show");
-      attribution?.removeAttribute("open");
+    if (!mapInstance) return;
+    const pin = document.createElement("div");
+    pin.setAttribute("role", "img");
+    pin.className = "neon-pin";
+    pin.innerHTML = '<span class="neon-pulse"></span><span class="neon-sweep"></span><span class="neon-core"></span>';
+    const created = new Marker({ element: pin }).setLngLat(mapInstance.getCenter()).addTo(mapInstance);
+    marker.current = created;
+    return () => { created.remove(); marker.current = null; };
+  }, [mapInstance]);
+
+  useEffect(() => {
+    marker.current?.getElement().setAttribute("aria-label", placeName);
+  }, [mapInstance, placeName]);
+
+  useEffect(() => {
+    if (!mapInstance || !marker.current) return;
+    const target: [number, number] = [place.lon, place.lat];
+    const current = marker.current.getLngLat();
+    marker.current.setLngLat(target);
+    if (current.lng === target[0] && current.lat === target[1]) return;
+    if (reducedMotion) mapInstance.jumpTo({ center: target });
+    else mapInstance.easeTo({ center: target, duration: 800 });
+  }, [mapInstance, place.lon, place.lat, reducedMotion]);
+
+  useEffect(() => {
+    if (!mapInstance) return;
+    const liveMap = mapInstance;
+    {
       const removeRadar = () => {
         for (let index = 0; index < 6; index++) {
           const id = radarId(index);
@@ -396,29 +376,15 @@ export function MapView() {
       liveMap.on("idle", applyModel);
       liveMap.on("style.load", applyHologram);
       liveMap.on("idle", onHologramIdle);
-      const pin = document.createElement("div");
-      pin.setAttribute("role", "img");
-      pin.setAttribute("aria-label", placeName);
-      pin.className = "neon-pin";
-      pin.innerHTML = '<span class="neon-pulse"></span><span class="neon-sweep"></span><span class="neon-core"></span>';
-      marker = new Marker({ element: pin }).setLngLat([place.lon, place.lat]).addTo(liveMap);
-
-      liveMap.once("load", () => setMapInstance(liveMap));
-      liveMap.on("idle", () => {
-        if (waitingForStyle) {
-          waitingForStyle = false;
-          setStatus("ready");
-        }
-      });
-      liveMap.on("error", () => {
-        if (waitingForStyle) {
-          waitingForStyle = false;
-          setStatus("error");
-        }
-      });
+      // The map fired "load" before this effect ran: apply now, and repaint so "idle" follows.
+      applyQuakes();
+      applyStorms();
+      applyTerrain();
+      addRadar();
+      applyModel();
+      liveMap.triggerRepaint();
 
       return () => {
-        setMapInstance(null);
         syncRadar.current = () => {};
         syncModel.current = () => {};
         syncTerrain.current = () => {};
@@ -426,31 +392,26 @@ export function MapView() {
         syncQuakes.current = () => {};
         liveMap.off("style.load", applyQuakes);
         liveMap.off("idle", applyQuakes);
-        removeQuakes();
         liveMap.off("style.load", applyStorms);
         liveMap.off("idle", applyStorms);
-        removeStorms();
         liveMap.off("style.load", applyTerrain);
         liveMap.off("idle", applyTerrain);
         liveMap.off("style.load", addRadar);
         liveMap.off("idle", addRadar);
-        removeRadar();
         liveMap.off("style.load", applyModel);
         liveMap.off("idle", applyModel);
-        removeModel();
         liveMap.off("style.load", applyHologram);
         liveMap.off("idle", onHologramIdle);
-        removeHologram();
-        marker?.remove();
-        liveMap.remove();
+        try {
+          removeQuakes();
+          removeStorms();
+          removeRadar();
+          removeModel();
+          removeHologram();
+        } catch { /* The provider may already have removed the map (retry/unmount). */ }
       };
-    } catch {
-      marker?.remove();
-      map?.remove();
-      const timer = window.setTimeout(() => setStatus("error"), 0);
-      return () => window.clearTimeout(timer);
     }
-  }, [place.lon, place.lat, placeName, attempt, mapStyle, device.saveData]);
+  }, [mapInstance, device.saveData]);
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
@@ -583,7 +544,7 @@ export function MapView() {
             {status === "error" ? (
               <div className="text-center">
                 <p>{t("โหลดแผนที่ไม่สำเร็จ")}</p>
-                <button type="button" className="install-action mt-3" onClick={() => { setStatus("loading"); setAttempt((value) => value + 1); }}>{t("ลองใหม่")}</button>
+                <button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button>
               </div>
             ) : t("กำลังโหลดแผนที่…")}
           </div>
