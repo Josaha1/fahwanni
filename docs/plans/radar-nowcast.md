@@ -1,6 +1,6 @@
 # Plan: future radar — nowcast (+10–60 min) and model rain (+1–12 h)
 
-Status: DRAFT (awaiting user approval)
+Status: APPROVED (2026-09-28)
 
 ## Context
 User: "ทำเรดาให้พยากรณ์ไปเป็นเวลาข้างหน้าด้วยได้มั้ย" → chose A + B. RainViewer's free API has
