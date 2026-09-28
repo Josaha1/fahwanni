@@ -157,6 +157,8 @@ body:has(.neon-map) { background: #070b1a; background-image: none; }
 .neon-play { background: var(--neon-pin); color: var(--neon-bg); }
 .neon-range { accent-color: var(--neon-pin); }
 .neon-muted { color: var(--neon-muted); }
+.neon-typhoon { width: 56px; height: 56px; background-image: url("/anim/typhoon.webp"); background-repeat: no-repeat; background-size: 2400% 100%; background-position: 0 0; filter: drop-shadow(0 0 8px var(--neon-accent)) drop-shadow(0 0 14px var(--neon-accent)); animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }
+@media (prefers-reduced-motion: reduce) { .neon-typhoon { animation: none; } }
 .neon-pin { position: relative; width: 40px; height: 40px; pointer-events: none; }
 .neon-core { position: absolute; inset: 15px; border-radius: 50%; background: var(--neon-pin); box-shadow: 0 0 8px 3px var(--neon-pin), 0 0 20px 7px rgb(56 232 255 / .35); }
 .neon-sweep { position: absolute; inset: 4px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 255deg, rgb(56 232 255 / .05) 290deg, var(--neon-pin) 360deg); mask: radial-gradient(circle, transparent 57%, #000 61%); animation: neon-sweep 4s linear infinite; }

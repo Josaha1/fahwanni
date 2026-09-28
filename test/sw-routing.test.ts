@@ -45,6 +45,11 @@ describe("service worker routing", () => {
     expect(route("/anim/readme.txt")).toBeNull();
   });
 
+  it("caches the typhoon sprite", () => {
+    expect(route("/anim/typhoon.webp")).toBe("static");
+    expect(scope.fahWarmable!("/anim/typhoon.webp", origin)).toBe(true);
+  });
+
   it("caches weather icons only from maps.gstatic.com", () => {
     expect(route("https://maps.gstatic.com/weather/v1/rain.svg")).toBe("static");
     expect(route("https://maps.gstatic.com/weather/v1/rain_dark.svg")).toBe("static");

@@ -24,7 +24,7 @@ import { neonStyle } from "@/lib/map/neon-style";
 import { HOLOGRAM_URL, hologramCoordinates, hologramOpacity } from "@/lib/map/hologram";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
-import { bearingWord } from "@/lib/storms/present";
+import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
 
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
@@ -47,7 +47,7 @@ const radarId = (index: number) => `rain-radar-${index}`;
 const modelId = (index: number) => `model-rain-${index}`;
 type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
 const STORM_SOURCE = "storms";
-const STORM_LAYERS = ["storm-cone", "storm-track-glow", "storm-track", "storm-forecast-glow", "storm-forecast", "storm-center", "storm-label"] as const;
+const STORM_LAYERS = ["storm-cone", "storm-track-glow", "storm-track", "storm-forecast-glow", "storm-forecast", "storm-label"] as const;
 const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
 const QUAKE_SOURCE = "quakes";
 const HOLOGRAM_SOURCE = "hologram";
@@ -217,6 +217,18 @@ export function MapView() {
   }, []);
 
   useEffect(() => {
+    if (!mapInstance || !stormsOn) return;
+    const markers = storms.map((storm) => {
+      const element = document.createElement("div");
+      element.className = "neon-typhoon";
+      element.setAttribute("role", "img");
+      element.setAttribute("aria-label", t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name }));
+      return new Marker({ element, anchor: "center" }).setLngLat([storm.position.lon, storm.position.lat]).addTo(mapInstance);
+    });
+    return () => markers.forEach((marker) => marker.remove());
+  }, [mapInstance, storms, stormsOn, t]);
+
+  useEffect(() => {
     if (!container.current || !mapStyle) return;
     let map: Map | undefined;
     let marker: Marker | undefined;
@@ -340,8 +352,7 @@ export function MapView() {
         liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": NEON.accent, "line-width": 2.5 } });
         liveMap.addLayer({ id: "storm-forecast-glow", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 9, "line-blur": 6, "line-opacity": 0.6 } });
         liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 2, "line-dasharray": [2, 2] } });
-        liveMap.addLayer({ id: "storm-center", type: "circle", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], paint: { "circle-radius": 8, "circle-color": NEON.accent, "circle-stroke-width": 3, "circle-stroke-color": NEON.label } });
-        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": NEON.accent, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
+        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 2.7], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": NEON.accent, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
       };
       const removeStorms = () => {
         applied = null;
@@ -443,7 +454,7 @@ export function MapView() {
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
-      style={{ "--neon-bg": NEON.bg, "--neon-label": NEON.label, "--neon-muted": NEON.labelMuted, "--neon-pin": NEON.pin } as React.CSSProperties}>
+      style={{ "--neon-bg": NEON.bg, "--neon-label": NEON.label, "--neon-muted": NEON.labelMuted, "--neon-pin": NEON.pin, "--neon-accent": NEON.accent } as React.CSSProperties}>
       <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
       </header>
