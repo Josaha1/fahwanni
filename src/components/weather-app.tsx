@@ -17,6 +17,7 @@ import { SeasonChip } from "@/components/season-chip";
 import { YesterdayLine } from "@/components/yesterday-line";
 import { FavouritesOverview } from "@/components/favourites-overview";
 import { BestTimeCard } from "@/components/best-time-card";
+import { SpeakButton } from "@/components/speak-button";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
@@ -103,7 +104,10 @@ export function WeatherApp() {
         <SeasonChip lat={place.lat} lon={place.lon} />
         {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>
-          <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
+          <div className="flex flex-wrap gap-2">
+            <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
+            <SpeakButton snapshot={weather.snapshot} air={weather.air} place={place} />
+          </div>
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
           <BestTimeCard snapshot={weather.snapshot} air={weather.air} />
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />

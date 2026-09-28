@@ -22,6 +22,9 @@ const themeScript = `(() => {
   const selected = resolveTheme(choice, new Date().getHours(), window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.themeChoice = selected.choice;
   document.documentElement.dataset.theme = selected.theme;
+  try {
+    if (localStorage.getItem("fah-large-text") === "1") document.documentElement.dataset.text = "large";
+  } catch { /* Storage may be unavailable in private browsing. */ }
 })();`;
 
 const anuphan = Anuphan({

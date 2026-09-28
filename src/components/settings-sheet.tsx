@@ -1,11 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { InstallButton } from "@/components/install-button";
 import { LanguageSwitch } from "@/components/language-switch";
 import { useT } from "@/i18n/client";
 
 type ThemeChoice = "auto" | "light" | "dark";
+
+function subscribeTextSize(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-text"] });
+  return () => observer.disconnect();
+}
 
 export function SettingsSheet() {
   const t = useT();
@@ -13,6 +19,15 @@ export function SettingsSheet() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [theme, setTheme] = useState<ThemeChoice>("auto");
   const [confirmClear, setConfirmClear] = useState(false);
+  // Read from <html data-text> (set before paint by the layout script) so hydration picks it up.
+  const largeText = useSyncExternalStore(subscribeTextSize, () => document.documentElement.dataset.text === "large", () => false);
+
+  function toggleLargeText() {
+    const next = !largeText;
+    if (next) document.documentElement.dataset.text = "large";
+    else delete document.documentElement.dataset.text;
+    try { localStorage.setItem("fah-large-text", next ? "1" : "0"); } catch { /* optional */ }
+  }
 
   function open() {
     const choice = document.documentElement.dataset.themeChoice;
@@ -64,6 +79,13 @@ export function SettingsSheet() {
             {([["auto", "อัตโนมัติ"], ["light", "สว่าง"], ["dark", "มืด"]] as const).map(([choice, label]) => <button key={choice} type="button" className="chip" aria-pressed={theme === choice} onClick={() => chooseTheme(choice)}>{t(label)}</button>)}
           </div>
         </fieldset>
+        <div>
+          <p className="mb-2 font-semibold">{t("ขนาดตัวอักษร")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="chip" aria-pressed={!largeText} onClick={() => largeText && toggleLargeText()}>{t("ปกติ")}</button>
+            <button type="button" className="chip" aria-pressed={largeText} onClick={() => !largeText && toggleLargeText()}>{t("ตัวใหญ่")}</button>
+          </div>
+        </div>
         <div>
           <p className="mb-2 font-semibold">{t("ภาษา")}</p>
           <LanguageSwitch />
