@@ -63,7 +63,11 @@ Status: APPROVED (2026-09-28)
 9. Wire style into `map-view.tsx` (always neon; theme observer no longer swaps basemap). Verify:
    typecheck + Chrome z3–7, check coast-glow tile seams (fallback: outline-only)
 10. Radar/model/wind/legend on palette. Verify: `npx vitest run` + Chrome
-11. CSS neon pin + sweep ring + glass panels + storm/quake glow. Verify: Chrome incl. reduced-motion
+11. CSS neon pin + sweep ring + glass panels + storm/quake glow **+ collapsible map controls**
+    (user request 2026-09-28: "ช่วยทำให้สามารถย่อตรง control ในแผนที่ให้ด้วย" — layer chips and the
+    radar/timeline panel collapse to a small toggle; attribution stays compact/collapsed on small
+    screens; state remembered on the device). Done before task 10 at the user's request.
+    Verify: Chrome incl. reduced-motion and a phone-width window
 12. **SPIKE** hologram plate pipeline (`scripts/map/stitch-dem.mjs`, `scripts/blender/hologram-terrain.py`,
     `scripts/map/build-hologram.mjs`, `src/lib/map/hologram.ts` + test). Verify:
     `node scripts/map/build-hologram.mjs` → file ≤ 358400 bytes + visual check of the render

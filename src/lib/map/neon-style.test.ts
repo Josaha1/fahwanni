@@ -5,7 +5,7 @@ import { NEON } from "./neon-palette";
 import { neonStyle } from "./neon-style";
 
 const base = ofmDark as StyleSpecification;
-const glowIds = ["boundary_country_z0-4", "boundary_country_z5-", "waterway", "highway_motorway_inner"];
+const glowIds = ["boundary_country_z0-4", "boundary_country_z5-", "highway_motorway_inner"];
 
 function layer(style: StyleSpecification, id: string): LayerSpecification {
   const found = style.layers.find((item) => item.id === id);
@@ -25,11 +25,11 @@ describe("neonStyle", () => {
     expect(result.sprite).toEqual(base.sprite);
     expect(result.name).toEqual(base.name);
     expect(result.version).toBe(base.version);
-    expect(result.layers).toHaveLength(base.layers.length + 4 + 2);
+    expect(result.layers).toHaveLength(base.layers.length + 3 + 2);
     expect(new Set(result.layers.map((item) => item.id)).size).toBe(result.layers.length);
   });
 
-  it("puts four matching glow layers immediately below their crisp lines", () => {
+  it("puts three matching glow layers immediately below their crisp lines", () => {
     const result = neonStyle(base);
     for (const id of glowIds) {
       const index = result.layers.findIndex((item) => item.id === id);
@@ -52,6 +52,19 @@ describe("neonStyle", () => {
     expect(border.paint?.["line-width"]).toEqual(["interpolate", ["linear"], ["zoom"], 3, 4, 22, 6]);
   });
 
+  it("excludes maritime boundaries from crisp and glow country lines", () => {
+    const result = neonStyle(base);
+    for (const id of ["boundary_country_z0-4", "boundary_country_z5-"]) {
+      const original = layer(base, id);
+      const crisp = layer(result, id);
+      const glow = layer(result, `neon-glow-${id}`);
+      if (original.type !== "line" || crisp.type !== "line" || glow.type !== "line") throw new Error(`Expected country lines: ${id}`);
+      const expectedFilter = ["all", original.filter, ["!=", ["get", "maritime"], 1]];
+      expect(crisp.filter).toEqual(expectedFilter);
+      expect(glow.filter).toEqual(expectedFilter);
+    }
+  });
+
   it("adds coast lines immediately after water and recolors the base", () => {
     const result = neonStyle(base);
     const waterIndex = result.layers.findIndex((item) => item.id === "water");
@@ -65,7 +78,8 @@ describe("neonStyle", () => {
     }
     expect(layer(result, "background")).toMatchObject({ paint: { "background-color": NEON.bg } });
     expect(layer(result, "water")).toMatchObject({ paint: { "fill-color": NEON.water } });
-    expect(layer(result, "waterway")).toMatchObject({ paint: { "line-color": NEON.river } });
+    expect(layer(result, "waterway")).toMatchObject({ paint: { "line-color": "#1f5d9c", "line-opacity": 0.7 } });
+    expect(result.layers.some((item) => item.id === "neon-glow-waterway")).toBe(false);
     expect(layer(result, "building")).toMatchObject({ paint: { "fill-color": NEON.roadDim, "fill-opacity": 0.6 } });
     expect(layer(result, "highway_motorway_inner")).toMatchObject({ paint: { "line-color": NEON.river, "line-opacity": 0.9 } });
     expect(layer(result, "boundary_state")).toMatchObject({ paint: { "line-color": NEON.labelMuted, "line-dasharray": [2, 2] } });

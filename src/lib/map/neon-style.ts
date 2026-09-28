@@ -6,7 +6,6 @@ type LineLayer = Extract<LayerSpecification, { type: "line" }>;
 const GLOW_IDS = new Set([
   "boundary_country_z0-4",
   "boundary_country_z5-",
-  "waterway",
   "highway_motorway_inner",
 ]);
 
@@ -57,14 +56,20 @@ export function neonStyle(base: StyleSpecification): StyleSpecification {
       }
     } else if (layer.type === "line") {
       let color: string | undefined;
-      if (layer.id === "waterway") color = NEON.river;
+      if (layer.id === "waterway") color = "#1f5d9c";
       else if (layer.id === "boundary_state") color = NEON.labelMuted;
       else if (layer.id.startsWith("boundary_country_")) color = NEON.border;
       else if (layer.id === "highway_motorway_inner") color = NEON.river;
       else if (layer.id === "highway_major_inner") color = NEON.road;
       else if (layer.id.startsWith("highway_") || layer.id.startsWith("road_") || layer.id.startsWith("railway") || layer.id.startsWith("aeroway-")) color = NEON.roadDim;
       if (color) layer.paint = { ...layer.paint, "line-color": color };
+      if (layer.id === "waterway") {
+        layer.paint = { ...layer.paint, "line-opacity": 0.7 };
+      }
       if (layer.id.startsWith("boundary_country_")) {
+        layer.filter = layer.filter
+          ? ["all", layer.filter, ["!=", ["get", "maritime"], 1]] as LineLayer["filter"]
+          : ["!=", ["get", "maritime"], 1];
         layer.paint = {
           ...layer.paint,
           "line-width": ["interpolate", ["linear"], ["zoom"], 3, 1, 22, 1.5],

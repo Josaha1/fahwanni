@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AttributionControl, Map, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
+import { AttributionControl, Map, Marker, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { version } from "maplibre-gl/package.json";
 import { useLastPlace } from "@/hooks/use-favourites";
@@ -19,16 +19,29 @@ import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
+import { NEON } from "@/lib/map/neon-palette";
+import { neonStyle } from "@/lib/map/neon-style";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { bearingWord } from "@/lib/storms/present";
 
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
-const styles = {
-  light: "https://tiles.openfreemap.org/styles/positron",
-  dark: "https://tiles.openfreemap.org/styles/dark",
-};
+const DARK_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
+let neonStylePromise: Promise<StyleSpecification> | undefined;
+
+function loadNeonStyle(): Promise<StyleSpecification> {
+  if (!neonStylePromise) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15_000);
+    neonStylePromise = fetch(DARK_STYLE_URL, { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("map style unavailable"); return response.json() as Promise<StyleSpecification>; })
+      .then(neonStyle)
+      .catch((error) => { neonStylePromise = undefined; throw error; })
+      .finally(() => window.clearTimeout(timeout));
+  }
+  return neonStylePromise;
+}
 const radarId = (index: number) => `rain-radar-${index}`;
 const modelId = (index: number) => `model-rain-${index}`;
 type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
@@ -39,11 +52,6 @@ const QUAKE_SOURCE = "quakes";
 type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
 const emptyQuakes: QuakeCollection = { type: "FeatureCollection", features: [] };
 const quakesToGeoJSON = (quakes: Quake[]): QuakeCollection => ({ type: "FeatureCollection", features: quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) });
-
-function currentStyle() {
-  const theme = document.documentElement.dataset.theme;
-  return theme === "dark" || theme === "night" ? styles.dark : styles.light;
-}
 
 export function MapView() {
   const { place } = useLastPlace();
@@ -89,9 +97,9 @@ export function MapView() {
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
+  const [mapStyle, setMapStyle] = useState<StyleSpecification | string | null>(null);
   const [mapInstance, setMapInstance] = useState<Map | null>(null);
   const [windOn, setWindOn] = useState(true);
-  const [dark, setDark] = useState(() => currentStyle() === styles.dark);
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
@@ -184,14 +192,22 @@ export function MapView() {
   }, [terrainOn, mapInstance, reducedMotion]);
 
   useEffect(() => {
-    if (!container.current) return;
+    let active = true;
+    loadNeonStyle().catch(() => DARK_STYLE_URL).then((style) => {
+      if (active) setMapStyle(style);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!container.current || !mapStyle) return;
     let map: Map | undefined;
     let marker: Marker | undefined;
     let waitingForStyle = true;
     try {
       map = new Map({
         container: container.current,
-        style: currentStyle(),
+        style: mapStyle,
         center: [place.lon, place.lat],
         zoom: 6,
         minZoom: 3,
@@ -284,7 +300,7 @@ export function MapView() {
         liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": red, "line-width": 2.5 } });
         liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": red, "line-width": 2, "line-dasharray": [2, 2] } });
         liveMap.addLayer({ id: "storm-center", type: "circle", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], paint: { "circle-radius": 8, "circle-color": red, "circle-stroke-width": 3, "circle-stroke-color": "#ffffff" } });
-        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": red, "text-halo-color": "#ffffff", "text-halo-width": 1.5 } });
+        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": red, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
       };
       const removeStorms = () => {
         applied = null;
@@ -346,23 +362,7 @@ export function MapView() {
         }
       });
 
-      let style = currentStyle();
-      const observer = new MutationObserver(() => {
-        const next = currentStyle();
-        if (next === style) return;
-        style = next;
-        setDark(next === styles.dark);
-        waitingForStyle = true;
-        setStatus("loading");
-        removeRadar();
-        removeModel();
-        removeStorms();
-        removeQuakes();
-        liveMap.setStyle(next);
-      });
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
       return () => {
-        observer.disconnect();
         setMapInstance(null);
         syncRadar.current = () => {};
         syncModel.current = () => {};
@@ -392,14 +392,14 @@ export function MapView() {
       const timer = window.setTimeout(() => setStatus("error"), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [place.lon, place.lat, placeName, attempt]);
+  }, [place.lon, place.lat, placeName, attempt, mapStyle]);
 
   return (
     <main className="mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden">
       <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
       </header>
-      <div className="relative min-h-0 flex-1 bg-sky">
+      <div className="relative min-h-0 flex-1" style={{ backgroundColor: NEON.bg }}>
         <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
         <div className="absolute left-3 top-3 z-10">
           <button type="button" disabled={!available} aria-pressed={available && radarOn}
@@ -433,7 +433,7 @@ export function MapView() {
           )}
         </div>
         {mapInstance && wind && windOn && status === "ready" && (
-          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark={dark} />
+          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark />
         )}
         {available && radarOn && (
           <div className="absolute inset-x-3 bottom-[4.5rem] z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
@@ -499,7 +499,7 @@ export function MapView() {
           </div>
         )}
         {status !== "ready" && (
-          <div className="absolute inset-0 z-10 grid place-items-center bg-background/90" role="status">
+          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: NEON.bg, color: NEON.label }} role="status">
             {status === "error" ? (
               <div className="text-center">
                 <p>{t("โหลดแผนที่ไม่สำเร็จ")}</p>
