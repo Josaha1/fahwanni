@@ -1,0 +1,38 @@
+{
+  "name": "ลูกรัก (Lookrak)",
+  "short_name": "ลูกรัก",
+  "description": "ลูกรัก — แอปช่วยดูแลและเตือนเวลาให้ยา",
+  "lang": "th",
+  "start_url": "/app/today",
+  "display": "standalone",
+  "theme_color": "#F7EFE4",
+  "background_color": "#F7EFE4",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "วันนี้ในลูกรัก",
+      "url": "/app/today"
+    },
+    {
+      "name": "เพิ่มยาในลูกรัก",
+      "url": "/app/today?add=1"
+    }
+  ]
+}
