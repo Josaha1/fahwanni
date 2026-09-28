@@ -1,6 +1,6 @@
 # Plan: finish future radar (model-only) + neon hologram map (Blender) + Vercel deploy
 
-Status: APPROVED (2026-09-28)
+Status: DONE (2026-09-28) — live at https://fahwanni.vercel.app (verify-deploy 11/11 × 200, sin1)
 
 ## Context
 - Phase 1 + 2 of ฟ้าวันนี้ are done and pushed (github.com/Josaha1/fahwanni, main).
