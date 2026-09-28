@@ -42,6 +42,11 @@ describe("renderPrecipImage", () => {
     expect(Math.abs(firstWetRow / 512 - linear)).toBeGreaterThan(Math.abs(firstWetRow / 512 - merc));
   });
 
+  it("hides rain the model gives under 30 % probability", () => {
+    const img = renderPrecipImage(grid(() => 8, () => 20), 0, 8, 8)!;
+    expect(img.data.every((v) => v === 0)).toBe(true);
+  });
+
   it("returns null without rain data or for a missing hour", () => {
     const g = grid(() => 1);
     expect(renderPrecipImage({ ...g, precip: undefined }, 0)).toBeNull();
@@ -50,7 +55,7 @@ describe("renderPrecipImage", () => {
 });
 
 describe("bins and alpha", () => {
-  it.each([[0.05, 0], [0.5, 1], [2, 2], [6, 3], [15, 4]])("%s mm → level %s", (mm, level) => expect(precipLevel(mm)).toBe(level));
+  it.each([[0.05, 0], [0.29, 0], [0.5, 1], [2, 2], [6, 3], [15, 4]])("%s mm → level %s", (mm, level) => expect(precipLevel(mm)).toBe(level));
   it("clamps probability alpha to 25–80 %", () => {
     expect(precipAlpha(5)).toBe(Math.round(0.25 * 255));
     expect(precipAlpha(100)).toBe(Math.round(0.8 * 255));

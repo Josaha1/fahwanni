@@ -21,9 +21,16 @@ export function mercYToLat(y: number): number {
   return ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI;
 }
 
-/** Same bins as the radar legend: <0.1 dry, then light / moderate / heavy / very heavy. */
+/**
+ * Radar-legend bins. Model drizzle below 0.3 mm/h is dropped: at 1° resolution it otherwise
+ * paints most of the map pale blue and reads as "rain everywhere".
+ */
+export const MIN_MM = 0.3;
+/** Below this probability the model's rain is not drawn at all. */
+export const MIN_PROB = 30;
+
 export function precipLevel(mm: number): number {
-  if (mm < 0.1) return 0;
+  if (mm < MIN_MM) return 0;
   if (mm < 1) return 1;
   if (mm < 4) return 2;
   if (mm < 10) return 3;
@@ -58,10 +65,11 @@ export function renderPrecipImage(grid: WindGrid, hourIndex: number, width = 256
       const at = (arr: number[]) =>
         arr[y0 * nx + x0] * (1 - fx) * (1 - fy) + arr[y0 * nx + x1] * fx * (1 - fy) +
         arr[y1 * nx + x0] * (1 - fx) * fy + arr[y1 * nx + x1] * fx * fy;
-      const level = precipLevel(at(mm));
+      const prob = at(pr);
+      const level = prob < MIN_PROB ? 0 : precipLevel(at(mm));
       if (level === 0) continue;
       const [r, g, b] = levelToRgba(level);
-      data.set([r, g, b, precipAlpha(at(pr))], (row * width + col) * 4);
+      data.set([r, g, b, precipAlpha(prob)], (row * width + col) * 4);
     }
   }
   return {

@@ -7,9 +7,11 @@ import { version } from "maplibre-gl/package.json";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
-import { lastRadarFrames, minutesSinceNewest, nextFrameIndex } from "@/lib/radar/frames";
+import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
 import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
+import { renderPrecipImage, type PrecipImage } from "@/lib/precip/render";
+import { buildTimeline, defaultIndex, nextPlayIndex, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
@@ -26,6 +28,8 @@ const styles = {
   dark: "https://tiles.openfreemap.org/styles/dark",
 };
 const radarId = (index: number) => `rain-radar-${index}`;
+const modelId = (index: number) => `model-rain-${index}`;
+type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
 const STORM_SOURCE = "storms";
 const STORM_LAYERS = ["storm-cone", "storm-track", "storm-forecast", "storm-center", "storm-label"] as const;
 const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
@@ -52,13 +56,36 @@ export function MapView() {
   const [playing, setPlaying] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
+  const [wind, setWind] = useState<WindGrid | null>(null);
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
-  const available = frames.length > 0;
-  const activeFrame = frames[Math.min(activeIndex, frames.length - 1)];
+  const modelImages = useMemo(() => {
+    if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ModelRainImage | null)[];
+    const images = wind.precipHours.slice(0, 12).map((_, index) => {
+      const image = renderPrecipImage(wind, index);
+      if (!image) return null;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+      const pixels = context.createImageData(image.width, image.height);
+      pixels.data.set(image.data);
+      context.putImageData(pixels, 0, 0);
+      return { url: canvas.toDataURL(), coordinates: image.coordinates };
+    });
+    return images.every(Boolean) ? images : [];
+  }, [wind]);
+  const modelHours = useMemo(() => modelImages.length ? wind?.precipHours?.slice(0, modelImages.length) ?? [] : [], [modelImages, wind]);
+  const stops = useMemo(() => buildTimeline(frames.map((frame) => frame.time), modelHours, nowIso), [frames, modelHours, nowIso]);
+  const available = stops.length > 0;
+  const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
+  const shares = segmentShares(stops);
+  const activeTimeLabel = activeStop?.kind === "model"
+    ? t("+{n} ชม. · {time} น.", { n: Math.max(0, Math.ceil((Date.parse(activeStop.time) - Date.parse(nowIso)) / 3_600_000)), time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) })
+    : activeStop ? t("{time} น.", { time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) }) : "";
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const [mapInstance, setMapInstance] = useState<Map | null>(null);
-  const [wind, setWind] = useState<WindGrid | null>(null);
   const [windOn, setWindOn] = useState(true);
   const [dark, setDark] = useState(() => currentStyle() === styles.dark);
   const [device] = useState(() => {
@@ -81,12 +108,18 @@ export function MapView() {
   const syncTerrain = useRef<() => void>(() => {});
   const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
   const syncRadar = useRef<() => void>(() => {});
+  const modelState = useRef({ images: [] as (ModelRainImage | null)[], activeIndex: -1, enabled: true });
+  const syncModel = useRef<() => void>(() => {});
 
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/radar", { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("radar unavailable"); return response.json() as Promise<RadarManifest>; })
-      .then((data) => { setManifest(data); setActiveIndex(Math.max(0, lastRadarFrames(data.frames).length - 1)); })
+      .then((data) => {
+        setManifest(data);
+        const radarTimes = lastRadarFrames(data.provider === "rainviewer" ? data.frames : []).map((frame) => frame.time);
+        setActiveIndex(defaultIndex(buildTimeline(radarTimes, [], new Date().toISOString())));
+      })
       .catch(() => { if (!controller.signal.aborted) setManifest(null); });
     fetch("/api/wind", { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
@@ -117,16 +150,18 @@ export function MapView() {
   }, []);
 
   useEffect(() => {
-    if (!playing || reducedMotion || !available || !radarOn) return;
-    const timer = window.setTimeout(() => setActiveIndex((index) => nextFrameIndex(index, frames.length)),
-      activeIndex === frames.length - 1 ? 1500 : 600);
+    if (!playing || reducedMotion || !frames.length || !radarOn) return;
+    const timer = window.setTimeout(() => setActiveIndex((index) => nextPlayIndex(stops, index)),
+      activeStop?.kind === "radar" && activeStop.index === frames.length - 1 ? 1500 : 600);
     return () => window.clearTimeout(timer);
-  }, [playing, reducedMotion, available, radarOn, frames.length, activeIndex]);
+  }, [playing, reducedMotion, radarOn, frames.length, activeIndex, activeStop, stops]);
 
   useEffect(() => {
-    radarState.current = { frames, maxZoom: manifest?.maxZoom ?? 7, activeIndex, enabled: radarOn && available };
+    radarState.current = { frames, maxZoom: manifest?.maxZoom ?? 7, activeIndex: activeStop?.kind === "radar" ? activeStop.index : -1, enabled: radarOn };
     syncRadar.current();
-  }, [frames, manifest, activeIndex, radarOn, available]);
+    modelState.current = { images: modelImages, activeIndex: activeStop?.kind === "model" ? activeStop.index : -1, enabled: radarOn };
+    syncModel.current();
+  }, [frames, manifest, activeStop, radarOn, modelImages]);
 
   useEffect(() => {
     stormState.current = stormsOn ? stormsToGeoJSON(storms) : emptyStorms;
@@ -191,6 +226,27 @@ export function MapView() {
         });
       };
       syncRadar.current = addRadar;
+      const removeModel = () => {
+        for (let index = 0; index < 12; index++) {
+          const id = modelId(index);
+          if (liveMap.getLayer(id)) liveMap.removeLayer(id);
+          if (liveMap.getSource(id)) liveMap.removeSource(id);
+        }
+      };
+      const applyModel = () => {
+        if (!liveMap.isStyleLoaded()) return;
+        const { images, activeIndex, enabled } = modelState.current;
+        const firstSymbol = liveMap.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+        images.forEach((image, index) => {
+          if (!image) return;
+          const id = modelId(index);
+          if (!liveMap.getSource(id)) liveMap.addSource(id, { type: "image", url: image.url, coordinates: image.coordinates });
+          if (!liveMap.getLayer(id)) liveMap.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 } } }, firstSymbol);
+          const opacity = enabled && index === activeIndex ? 1 : 0;
+          if (liveMap.getPaintProperty(id, "raster-opacity") !== opacity) liveMap.setPaintProperty(id, "raster-opacity", opacity);
+        });
+      };
+      syncModel.current = applyModel;
       const applyTerrain = () => {
         if (!liveMap.isStyleLoaded()) return;
         // Also runs on "idle" (see applyStorms); skip when already in the wanted state.
@@ -264,6 +320,8 @@ export function MapView() {
       liveMap.on("idle", applyTerrain);
       liveMap.on("style.load", addRadar);
       liveMap.on("idle", addRadar);
+      liveMap.on("style.load", applyModel);
+      liveMap.on("idle", applyModel);
       const pin = document.createElement("div");
       pin.setAttribute("role", "img");
       pin.setAttribute("aria-label", placeName);
@@ -293,6 +351,7 @@ export function MapView() {
         waitingForStyle = true;
         setStatus("loading");
         removeRadar();
+        removeModel();
         removeStorms();
         removeQuakes();
         liveMap.setStyle(next);
@@ -302,6 +361,7 @@ export function MapView() {
         observer.disconnect();
         setMapInstance(null);
         syncRadar.current = () => {};
+        syncModel.current = () => {};
         syncTerrain.current = () => {};
         syncStorms.current = () => {};
         syncQuakes.current = () => {};
@@ -316,6 +376,9 @@ export function MapView() {
         liveMap.off("style.load", addRadar);
         liveMap.off("idle", addRadar);
         removeRadar();
+        liveMap.off("style.load", applyModel);
+        liveMap.off("idle", applyModel);
+        removeModel();
         marker?.remove();
         liveMap.remove();
       };
@@ -371,18 +434,25 @@ export function MapView() {
         {available && radarOn && (
           <div className="absolute inset-x-3 bottom-[4.5rem] z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setPlaying((value) => !value)} disabled={reducedMotion}
+              <button type="button" onClick={() => setPlaying((value) => !value)} disabled={reducedMotion || !frames.length}
                 aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")}
                 className="grid size-9 shrink-0 place-items-center rounded-full bg-given text-white disabled:opacity-50">
                 {playing ? "Ⅱ" : "▶"}
               </button>
-              <input type="range" min={0} max={frames.length - 1} value={Math.min(activeIndex, frames.length - 1)}
-                onChange={(event) => { setPlaying(false); setActiveIndex(Number(event.target.value)); }}
-                aria-label={t("เวลาเรดาร์")}
-                aria-valuetext={activeFrame ? t("{time} น.", { time: formatTime(activeFrame.time, "Asia/Bangkok", t.locale) }) : ""}
-                className="min-w-0 flex-1 accent-given" />
-              <span className="w-16 shrink-0 text-right text-sm font-semibold">
-                {activeFrame && t("{time} น.", { time: formatTime(activeFrame.time, "Asia/Bangkok", t.locale) })}
+              <div className="min-w-0 flex-1">
+                <input type="range" min={0} max={stops.length - 1} value={Math.min(activeIndex, stops.length - 1)}
+                  onChange={(event) => { setPlaying(false); setActiveIndex(Number(event.target.value)); }}
+                  aria-label={t("เวลาฝน")}
+                  aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
+                  className="w-full accent-given" />
+                <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
+                  <span className="bg-given" style={{ width: `${shares.radar * 100}%` }} />
+                  <span className="bg-violet-400/60" style={{ width: `${shares.model * 100}%` }} />
+                </div>
+              </div>
+              <span className="w-32 shrink-0 text-right text-sm font-semibold">
+                {activeTimeLabel}
+                {activeStop && <small className="block text-xs font-normal text-muted">{t(stopLabelKey(activeStop))}</small>}
               </span>
             </div>
             {radarSummary && (
@@ -396,7 +466,7 @@ export function MapView() {
             )}
             <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
               <span>{t("ฝนเบา → ฝนหนัก")}</span>
-              <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>
+              {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
             </div>
             <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: "linear-gradient(to right, #9cdbff, #3383db, #ffe164, #e8473f)" }} aria-hidden="true" />
           </div>
