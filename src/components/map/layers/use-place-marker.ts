@@ -14,8 +14,8 @@ export function usePlaceMarker(map: Map | null, lon: number, lat: number, label:
     const pin = document.createElement("div");
     pin.setAttribute("role", "img");
     pin.setAttribute("aria-label", currentPlace.label);
-    pin.className = "neon-pin";
-    pin.innerHTML = '<span class="neon-pulse"></span><span class="neon-sweep"></span><span class="neon-core"></span>';
+    pin.className = "map-pin";
+    pin.innerHTML = '<span class="map-pin-pulse"></span><span class="map-pin-core"></span>';
     // Start at the camera centre so the move effect below recentres if the place changed while loading.
     const created = new Marker({ element: pin }).setLngLat(skipInitialMove ? [currentPlace.lon, currentPlace.lat] : map.getCenter()).addTo(map);
     marker.current = created;

@@ -51,7 +51,6 @@ export const weather: Record<string, string> = {
   "กรมอุตุฯ": "Meteorological Department",
   "ปริมาณฝน": "Rainfall",
   "{time} อุณหภูมิ {temp} {condition} โอกาสฝน {rain}%": "{time}, {temp}, {condition}, {rain}% chance of rain",
-  "พระอาทิตย์และ UV": "Sun and UV",
   "เจ็บป่วยฉุกเฉิน": "Medical emergency",
   "ประกาศพายุและคำเตือน": "Storms and official warnings",
   "พายุไต้ฝุ่น": "Typhoon",

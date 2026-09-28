@@ -28,8 +28,6 @@ PALETTE = {
     "snow": "#DCEBFA",
     "ice": "#D6ECFF",
     "wind": "#BFD8F2",
-    "neon_magenta": "#FF3DF2",
-    "neon_cyan": "#38E8FF",
     "typhoon_eye": "#FFFFFF",
     "typhoon_arm": "#E5484D",
     "typhoon_tip": "#F3B4B6",
@@ -260,29 +258,6 @@ def scene(group, night):
     return build
 
 
-def scene_typhoon(frames, arms=3, beads=16):
-    """Neon cyclone for the map's storm marker: glowing spiral arms around a bright eye.
-
-    The spiral lies in the XZ plane (facing the -Y camera). Arms are 120° apart, so turning the
-    whole group by one arm gap per loop makes a seamless repeat.
-    """
-    group = bpy.data.objects.new("typhoon", None)
-    bpy.context.scene.collection.objects.link(group)
-    eye = sphere(0.16, (0, 0, 0), clay("neon_cyan", 0.2, emission=4.0))
-    eye.parent = group
-    for a in range(arms):
-        for i in range(beads):
-            t = i / (beads - 1)
-            # Logarithmic-ish spiral: radius grows and beads shrink/fade outwards.
-            angle = a * 2 * math.pi / arms + t * 2.6
-            radius = 0.22 + 0.95 * t
-            size = 0.11 * (1 - 0.65 * t)
-            bead = sphere(size, (0, 0, 0), clay("neon_magenta", 0.25, emission=3.2 * (1 - 0.6 * t)))
-            bead.parent = group
-            bead.location = (radius * math.cos(angle), 0, radius * math.sin(angle))
-    keyframes(group, frames, lambda t: {"rotation_euler": (0, -2 * math.pi / arms * t, 0)})
-
-
 def scene_typhoon_calm(frames, arms=3, beads=16):
     """The map cyclone's spiral in matte clay, with arms softening towards their tips."""
     group = bpy.data.objects.new("typhoon-calm", None)
@@ -306,7 +281,6 @@ def scene_typhoon_calm(frames, arms=3, beads=16):
 
 GROUPS = ["clear", "cloud", "rain", "storm", "snow", "wind", "hail"]
 SCENES = {f"{g}-{v}": scene(g, v == "night") for g in GROUPS for v in ("day", "night")}
-SCENES["typhoon"] = scene_typhoon
 SCENES["typhoon-calm"] = scene_typhoon_calm
 
 # Fixed framing so every frame (and every icon) shares the same camera.

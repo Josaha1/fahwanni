@@ -26,8 +26,9 @@ const paths = [
   "/api/storms",
   "/api/quakes",
   "/sw.js",
-  "/map/hologram-terrain.webp",
-  "/anim/typhoon.webp",
+  "/map/relief-light.webp",
+  "/map/relief-dark.webp",
+  "/anim/typhoon-calm.webp",
   `/vendor/maplibre/${version}/maplibre-gl-worker.mjs`,
 ];
 

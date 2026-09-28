@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { Map } from "maplibre-gl";
 import { reliefCoordinates, reliefOpacity, reliefUrl } from "@/lib/map/relief";
 import { useMapContext } from "../map-provider";
@@ -11,17 +10,10 @@ const LAYER = "relief";
 
 export function usePlateLayer(map: Map | null, saveData: boolean) {
   const { theme } = useMapContext();
-  const [idleMap, setIdleMap] = useState<Map | null>(null);
-  useEffect(() => {
-    if (!map || saveData) return;
-    const onIdle = () => setIdleMap(map);
-    map.once("idle", onIdle);
-    map.triggerRepaint();
-    return () => { map.off("idle", onIdle); };
-  }, [map, saveData]);
 
+  // The provider supplies the map after load, so relief can be added before raster tiles settle.
   useStyleEffect(map, (live) => {
-    if (saveData || idleMap !== live) return;
+    if (saveData) return;
     const layers = live.getStyle()?.layers;
     if (!layers) return;
     const waterIndex = layers.findIndex((layer) => layer.id === "water" && layer.type === "fill");
@@ -34,5 +26,5 @@ export function usePlateLayer(map: Map | null, saveData: boolean) {
   }, (live) => {
     if (live.getLayer(LAYER)) live.removeLayer(LAYER);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
-  }, [idleMap, saveData, theme]);
+  }, [saveData, theme]);
 }

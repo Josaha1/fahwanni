@@ -182,15 +182,13 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-probe-marker { width: 18px; height: 18px; border: 3px solid var(--map-accent); border-radius: 50%; background: rgb(255 255 255 / .8); pointer-events: none; }
 .map-point-card { box-shadow: none; }
 @media (max-width: 1023px) { .map-shell .maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in) { display: none; } }
-.neon-typhoon { width: 56px; height: 56px; background-image: url("/anim/typhoon-calm.webp"); background-repeat: no-repeat; background-size: 2400% 100%; background-position: 0 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / .35)); animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }
-@media (prefers-reduced-motion: reduce) { .neon-typhoon { animation: none; } }
-.neon-pin { position: relative; width: 40px; height: 40px; pointer-events: none; }
-.neon-core { position: absolute; inset: 15px; border-radius: 50%; background: var(--map-accent); box-shadow: 0 0 0 3px rgb(255 255 255 / .9); }
-.neon-sweep { position: absolute; inset: 4px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 255deg, rgb(56 232 255 / .05) 290deg, var(--map-accent) 360deg); mask: radial-gradient(circle, transparent 57%, #000 61%); animation: neon-sweep 4s linear infinite; }
-.neon-pulse { position: absolute; inset: 11px; border: 1px solid var(--map-accent); border-radius: 50%; animation: neon-pulse 2.4s ease-out infinite; }
-@keyframes neon-sweep { to { transform: rotate(360deg); } }
-@keyframes neon-pulse { to { transform: scale(2.5); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .neon-sweep, .neon-pulse { animation: none; } }
+.map-typhoon { width: 56px; height: 56px; background-image: url("/anim/typhoon-calm.webp"); background-repeat: no-repeat; background-size: 2400% 100%; background-position: 0 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / .35)); animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }
+@media (prefers-reduced-motion: reduce) { .map-typhoon { animation: none; } }
+.map-pin { position: relative; width: 40px; height: 40px; pointer-events: none; }
+.map-pin-core { position: absolute; inset: 15px; border-radius: 50%; background: var(--map-accent); box-shadow: 0 0 0 3px rgb(255 255 255 / .9); }
+.map-pin-pulse { position: absolute; inset: 11px; border: 1px solid var(--map-accent); border-radius: 50%; animation: map-pin-pulse 2.4s ease-out infinite; }
+@keyframes map-pin-pulse { to { transform: scale(2.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .map-pin-pulse { animation: none; } }
 
 .app-shell {
   min-height: 100dvh;

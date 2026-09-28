@@ -1,4 +1,4 @@
-// Stitches AWS Terrarium elevation tiles into one 16-bit heightmap for the Blender hologram plate.
+// Stitches AWS Terrarium elevation tiles into one 16-bit heightmap for the Blender relief plates.
 //   node scripts/map/stitch-dem.mjs [--out .cache/map/heightmap.png]
 // Tile-aligned area z6 x48–51, y27–31 = 90–112.5°E, 0–27.06°N (Web Mercator, so the stitched
 // image can be placed on the map by its corners without reprojection).

@@ -31,9 +31,11 @@ describe("service worker routing", () => {
     expect(route("/vendor/other/file.mjs")).toBeNull();
   });
 
-  it("caches and warms the hologram terrain image", () => {
-    expect(route("/map/hologram-terrain.webp")).toBe("static");
-    expect(scope.fahWarmable!("/map/hologram-terrain.webp", origin)).toBe(true);
+  it("caches and warms both relief terrain images", () => {
+    expect(route("/map/relief-light.webp")).toBe("static");
+    expect(scope.fahWarmable!("/map/relief-light.webp", origin)).toBe(true);
+    expect(route("/map/relief-dark.webp")).toBe("static");
+    expect(scope.fahWarmable!("/map/relief-dark.webp", origin)).toBe(true);
     expect(route("/map/other.webp")).toBeNull();
   });
 
@@ -46,8 +48,8 @@ describe("service worker routing", () => {
   });
 
   it("caches the typhoon sprite", () => {
-    expect(route("/anim/typhoon.webp")).toBe("static");
-    expect(scope.fahWarmable!("/anim/typhoon.webp", origin)).toBe(true);
+    expect(route("/anim/typhoon-calm.webp")).toBe("static");
+    expect(scope.fahWarmable!("/anim/typhoon-calm.webp", origin)).toBe(true);
   });
 
   it("caches weather icons only from maps.gstatic.com", () => {

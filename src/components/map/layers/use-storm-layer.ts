@@ -32,7 +32,7 @@ export function useStormLayer(map: Map | null, storms: Storm[], enabled: boolean
     if (!map || !enabled) return;
     const markers = storms.map((storm) => {
       const element = document.createElement("div");
-      element.className = "neon-typhoon";
+      element.className = "map-typhoon";
       element.setAttribute("role", "button");
       element.tabIndex = 0;
       element.setAttribute("aria-label", t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name }));

@@ -1,6 +1,6 @@
 # Plan: map page redesign — easy, modern, complete (light/dark, no neon)
 
-Status: APPROVED (2026-09-28)
+Status: DONE (2026-09-28) — tasks 1–18
 
 ## Context
 User (2026-09-28): "ต้องการให้ออกแบบหน้าแผนที่ใหม่ ให้ดูง่าย ล้ำสมัย สวยงาม ฟังก์ชั่นครบ".
