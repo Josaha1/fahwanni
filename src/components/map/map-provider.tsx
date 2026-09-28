@@ -4,27 +4,26 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { AttributionControl, Map, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { version } from "maplibre-gl/package.json";
-import { neonStyle } from "@/lib/map/neon-style";
+import { baseStyle, STYLE_URLS, type BaseTheme } from "@/lib/map/base-style";
 import { TERRAIN_ATTRIBUTION } from "@/lib/map/terrain";
 
 // Turbopack does not emit the worker/shared modules v6 loads via import.meta.url; they are copied
 // to public/vendor by scripts/copy-maplibre-worker.mjs.
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
-const DARK_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
-let neonStylePromise: Promise<StyleSpecification> | undefined;
+const stylePromises: Partial<Record<BaseTheme, Promise<StyleSpecification>>> = {};
 
-function loadNeonStyle(): Promise<StyleSpecification> {
-  if (!neonStylePromise) {
+function loadBaseStyle(theme: BaseTheme): Promise<StyleSpecification> {
+  if (!stylePromises[theme]) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15_000);
-    neonStylePromise = fetch(DARK_STYLE_URL, { signal: controller.signal })
+    stylePromises[theme] = fetch(STYLE_URLS[theme], { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("map style unavailable"); return response.json() as Promise<StyleSpecification>; })
-      .then(neonStyle)
-      .catch((error) => { neonStylePromise = undefined; throw error; })
+      .then((json) => baseStyle(theme, json))
+      .catch((error) => { delete stylePromises[theme]; throw error; })
       .finally(() => window.clearTimeout(timeout));
   }
-  return neonStylePromise;
+  return stylePromises[theme];
 }
 
 export type MapStatus = "loading" | "ready" | "error";
@@ -60,7 +59,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
 
   useEffect(() => {
     let active = true;
-    loadNeonStyle().catch(() => DARK_STYLE_URL).then((loaded) => { if (active) setStyle(loaded); });
+    loadBaseStyle("dark").catch(() => STYLE_URLS.dark).then((loaded) => { if (active) setStyle(loaded); });
     return () => { active = false; };
   }, []);
 

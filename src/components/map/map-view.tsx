@@ -12,7 +12,8 @@ import { levelToRgba } from "@/lib/nowcast/intensity";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
-import { NEON } from "@/lib/map/neon-style";
+import { BASE } from "@/lib/map/base-style";
+import { DATA } from "@/lib/map/palette";
 import { legendGradient } from "@/lib/map/legend";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
@@ -134,11 +135,11 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
-      style={{ "--neon-bg": NEON.bg, "--neon-label": NEON.label, "--neon-muted": NEON.labelMuted, "--neon-pin": NEON.pin, "--neon-accent": NEON.accent } as React.CSSProperties}>
+      style={{ "--neon-bg": BASE.dark.bg, "--neon-label": BASE.dark.label, "--neon-muted": BASE.dark.labelMuted, "--neon-pin": DATA.pin, "--neon-accent": DATA.storm } as React.CSSProperties}>
       <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
       </header>
-      <div className="relative min-h-0 flex-1" style={{ backgroundColor: NEON.bg }}>
+      <div className="relative min-h-0 flex-1" style={{ backgroundColor: BASE.dark.bg }}>
         <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
         <div className="absolute left-3 top-3 z-10" style={{ maxWidth: "calc(100% - 5rem)" }}>
           <button type="button" aria-expanded={layersOpen} aria-controls="map-layer-chips"
@@ -206,8 +207,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
                     aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
                     className="neon-range w-full" />
                   <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
-                    <span style={{ width: `${shares.radar * 100}%`, backgroundColor: NEON.pin }} />
-                    <span style={{ width: `${shares.model * 100}%`, backgroundColor: NEON.accent, opacity: 0.6 }} />
+                    <span style={{ width: `${shares.radar * 100}%`, backgroundColor: DATA.pin }} />
+                    <span style={{ width: `${shares.model * 100}%`, backgroundColor: DATA.storm, opacity: 0.6 }} />
                   </div>
                 </div>
                 <span className="w-32 shrink-0 text-right text-sm font-semibold max-[400px]:w-24">
@@ -223,7 +224,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
                     : radarSummary.nearestKm !== undefined
                       ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
                       : t("ไม่มีฝนในรัศมี 100 กม.")}
-                  {radarSummary.heavyNearby && <span className="ml-1" style={{ color: NEON.accent }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
+                  {radarSummary.heavyNearby && <span className="ml-1" style={{ color: DATA.storm }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
                 </p>
               )}
               {series.length > 0 && (
@@ -259,7 +260,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
           </div>
         )}
         {status !== "ready" && (
-          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: NEON.bg, color: NEON.label }} role="status">
+          <div className="absolute inset-0 z-10 grid place-items-center" style={{ backgroundColor: BASE.dark.bg, color: BASE.dark.label }} role="status">
             {status === "error" ? (
               <div className="text-center">
                 <p>{t("โหลดแผนที่ไม่สำเร็จ")}</p>
