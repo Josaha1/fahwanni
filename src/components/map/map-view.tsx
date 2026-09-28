@@ -21,6 +21,7 @@ import type { Quake } from "@/lib/quakes/usgs";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
 import { neonStyle } from "@/lib/map/neon-style";
+import { HOLOGRAM_URL, hologramCoordinates, hologramOpacity } from "@/lib/map/hologram";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { bearingWord } from "@/lib/storms/present";
@@ -49,6 +50,8 @@ const STORM_SOURCE = "storms";
 const STORM_LAYERS = ["storm-cone", "storm-track-glow", "storm-track", "storm-forecast-glow", "storm-forecast", "storm-center", "storm-label"] as const;
 const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
 const QUAKE_SOURCE = "quakes";
+const HOLOGRAM_SOURCE = "hologram";
+const HOLOGRAM_LAYER = "neon-hologram";
 type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
 const emptyQuakes: QuakeCollection = { type: "FeatureCollection", features: [] };
 const quakesToGeoJSON = (quakes: Quake[]): QuakeCollection => ({ type: "FeatureCollection", features: quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) });
@@ -250,6 +253,26 @@ export function MapView() {
           if (liveMap.getSource(id)) liveMap.removeSource(id);
         }
       };
+      let firstIdle = false;
+      const applyHologram = () => {
+        if (device.saveData || !firstIdle || !liveMap.isStyleLoaded()) return;
+        const layers = liveMap.getStyle().layers;
+        const waterIndex = layers.findIndex((layer) => layer.id === "water" && layer.type === "fill");
+        if (waterIndex < 0) return;
+        if (!liveMap.getSource(HOLOGRAM_SOURCE)) liveMap.addSource(HOLOGRAM_SOURCE, { type: "image", url: HOLOGRAM_URL, coordinates: hologramCoordinates() });
+        if (!liveMap.getLayer(HOLOGRAM_LAYER)) liveMap.addLayer({
+          id: HOLOGRAM_LAYER, type: "raster", source: HOLOGRAM_SOURCE,
+          paint: { "raster-opacity": hologramOpacity() as ["interpolate", ["linear"], ["zoom"], number, number, number, number], "raster-resampling": "linear", "raster-fade-duration": 0 },
+        }, layers[waterIndex + 1]?.id);
+      };
+      const onHologramIdle = () => {
+        firstIdle = true;
+        applyHologram();
+      };
+      const removeHologram = () => {
+        if (liveMap.getLayer(HOLOGRAM_LAYER)) liveMap.removeLayer(HOLOGRAM_LAYER);
+        if (liveMap.getSource(HOLOGRAM_SOURCE)) liveMap.removeSource(HOLOGRAM_SOURCE);
+      };
       const addRadar = () => {
         if (!liveMap.isStyleLoaded()) return;
         const { frames, maxZoom, activeIndex, enabled } = radarState.current;
@@ -360,6 +383,8 @@ export function MapView() {
       liveMap.on("idle", addRadar);
       liveMap.on("style.load", applyModel);
       liveMap.on("idle", applyModel);
+      liveMap.on("style.load", applyHologram);
+      liveMap.on("idle", onHologramIdle);
       const pin = document.createElement("div");
       pin.setAttribute("role", "img");
       pin.setAttribute("aria-label", placeName);
@@ -402,6 +427,9 @@ export function MapView() {
         liveMap.off("style.load", applyModel);
         liveMap.off("idle", applyModel);
         removeModel();
+        liveMap.off("style.load", applyHologram);
+        liveMap.off("idle", onHologramIdle);
+        removeHologram();
         marker?.remove();
         liveMap.remove();
       };
@@ -411,7 +439,7 @@ export function MapView() {
       const timer = window.setTimeout(() => setStatus("error"), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [place.lon, place.lat, placeName, attempt, mapStyle]);
+  }, [place.lon, place.lat, placeName, attempt, mapStyle, device.saveData]);
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"

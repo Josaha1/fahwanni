@@ -31,6 +31,12 @@ describe("service worker routing", () => {
     expect(route("/vendor/other/file.mjs")).toBeNull();
   });
 
+  it("caches and warms the hologram terrain image", () => {
+    expect(route("/map/hologram-terrain.webp")).toBe("static");
+    expect(scope.fahWarmable!("/map/hologram-terrain.webp", origin)).toBe(true);
+    expect(route("/map/other.webp")).toBeNull();
+  });
+
   it("caches the animated condition sprite sheets", () => {
     expect(route("/anim/rain-day.webp")).toBe("static");
     expect(route("/anim/clear-night.webp")).toBe("static");

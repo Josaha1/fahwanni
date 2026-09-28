@@ -2,7 +2,7 @@
 
 importScripts("/sw-routing.js");
 
-const CACHE = "fah-v1";
+const CACHE = "fah-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add("/")).catch(() => {}));

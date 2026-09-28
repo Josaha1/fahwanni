@@ -75,7 +75,13 @@ Status: APPROVED (2026-09-28)
     Verify: typecheck + Chrome Network (map tab ≤ 2.5 MB)
 14. Blender typhoon glyph sprite + storm-centre marker. Verify: `node scripts/blender/build.mjs --only typhoon`
 ### Part 3 — deploy
-15. Repo prep: `engines.node`, `.env.example`, README deploy section, `scripts/verify-deploy.mjs`
+15. **Shared upstream cache (found 2026-09-28):** dev restarts exhausted Open-Meteo's free daily
+    quota (HTTP 429 "Daily API request limit exceeded") because each in-memory cache miss costs 361
+    calls. Before deploy, move Open-Meteo/RainViewer/JMA/USGS upstream fetches to a cache shared by
+    all serverless instances (Next fetch cache / Vercel Data Cache via `next: { revalidate }`, or
+    `unstable_cache`), keep CDN `s-maxage`, and serve the last good response on 429.
+    Verify: vitest for the 429 → stale path + two cold server starts make ≤ 1 upstream grid fetch.
+    Repo prep: `engines.node`, `.env.example`, README deploy section, `scripts/verify-deploy.mjs`
     (checks `/`, `/map`, `/api/{weather,radar,wind,storms,quakes}`, maplibre worker, `/sw.js`,
     hologram image, `x-vercel-id` region sin1). Verify: build + typecheck + full vitest; push.
 16. **User**: rotate the Google API key; import github.com/Josaha1/fahwanni in Vercel; set
