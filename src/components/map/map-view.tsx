@@ -11,6 +11,7 @@ import { lastRadarFrames, minutesSinceNewest, nextFrameIndex } from "@/lib/radar
 import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
+import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { WindCanvas } from "./wind-canvas";
 
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
@@ -52,6 +53,10 @@ export function MapView() {
   });
   const motion = windMotion({ reducedMotion, ...device });
   const windHour = wind ? currentHourIndex(wind.hours, nowIso) : 0;
+  const terrainOk = terrainAvailable(device.deviceMemory);
+  const [terrainOn, setTerrainOn] = useState(false);
+  const terrainState = useRef(false);
+  const syncTerrain = useRef<() => void>(() => {});
   const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
   const syncRadar = useRef<() => void>(() => {});
 
@@ -94,6 +99,12 @@ export function MapView() {
   }, [frames, manifest, activeIndex, radarOn, available]);
 
   useEffect(() => {
+    terrainState.current = terrainOn;
+    syncTerrain.current();
+    mapInstance?.easeTo({ ...terrainCamera(terrainOn, reducedMotion), bearing: terrainOn ? mapInstance.getBearing() : 0 });
+  }, [terrainOn, mapInstance, reducedMotion]);
+
+  useEffect(() => {
     if (!container.current) return;
     let map: Map | undefined;
     let marker: Marker | undefined;
@@ -106,6 +117,7 @@ export function MapView() {
         zoom: 6,
         minZoom: 3,
         maxZoom: 12,
+        maxPitch: 60,
         maxBounds: [[80, -5], [130, 30]],
         pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
         fadeDuration: 100,
@@ -116,6 +128,7 @@ export function MapView() {
       liveMap.addControl(new AttributionControl({ compact: true, customAttribution: [
         '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
         '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
+        TERRAIN_ATTRIBUTION,
       ] }), "bottom-right");
       const removeRadar = () => {
         for (let index = 0; index < 6; index++) {
@@ -137,6 +150,22 @@ export function MapView() {
         });
       };
       syncRadar.current = addRadar;
+      const applyTerrain = () => {
+        if (!liveMap.isStyleLoaded()) return;
+        if (terrainState.current) {
+          if (!liveMap.getSource(TERRAIN_SOURCE)) liveMap.addSource(TERRAIN_SOURCE, terrainSource);
+          if (!liveMap.getLayer(HILLSHADE_LAYER)) {
+            const firstSymbol = liveMap.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+            liveMap.addLayer({ id: HILLSHADE_LAYER, type: "hillshade", source: TERRAIN_SOURCE, paint: { "hillshade-exaggeration": 0.35 } }, firstSymbol);
+          }
+          liveMap.setTerrain({ source: TERRAIN_SOURCE, exaggeration: 1.3 });
+        } else {
+          if (liveMap.getTerrain()) liveMap.setTerrain(null);
+          if (liveMap.getLayer(HILLSHADE_LAYER)) liveMap.removeLayer(HILLSHADE_LAYER);
+        }
+      };
+      syncTerrain.current = applyTerrain;
+      liveMap.on("style.load", applyTerrain);
       liveMap.on("style.load", addRadar);
       liveMap.on("idle", addRadar);
       const pin = document.createElement("div");
@@ -175,6 +204,8 @@ export function MapView() {
         observer.disconnect();
         setMapInstance(null);
         syncRadar.current = () => {};
+        syncTerrain.current = () => {};
+        liveMap.off("style.load", applyTerrain);
         liveMap.off("style.load", addRadar);
         liveMap.off("idle", addRadar);
         removeRadar();
@@ -207,6 +238,13 @@ export function MapView() {
             className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
             {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
           </button>
+          {terrainOk && (
+            <button type="button" aria-pressed={terrainOn} onClick={() => setTerrainOn((on) => !on)}
+              aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
+              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
+              3D
+            </button>
+          )}
         </div>
         {mapInstance && wind && windOn && status === "ready" && (
           <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark={dark} />
