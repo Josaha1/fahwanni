@@ -3,9 +3,9 @@ import { interpolate, intlLocale, thai, translator } from "./core";
 import { en } from "./en";
 
 describe("translator", () => {
-  it("returns Thai source text while the English dictionary is empty", () => {
+  it("returns Thai source text and its English translation", () => {
     expect(translator("th")("ภาษา")).toBe("ภาษา");
-    expect(translator("en")("ภาษา")).toBe("ภาษา");
+    expect(translator("en")("ภาษา")).toBe("Language");
   });
 
   it("falls back to the Thai text when an entry is missing", () => {
