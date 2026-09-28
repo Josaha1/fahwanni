@@ -1,6 +1,6 @@
 # Plan: future radar — nowcast (+10–60 min) and model rain (+1–12 h)
 
-Status: APPROVED (2026-09-28)
+Status: PARTIAL — spike FAILED 2026-09-28; nowcast A cut, B + timeline continue in docs/plans/neon-and-deploy.md (tasks 2–6)
 
 ## Context
 User: "ทำเรดาให้พยากรณ์ไปเป็นเวลาข้างหน้าด้วยได้มั้ย" → chose A + B. RainViewer's free API has
@@ -82,3 +82,14 @@ facts re-checked by Claude 2026-09-28.
 
 ## Out of scope
 Local/tiled motion field, growth/decay modelling, Web Worker, server-side nowcast, home-page changes.
+
+## Spike result (task 2) — 2026-09-28, `node scripts/nowcast-spike.mts`
+| window (UTC) | coverage | motion | +30 min CSI adv / persist | +60 min CSI adv / persist |
+|---|---|---|---|---|
+| 07:10→08:40 | 8.4 % | 29 km/h | 0.565 / 0.567 | 0.441 / 0.466 |
+| 06:40→08:10 (`OFFSET=30`) | 7.7 % | 30 km/h | 0.584 / 0.586 | 0.445 / 0.439 |
+
+Advection does not beat persistence at +30 min → gate failed. Slow-moving afternoon convection
+(growth/decay in place) dominates; a single global motion vector adds nothing.
+**CUT:** tasks 7, 8, 9 (nowcast hook/layers/ETA), 12 (live confidence), 13 (home ETA).
+**KEEP:** 1 (library, reusable), 3–6, 10, 11 (without nowcast segment).
