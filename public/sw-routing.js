@@ -7,6 +7,7 @@ self.fahRoute = function fahRoute(request, origin) {
   }
   if (url.origin !== origin || url.pathname.startsWith("/api/")) return null;
   if (url.pathname.startsWith("/_next/static/")) return "static";
+  if (url.pathname.startsWith("/vendor/maplibre/")) return "static";
   if (/^\/icon[^/]*\.png$/.test(url.pathname) || url.pathname === "/apple-touch-icon.png" || url.pathname === "/manifest.webmanifest") return "static";
   const rsc = url.searchParams.has("_rsc") || (request.headers && request.headers.get("RSC"));
   if ((url.pathname === "/" || url.pathname === "/map") && request.mode === "navigate" && !rsc) return "page";

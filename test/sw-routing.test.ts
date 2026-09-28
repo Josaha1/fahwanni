@@ -21,6 +21,16 @@ describe("service worker routing", () => {
     expect(route("/manifest.webmanifest")).toBe("static");
   });
 
+  it("caches versioned MapLibre worker modules", () => {
+    const worker = "/vendor/maplibre/6.11.2/maplibre-gl-worker.mjs";
+    const shared = "/vendor/maplibre/6.11.2/maplibre-gl-shared.mjs";
+    expect(route(worker)).toBe("static");
+    expect(route(shared)).toBe("static");
+    expect(scope.fahWarmable!(worker, origin)).toBe(true);
+    expect(scope.fahWarmable!(shared, origin)).toBe(true);
+    expect(route("/vendor/other/file.mjs")).toBeNull();
+  });
+
   it("caches weather icons only from maps.gstatic.com", () => {
     expect(route("https://maps.gstatic.com/weather/v1/rain.svg")).toBe("static");
     expect(route("https://maps.gstatic.com/weather/v1/rain_dark.svg")).toBe("static");
@@ -31,6 +41,17 @@ describe("service worker routing", () => {
 
   it("leaves the static JSON manifest to the network", () => {
     expect(route("/manifest.json")).toBeNull();
+  });
+
+  it("does not cache OpenFreeMap styles or tiles", () => {
+    for (const url of [
+      "https://tiles.openfreemap.org/styles/positron",
+      "https://tiles.openfreemap.org/styles/dark",
+      "https://tiles.openfreemap.org/planet/6/51/29.pbf",
+    ]) {
+      expect(route(url)).toBeNull();
+      expect(scope.fahWarmable!(url, origin)).toBe(false);
+    }
   });
 
   it("keeps offline copies of both pages only for full page loads", () => {

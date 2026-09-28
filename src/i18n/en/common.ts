@@ -4,6 +4,8 @@ export const common: Record<string, string> = {
   "พยากรณ์": "Forecast",
   "แผนที่": "Map",
   "กำลังเตรียมแผนที่…": "Map coming soon…",
+  "กำลังโหลดแผนที่…": "Loading map…",
+  "โหลดแผนที่ไม่สำเร็จ": "Could not load the map",
   "ค้นหาเมืองหรือจังหวัด": "Search city or province",
   "ค้นหาสถานที่": "Search places",
   "ปิดการค้นหา": "Close search",
