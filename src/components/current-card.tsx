@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import type { useWeather } from "@/hooks/use-weather";
 import { useT } from "@/i18n/client";
 import { heatBand } from "@/lib/advise";
-import { describeCondition, iconUrl } from "@/lib/condition";
+import { AnimatedConditionIcon } from "@/components/animated-condition-icon";
+import { describeCondition } from "@/lib/condition";
 import { heatBandWord, humidityWord, windDirectionLabel, windWord } from "@/lib/words";
 
 type Weather = ReturnType<typeof useWeather>;
@@ -49,11 +50,8 @@ export function CurrentCard({ weather }: { weather: Weather }) {
         <>
           <div className="mt-3 flex min-h-24 items-center justify-between gap-3">
             <p className="text-6xl font-semibold leading-none">{snapshot.tempC === undefined ? "—" : `${Math.round(snapshot.tempC)}°C`}</p>
-            {snapshot.iconBaseUri && (
-              // Google Weather API supplies the SVG URL and a dark variant; fixed dimensions prevent layout shift.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={iconUrl(snapshot.iconBaseUri, dark)} alt={condition} width={88} height={88} className="h-20 w-20 shrink-0 object-contain" />
-            )}
+            <AnimatedConditionIcon conditionType={snapshot.conditionType} isDaytime={snapshot.isDaytime}
+              iconBaseUri={snapshot.iconBaseUri} dark={dark} label={condition} size={88} />
           </div>
           <p className="text-lg font-medium">{condition}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">

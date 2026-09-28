@@ -55,3 +55,8 @@ export function describeCondition(type?: string): ConditionDescription {
 export function iconUrl(iconBaseUri: string, dark: boolean): string {
   return `${iconBaseUri}${dark ? "_dark" : ""}.svg`;
 }
+
+/** Blender-rendered looping sprite sheet (24 × 128 px frames) for a condition, day or night. */
+export function animSheet(type: string | undefined, isDaytime: boolean | undefined): string {
+  return `/anim/${describeCondition(type).group}-${isDaytime === false ? "night" : "day"}.webp`;
+}

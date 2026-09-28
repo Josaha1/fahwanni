@@ -31,6 +31,14 @@ describe("service worker routing", () => {
     expect(route("/vendor/other/file.mjs")).toBeNull();
   });
 
+  it("caches the animated condition sprite sheets", () => {
+    expect(route("/anim/rain-day.webp")).toBe("static");
+    expect(route("/anim/clear-night.webp")).toBe("static");
+    expect(scope.fahWarmable!("/anim/storm-day.webp", origin)).toBe(true);
+    expect(route("/anim/../api/weather")).toBeNull();
+    expect(route("/anim/readme.txt")).toBeNull();
+  });
+
   it("caches weather icons only from maps.gstatic.com", () => {
     expect(route("https://maps.gstatic.com/weather/v1/rain.svg")).toBe("static");
     expect(route("https://maps.gstatic.com/weather/v1/rain_dark.svg")).toBe("static");

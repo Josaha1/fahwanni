@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conditionTable, describeCondition, iconUrl } from "./condition";
+import { animSheet, conditionTable, describeCondition, iconUrl } from "./condition";
 
 const weatherConditionTypes = [
   "CLEAR", "MOSTLY_CLEAR", "PARTLY_CLOUDY", "MOSTLY_CLOUDY", "CLOUDY", "WINDY", "WIND_AND_RAIN",
@@ -36,5 +36,23 @@ describe("iconUrl", () => {
     const base = "https://maps.gstatic.com/weather/v1/partly_cloudy";
     expect(iconUrl(base, false)).toBe(`${base}.svg`);
     expect(iconUrl(base, true)).toBe(`${base}_dark.svg`);
+  });
+});
+
+describe("animSheet", () => {
+  it.each([
+    ["CLEAR", true, "/anim/clear-day.webp"],
+    ["LIGHT_THUNDERSTORM_RAIN", false, "/anim/storm-night.webp"],
+    ["WIND_AND_RAIN", true, "/anim/wind-day.webp"],
+    ["HAIL_SHOWERS", undefined, "/anim/hail-day.webp"],
+    [undefined, false, "/anim/cloud-night.webp"],
+  ])("%s daytime=%s", (type, isDaytime, expected) => expect(animSheet(type, isDaytime)).toBe(expected));
+
+  it("has a rendered sheet for every group and time of day", async () => {
+    const { existsSync } = await import("node:fs");
+    const groups = new Set(Object.values(conditionTable).map((entry) => entry.group));
+    for (const group of groups) for (const time of ["day", "night"]) {
+      expect(existsSync(`public/anim/${group}-${time}.webp`), `${group}-${time}`).toBe(true);
+    }
   });
 });

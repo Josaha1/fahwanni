@@ -21,6 +21,13 @@ PALETTE = {
     "sun_glow": "#FFB23E",
     "moon": "#F3EFD8",
     "rain": "#4DA3F0",
+    "storm_cloud": "#8E9BB5",
+    "storm_shade": "#6F7C97",
+    "bolt": "#FFD54A",
+    "star": "#FFF1B8",
+    "snow": "#DCEBFA",
+    "ice": "#D6ECFF",
+    "wind": "#BFD8F2",
 }
 
 
@@ -82,13 +89,14 @@ def keyframes(obj, frames, fn):
 
 # ---------- building blocks ----------
 
-def build_cloud(frames, x=0.0, z=0.0, size=1.0, bob=0.04):
+def build_cloud(frames, x=0.0, z=0.0, size=1.0, bob=0.04, dark=False):
     """Puffy cloud from overlapping spheres that bobs gently; returns the parent empty."""
     parent = bpy.data.objects.new("cloud", None)
     bpy.context.scene.collection.objects.link(parent)
     puffs = [(-0.55, 0, 0.0, 0.42), (-0.1, 0, 0.22, 0.55), (0.45, 0, 0.08, 0.45), (0.0, 0.25, -0.05, 0.5)]
+    top, shade = ("storm_cloud", "storm_shade") if dark else ("milk", "cloud_shade")
     for i, (px, py, pz, r) in enumerate(puffs):
-        obj = sphere(r * size, (0, 0, 0), clay("milk" if i != 3 else "cloud_shade", 0.5))
+        obj = sphere(r * size, (0, 0, 0), clay(top if i != 3 else shade, 0.5))
         obj.location = (px * size, py * size, pz * size)
         obj.parent = parent
     keyframes(parent, frames, lambda t: {"location": (x, 0, z + bob * math.sin(2 * math.pi * t))})
@@ -131,20 +139,127 @@ def build_rain(frames, top=-0.45, fall=1.1, xs=(-0.5, -0.1, 0.3, 0.65), heavy=Fa
             keyframes(drop, frames, at)
 
 
+def build_moon(frames, x, z, radius=0.5, sway=0.06):
+    """Crescent: a sphere with an offset sphere cut out, rocking gently."""
+    moon = sphere(radius, (x, 0.35, z), clay("moon", 0.45, emission=0.35))
+    # A sphere cutter only scoops a bowl out of the face (still a full disc from the front), so cut
+    # with a cylinder running along the camera's view axis (-Y) to get a crescent silhouette.
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius * 0.92, depth=radius * 6, vertices=48,
+                                        location=(x + radius * 0.5, 0.35, z + radius * 0.3), rotation=(math.pi / 2, 0, 0))
+    cutter = bpy.context.active_object
+    cutter.hide_render = True
+    mod = moon.modifiers.new("crescent", "BOOLEAN")
+    mod.operation = "DIFFERENCE"
+    mod.object = cutter
+    keyframes(moon, frames, lambda t: {"rotation_euler": (0, sway * math.sin(2 * math.pi * t), 0)})
+    return moon
+
+
+def build_stars(frames, spots=((-0.7, 0.75), (0.95, 0.9), (-0.2, 1.05), (1.1, 0.2))):
+    for i, (sx, sz) in enumerate(spots):
+        star = sphere(0.06, (sx, 0.5, sz), clay("star", 0.3, emission=1.2))
+        phase = i / len(spots)
+        keyframes(star, frames, lambda t, phase=phase: {"scale": [0.55 + 0.45 * (0.5 + 0.5 * math.cos(2 * math.pi * (t + phase)))] * 3})
+
+
+def build_bolt(frames, x=0.05, z=-0.55, flashes=((3, 6), (14, 16))):
+    """Zigzag of three rounded rods that flashes on a few frames per loop."""
+    bolt = bpy.data.objects.new("bolt", None)
+    bpy.context.scene.collection.objects.link(bolt)
+    segments = [((0.08, 0, 0.12), -0.5), ((-0.04, 0, -0.1), 0.6), ((0.06, 0, -0.34), -0.5)]
+    for (sx, sy, sz), tilt in segments:
+        rod = sphere(0.07, (0, 0, 0), clay("bolt", 0.3, emission=2.0), scale=(1, 1, 2.3))
+        rod.parent = bolt
+        rod.location = (sx, sy, sz)
+        rod.rotation_euler = (0, tilt, 0)
+    on = {f for a, b in flashes for f in range(a, b)}
+    for f in range(frames):
+        bolt.location = (x, -0.05, z)
+        bolt.scale = (1, 1, 1) if f in on else (0.001, 0.001, 0.001)
+        bolt.keyframe_insert("location", frame=f)
+        bolt.keyframe_insert("scale", frame=f)
+    for fcurve in (bolt.animation_data.action.fcurves if bolt.animation_data else []):
+        for key in fcurve.keyframe_points:
+            key.interpolation = "CONSTANT"
+
+
+def build_flakes(frames, top=-0.45, fall=1.0, xs=(-0.55, -0.15, 0.25, 0.6), material="snow", radius=0.07, drift=0.1, speed=1):
+    """Round particles falling with a slight sideways sway (snow) or straight and fast (hail)."""
+    for i, dx in enumerate(xs):
+        for k in range(2):
+            flake = sphere(radius, (0, 0, 0), clay(material, 0.35))
+            offset = (i * 0.29 + k * 0.5) % 1.0
+
+            def at(t, dx=dx, offset=offset):
+                p = (speed * t + offset) % 1.0
+                s = min(1.0, p / 0.12, (1 - p) / 0.12)
+                return {"location": (dx + drift * math.sin(2 * math.pi * (p * 2)), 0.1, top - fall * p), "scale": [s] * 3}
+
+            keyframes(flake, frames, at)
+
+
+def build_gusts(frames, rows=((0.35, 1.3), (0.0, 1.0), (-0.35, 1.2))):
+    """Three rounded streaks sliding left to right and wrapping, read as wind."""
+    for i, (z, length) in enumerate(rows):
+        streak = sphere(0.045, (0, 0, 0), clay("wind", 0.4), scale=(length * 9, 1, 1))
+        offset = i * 0.33
+
+        def at(t, z=z, length=length, offset=offset):
+            p = (t + offset) % 1.0
+            s = min(1.0, p / 0.15, (1 - p) / 0.15)
+            return {"location": (-1.1 + 2.3 * p, -0.4, z), "scale": (length * 9 * s, s, s)}
+
+        keyframes(streak, frames, at)
+
+
 # ---------- scenes (condition group × day/night) ----------
 
-def scene_rain_day(frames):
-    build_sun(frames, 0.55, 0.55)
-    build_cloud(frames, 0.0, 0.0)
-    build_rain(frames)
+def sky(frames, night, x, z, radius=0.62):
+    if night:
+        build_moon(frames, x, z, radius * 0.85)
+        build_stars(frames)
+    else:
+        build_sun(frames, x, z, radius)
 
 
-SCENES = {
-    "rain-day": scene_rain_day,
-}
+def scene(group, night):
+    def build(frames):
+        if group == "clear":
+            sky(frames, night, 0.15, 0.0, radius=0.85)
+        elif group == "cloud":
+            sky(frames, night, 0.55, 0.55)
+            build_cloud(frames, 0.0, 0.0)
+        elif group == "rain":
+            sky(frames, night, 0.55, 0.55)
+            build_cloud(frames, 0.0, 0.0)
+            build_rain(frames)
+        elif group == "storm":
+            if night:
+                build_stars(frames)
+            build_cloud(frames, 0.0, 0.05, dark=True)
+            build_rain(frames, xs=(-0.55, -0.25, 0.4, 0.7), heavy=True)
+            build_bolt(frames)
+        elif group == "snow":
+            sky(frames, night, 0.55, 0.55)
+            build_cloud(frames, 0.0, 0.0)
+            build_flakes(frames)
+        elif group == "hail":
+            if night:
+                build_stars(frames)
+            build_cloud(frames, 0.0, 0.0, dark=True)
+            build_flakes(frames, material="ice", radius=0.085, drift=0.0, speed=2)
+        elif group == "wind":
+            sky(frames, night, 0.6, 0.6, radius=0.45)
+            build_cloud(frames, -0.2, 0.25, size=0.75)
+            build_gusts(frames)
+    return build
+
+
+GROUPS = ["clear", "cloud", "rain", "storm", "snow", "wind", "hail"]
+SCENES = {f"{g}-{v}": scene(g, v == "night") for g in GROUPS for v in ("day", "night")}
 
 # Fixed framing so every frame (and every icon) shares the same camera.
-VIEW = {"center": Vector((0.15, 0, 0.0)), "ortho_scale": 3.4}
+VIEW = {"center": Vector((0.15, 0, -0.05)), "ortho_scale": 3.0}
 
 
 # ---------- stage ----------
