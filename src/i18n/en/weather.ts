@@ -33,5 +33,8 @@ export const weather: Record<string, string> = {
   "เล็กน้อย": "Minor",
   "ปภ.": "Disaster Prevention",
   "กรมอุตุฯ": "Meteorological Department",
+  "ปริมาณฝน": "Rainfall",
+  "{time} อุณหภูมิ {temp} {condition} โอกาสฝน {rain}%": "{time}, {temp}, {condition}, {rain}% chance of rain",
+  "พระอาทิตย์และ UV": "Sun and UV",
   "เจ็บป่วยฉุกเฉิน": "Medical emergency",
 };
