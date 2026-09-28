@@ -1,3 +1,5 @@
+import { RAIN_RAMP } from "../map/neon-palette";
+
 /**
  * Radar pixels ↔ intensity levels for the nowcast. Levels: 0 dry, 1 light, 2 moderate,
  * 3 heavy (yellow), 4 very heavy (orange/red). Classification follows RainViewer colour
@@ -22,19 +24,10 @@ export function imageToLevels(image: { data: ArrayLike<number>; width: number; h
   return out;
 }
 
-/** Legend colours used on the map (radar panel gradient). */
-const PALETTE: [number, number, number][] = [
-  [0, 0, 0],
-  [0x9c, 0xdb, 0xff],
-  [0x33, 0x83, 0xdb],
-  [0xff, 0xe1, 0x64],
-  [0xe8, 0x47, 0x3f],
-];
-
 export function levelToRgba(level: number, alpha = 200): [number, number, number, number] {
   if (level <= 0) return [0, 0, 0, 0];
-  const [r, g, b] = PALETTE[Math.min(4, level)];
-  return [r, g, b, alpha];
+  const color = RAIN_RAMP[Math.min(4, level)];
+  return [Number.parseInt(color.slice(1, 3), 16), Number.parseInt(color.slice(3, 5), 16), Number.parseInt(color.slice(5, 7), 16), alpha];
 }
 
 /** Paints levels into an RGBA buffer (e.g. ImageData.data). */

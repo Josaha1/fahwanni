@@ -41,11 +41,12 @@ describe("intensity", () => {
     expect(rgbaToLevel(232, 71, 63, 255)).toBe(4);
   });
 
-  it("round-trips an image and paints levels", () => {
-    const data = new Uint8ClampedArray([0, 0, 0, 0, ...levelToRgba(4)]);
+  it("classifies radar pixels and paints levels with the neon ramp", () => {
+    const data = new Uint8ClampedArray([0, 0, 0, 0, 232, 71, 63, 200]);
     const levels = imageToLevels({ data, width: 2, height: 1 });
     expect([...levels]).toEqual([0, 4]);
-    expect([...levelsToRgba(levels, 150)]).toEqual([0, 0, 0, 0, 0xe8, 0x47, 0x3f, 150]);
+    expect([...levelsToRgba(levels, 150)]).toEqual([0, 0, 0, 0, 0xff, 0x3d, 0x83, 150]);
+    expect(levelToRgba(4)).toEqual([0xff, 0x3d, 0x83, 200]);
     expect(rainFraction(levels)).toBe(0.5);
   });
 });

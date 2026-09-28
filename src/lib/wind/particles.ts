@@ -1,3 +1,4 @@
+import { windColor } from "../map/neon-palette";
 import { sampleAt, type WindGrid } from "./grid";
 
 export interface Particle {
@@ -69,10 +70,7 @@ export function currentHourIndex(hours: string[], nowIso: string): number {
   return index;
 }
 
-/** Calm winds pale, strong winds warm; speed in m/s. */
-export function speedColor(speed: number, dark: boolean): string {
-  if (speed < 3) return dark ? "rgba(200,220,255,0.55)" : "rgba(40,90,160,0.45)";
-  if (speed < 8) return dark ? "rgba(140,210,255,0.8)" : "rgba(30,110,200,0.7)";
-  if (speed < 14) return "rgba(255,190,60,0.9)";
-  return "rgba(235,70,60,0.95)";
+/** Wind colour follows the shared neon palette; speed is in m/s. */
+export function speedColor(speed: number): string {
+  return windColor(speed);
 }

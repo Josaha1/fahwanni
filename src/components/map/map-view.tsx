@@ -19,7 +19,7 @@ import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
-import { NEON } from "@/lib/map/neon-palette";
+import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
 import { neonStyle } from "@/lib/map/neon-style";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
@@ -257,7 +257,7 @@ export function MapView() {
         frames.forEach((frame, index) => {
           const id = radarId(index);
           if (!liveMap.getSource(id)) liveMap.addSource(id, { type: "raster", tiles: [frame.tileUrl], tileSize: 256, maxzoom: maxZoom });
-          if (!liveMap.getLayer(id)) liveMap.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 } } }, firstSymbol);
+          if (!liveMap.getLayer(id)) liveMap.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 }, "raster-saturation": 0.35, "raster-contrast": 0.15, "raster-resampling": "linear" } }, firstSymbol);
           const opacity = enabled && index === activeIndex ? 0.7 : 0;
           if (liveMap.getPaintProperty(id, "raster-opacity") !== opacity) liveMap.setPaintProperty(id, "raster-opacity", opacity);
         });
@@ -461,7 +461,7 @@ export function MapView() {
           </div>
         </div>
         {mapInstance && wind && windOn && status === "ready" && (
-          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark />
+          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />
         )}
         {available && radarOn && (
           <div className={`neon-glass absolute z-10 rounded-2xl p-3 ${panelOpen ? "inset-x-3 bottom-[4.5rem] mx-auto max-w-md" : "bottom-3 left-3"}`}
@@ -487,8 +487,8 @@ export function MapView() {
                     aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
                     className="neon-range w-full" />
                   <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
-                    <span className="bg-cyan-400" style={{ width: `${shares.radar * 100}%` }} />
-                    <span className="bg-violet-400/60" style={{ width: `${shares.model * 100}%` }} />
+                    <span style={{ width: `${shares.radar * 100}%`, backgroundColor: NEON.pin }} />
+                    <span style={{ width: `${shares.model * 100}%`, backgroundColor: NEON.accent, opacity: 0.6 }} />
                   </div>
                 </div>
                 <span className="w-32 shrink-0 text-right text-sm font-semibold max-[400px]:w-24">
@@ -535,7 +535,7 @@ export function MapView() {
                 <span>{t("ฝนเบา → ฝนหนัก")}</span>
                 {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
               </div>
-              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: "linear-gradient(to right, #9cdbff, #3383db, #ffe164, #e8473f)" }} aria-hidden="true" />
+              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: rainLegendGradient() }} aria-hidden="true" />
             </div>
           </div>
         )}

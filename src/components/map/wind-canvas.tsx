@@ -11,14 +11,13 @@ interface Props {
   hourIndex: number;
   animate: boolean;
   count: number;
-  dark: boolean;
 }
 
 /**
  * Canvas-2D wind overlay. Particles live in lon/lat and are projected every frame,
  * so they stay glued to the map; drawing pauses while the map moves.
  */
-export function WindCanvas({ map, grid, hourIndex, animate, count, dark }: Props) {
+export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -63,7 +62,7 @@ export function WindCanvas({ map, grid, hourIndex, animate, count, dark }: Props
           const len = 8 + Math.min(speed, 15) * 1.2;
           const ux = wind.u / speed, uy = -wind.v / speed;
           const tipX = p.x + ux * len, tipY = p.y + uy * len;
-          ctx.strokeStyle = speedColor(speed, dark);
+          ctx.strokeStyle = speedColor(speed);
           ctx.beginPath();
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(tipX, tipY);
@@ -90,7 +89,7 @@ export function WindCanvas({ map, grid, hourIndex, animate, count, dark }: Props
         const wind = sampleAt(grid, hourIndex, p.lon, p.lat);
         const from = map.project([p.lon, p.lat]);
         const to = map.project([next.lon, next.lat]);
-        ctx.strokeStyle = speedColor(wind ? Math.hypot(wind.u, wind.v) : 0, dark);
+        ctx.strokeStyle = speedColor(wind ? Math.hypot(wind.u, wind.v) : 0);
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
@@ -117,7 +116,7 @@ export function WindCanvas({ map, grid, hourIndex, animate, count, dark }: Props
       map.off("resize", onResize);
       clear();
     };
-  }, [map, grid, hourIndex, animate, count, dark]);
+  }, [map, grid, hourIndex, animate, count]);
 
   return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[5]" aria-hidden="true" />;
 }
