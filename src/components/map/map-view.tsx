@@ -12,6 +12,8 @@ import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
 import { renderPrecipImage, type PrecipImage } from "@/lib/precip/render";
 import { buildTimeline, defaultIndex, nextPlayIndex, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
+import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
+import { levelToRgba } from "@/lib/nowcast/intensity";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
@@ -85,6 +87,8 @@ export function MapView() {
     : activeStop ? t("{time} น.", { time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) }) : "";
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
+  const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
+  const seriesSummary = placeSeriesSummary(series, nowIso);
   const [mapInstance, setMapInstance] = useState<Map | null>(null);
   const [windOn, setWindOn] = useState(true);
   const [dark, setDark] = useState(() => currentStyle() === styles.dark);
@@ -463,6 +467,29 @@ export function MapView() {
                     : t("ไม่มีฝนในรัศมี 100 กม.")}
                 {radarSummary.heavyNearby && <span className="ml-1 text-zone-alert-ink">· {t("มีฝนหนักใกล้คุณ")}</span>}
               </p>
+            )}
+            {series.length > 0 && (
+              <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
+                <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
+                <div className="mt-1 flex gap-1 overflow-x-auto pb-1">
+                  {series.map((item) => {
+                    const index = stops.findIndex((stop) => stop.kind === item.kind && stop.time === item.time);
+                    const label = item.kind === "radar" ? t("ตอนนี้") : t("+{n} ชม.", { n: Math.max(1, Math.ceil((Date.parse(item.time) - Date.parse(nowIso)) / 3_600_000)) });
+                    const [r, g, b] = levelToRgba(item.level);
+                    return (
+                      <button key={`${item.kind}-${item.time}`} type="button" onClick={() => { setPlaying(false); setActiveIndex(index); }}
+                        aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
+                        aria-pressed={activeIndex === index}
+                        className="flex min-w-8 flex-1 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-[10px] focus-visible:outline-2 focus-visible:outline-given aria-pressed:bg-given/10">
+                        <span className="flex h-7 w-3 items-end rounded-sm bg-foreground/10" aria-hidden="true">
+                          {item.level > 0 && <span className="w-full rounded-sm" style={{ height: `${item.level * 25}%`, backgroundColor: `rgb(${r} ${g} ${b})` }} />}
+                        </span>
+                        <span className="whitespace-nowrap">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             )}
             <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
               <span>{t("ฝนเบา → ฝนหนัก")}</span>
