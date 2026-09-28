@@ -12,6 +12,7 @@ import { HourlyStrip } from "@/components/hourly-strip";
 import { LocationBar } from "@/components/location-bar";
 import { OfflineSupport } from "@/components/offline-support";
 import { SearchBox } from "@/components/search-box";
+import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
 import { useLastPlace } from "@/hooks/use-favourites";
@@ -74,7 +75,10 @@ export function WeatherApp() {
 
   return (
     <main className="app-shell">
-      <h1 className="mb-6 text-3xl">{t("ฟ้าวันนี้")}</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-3xl">{t("ฟ้าวันนี้")}</h1>
+        <SettingsSheet />
+      </div>
       <OfflineSupport />
       <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={useCurrentLocation} locating={locating} />
       <FavouritesRow place={place} onSelect={selectPlace} />

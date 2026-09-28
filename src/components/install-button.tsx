@@ -51,7 +51,7 @@ export function InstallButton({ banner = false, compact = false }: { banner?: bo
     }
   }
 
-  const visible = env && env !== "installed" && (!banner || dismissed === false);
+  const visible = env && env !== "installed" && (!compact || env !== "other") && (!banner || dismissed === false);
   const intent = url ? `intent://${url.split("://").slice(1).join("://").split("#")[0]}#Intent;scheme=${url.split(":")[0]};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end` : "";
 
   return visible ? (

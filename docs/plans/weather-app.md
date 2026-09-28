@@ -1,6 +1,6 @@
 # Plan: ฟ้าวันนี้ — simple weather web app (clone of baby-care)
 
-Status: APPROVED (2026-09-28)
+Status: DONE (Phase 1, 2026-09-28)
 
 ## Context
 User wants a simple weather forecast web app for ordinary people, built on Google Maps Platform

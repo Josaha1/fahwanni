@@ -17,3 +17,5 @@ npm-debug.log*
 .neon
 .vercel
 .env*
+
+!.env.example
