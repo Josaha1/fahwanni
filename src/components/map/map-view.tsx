@@ -9,6 +9,9 @@ import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, nextFrameIndex } from "@/lib/radar/frames";
 import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
+import type { WindGrid } from "@/lib/wind/grid";
+import { currentHourIndex, windMotion } from "@/lib/wind/particles";
+import { WindCanvas } from "./wind-canvas";
 
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
@@ -39,6 +42,16 @@ export function MapView() {
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const available = frames.length > 0;
   const activeFrame = frames[Math.min(activeIndex, frames.length - 1)];
+  const [mapInstance, setMapInstance] = useState<Map | null>(null);
+  const [wind, setWind] = useState<WindGrid | null>(null);
+  const [windOn, setWindOn] = useState(true);
+  const [dark, setDark] = useState(() => currentStyle() === styles.dark);
+  const [device] = useState(() => {
+    const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
+    return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
+  });
+  const motion = windMotion({ reducedMotion, ...device });
+  const windHour = wind ? currentHourIndex(wind.hours, nowIso) : 0;
   const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
   const syncRadar = useRef<() => void>(() => {});
 
@@ -48,6 +61,10 @@ export function MapView() {
       .then((response) => { if (!response.ok) throw new Error("radar unavailable"); return response.json() as Promise<RadarManifest>; })
       .then((data) => { setManifest(data); setActiveIndex(Math.max(0, lastRadarFrames(data.frames).length - 1)); })
       .catch(() => { if (!controller.signal.aborted) setManifest(null); });
+    fetch("/api/wind", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
+      .then(setWind)
+      .catch(() => { if (!controller.signal.aborted) setWind(null); });
     return () => controller.abort();
   }, []);
 
@@ -96,7 +113,10 @@ export function MapView() {
       });
       const liveMap = map;
       liveMap.addControl(new NavigationControl(), "top-right");
-      liveMap.addControl(new AttributionControl({ compact: true, customAttribution: '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>' }), "bottom-right");
+      liveMap.addControl(new AttributionControl({ compact: true, customAttribution: [
+        '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
+        '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
+      ] }), "bottom-right");
       const removeRadar = () => {
         for (let index = 0; index < 6; index++) {
           const id = radarId(index);
@@ -125,6 +145,7 @@ export function MapView() {
       pin.className = "h-5 w-5 rounded-full border-[3px] border-white bg-given shadow-lg";
       marker = new Marker({ element: pin }).setLngLat([place.lon, place.lat]).addTo(liveMap);
 
+      liveMap.once("load", () => setMapInstance(liveMap));
       liveMap.on("idle", () => {
         if (waitingForStyle) {
           waitingForStyle = false;
@@ -143,6 +164,7 @@ export function MapView() {
         const next = currentStyle();
         if (next === style) return;
         style = next;
+        setDark(next === styles.dark);
         waitingForStyle = true;
         setStatus("loading");
         removeRadar();
@@ -151,6 +173,7 @@ export function MapView() {
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
       return () => {
         observer.disconnect();
+        setMapInstance(null);
         syncRadar.current = () => {};
         liveMap.off("style.load", addRadar);
         liveMap.off("idle", addRadar);
@@ -179,7 +202,15 @@ export function MapView() {
             className="rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
             {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
           </button>
+          <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn}
+            onClick={() => setWindOn((on) => !on)}
+            className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
+            {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
+          </button>
         </div>
+        {mapInstance && wind && windOn && status === "ready" && (
+          <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark={dark} />
+        )}
         {available && radarOn && (
           <div className="absolute inset-x-3 bottom-10 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
             <div className="flex items-center gap-3">

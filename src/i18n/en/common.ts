@@ -8,6 +8,7 @@ export const common: Record<string, string> = {
   "โหลดแผนที่ไม่สำเร็จ": "Could not load the map",
   "เรดาร์ฝน": "Rain radar",
   "เรดาร์ไม่พร้อมใช้งาน": "Radar unavailable",
+  "ข้อมูลลมไม่พร้อมใช้งาน": "Wind unavailable",
   "เล่นภาพเรดาร์": "Play radar frames",
   "หยุดภาพเรดาร์": "Pause radar frames",
   "เวลาเรดาร์": "Radar time",
