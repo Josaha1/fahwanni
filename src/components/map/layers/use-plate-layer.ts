@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import type { Map } from "maplibre-gl";
-import { HOLOGRAM_URL, hologramCoordinates, hologramOpacity } from "@/lib/map/hologram";
+import { reliefCoordinates, reliefOpacity, reliefUrl } from "@/lib/map/relief";
+import { useMapContext } from "../map-provider";
 import { useStyleEffect } from "../use-style-effect";
 
-const SOURCE = "hologram";
-const LAYER = "neon-hologram";
+const SOURCE = "relief";
+const LAYER = "relief";
 
 export function usePlateLayer(map: Map | null, saveData: boolean) {
+  const { theme } = useMapContext();
   const [idleMap, setIdleMap] = useState<Map | null>(null);
   useEffect(() => {
     if (!map || saveData) return;
@@ -24,13 +26,13 @@ export function usePlateLayer(map: Map | null, saveData: boolean) {
     if (!layers) return;
     const waterIndex = layers.findIndex((layer) => layer.id === "water" && layer.type === "fill");
     if (waterIndex < 0) return;
-    if (!live.getSource(SOURCE)) live.addSource(SOURCE, { type: "image", url: HOLOGRAM_URL, coordinates: hologramCoordinates() });
+    if (!live.getSource(SOURCE)) live.addSource(SOURCE, { type: "image", url: reliefUrl(theme), coordinates: reliefCoordinates() });
     if (!live.getLayer(LAYER)) live.addLayer({
       id: LAYER, type: "raster", source: SOURCE,
-      paint: { "raster-opacity": hologramOpacity() as ["interpolate", ["linear"], ["zoom"], number, number, number, number], "raster-resampling": "linear", "raster-fade-duration": 0 },
+      paint: { "raster-opacity": reliefOpacity(theme), "raster-resampling": "linear", "raster-fade-duration": 0 },
     }, layers[waterIndex + 1]?.id);
   }, (live) => {
     if (live.getLayer(LAYER)) live.removeLayer(LAYER);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
-  }, [idleMap, saveData]);
+  }, [idleMap, saveData, theme]);
 }

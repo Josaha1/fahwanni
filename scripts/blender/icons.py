@@ -30,6 +30,9 @@ PALETTE = {
     "wind": "#BFD8F2",
     "neon_magenta": "#FF3DF2",
     "neon_cyan": "#38E8FF",
+    "typhoon_eye": "#FFFFFF",
+    "typhoon_arm": "#E5484D",
+    "typhoon_tip": "#F3B4B6",
 }
 
 
@@ -43,14 +46,14 @@ def hex_rgba(value):
 _materials = {}
 
 
-def clay(name, roughness=0.4, emission=0.0):
-    key = (name, emission)
+def clay(name, roughness=0.4, emission=0.0, color=None):
+    key = (name, emission, color)
     if key in _materials:
         return _materials[key]
     mat = bpy.data.materials.new(f"clay-{name}")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Base Color"].default_value = hex_rgba(PALETTE[name])
+    bsdf.inputs["Base Color"].default_value = hex_rgba(color or PALETTE[name])
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Coat Weight"].default_value = 0.25
     bsdf.inputs["Subsurface Weight"].default_value = 0.05
@@ -280,9 +283,31 @@ def scene_typhoon(frames, arms=3, beads=16):
     keyframes(group, frames, lambda t: {"rotation_euler": (0, -2 * math.pi / arms * t, 0)})
 
 
+def scene_typhoon_calm(frames, arms=3, beads=16):
+    """The map cyclone's spiral in matte clay, with arms softening towards their tips."""
+    group = bpy.data.objects.new("typhoon-calm", None)
+    bpy.context.scene.collection.objects.link(group)
+    eye = sphere(0.16, (0, 0, 0), clay("typhoon_eye", 0.5))
+    eye.parent = group
+    start = tuple(int(PALETTE["typhoon_arm"][i:i + 2], 16) for i in (1, 3, 5))
+    end = tuple(int(PALETTE["typhoon_tip"][i:i + 2], 16) for i in (1, 3, 5))
+    for a in range(arms):
+        for i in range(beads):
+            t = i / (beads - 1)
+            angle = a * 2 * math.pi / arms + t * 2.6
+            radius = 0.22 + 0.95 * t
+            size = 0.11 * (1 - 0.65 * t)
+            color = "#" + "".join(f"{round(s * (1 - t) + e * t):02x}" for s, e in zip(start, end))
+            bead = sphere(size, (0, 0, 0), clay(f"typhoon-arm-{i}", 0.5, color=color))
+            bead.parent = group
+            bead.location = (radius * math.cos(angle), 0, radius * math.sin(angle))
+    keyframes(group, frames, lambda t: {"rotation_euler": (0, -2 * math.pi / arms * t, 0)})
+
+
 GROUPS = ["clear", "cloud", "rain", "storm", "snow", "wind", "hail"]
 SCENES = {f"{g}-{v}": scene(g, v == "night") for g in GROUPS for v in ("day", "night")}
 SCENES["typhoon"] = scene_typhoon
+SCENES["typhoon-calm"] = scene_typhoon_calm
 
 # Fixed framing so every frame (and every icon) shares the same camera.
 VIEW = {"center": Vector((0.15, 0, -0.05)), "ortho_scale": 3.0}
