@@ -11,6 +11,8 @@ import { lastRadarFrames, minutesSinceNewest, nextFrameIndex } from "@/lib/radar
 import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
+import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
+import type { Storm } from "@/lib/storms/normalize";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { WindCanvas } from "./wind-canvas";
 
@@ -21,6 +23,9 @@ const styles = {
   dark: "https://tiles.openfreemap.org/styles/dark",
 };
 const radarId = (index: number) => `rain-radar-${index}`;
+const STORM_SOURCE = "storms";
+const STORM_LAYERS = ["storm-cone", "storm-track", "storm-forecast", "storm-center", "storm-label"] as const;
+const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
 
 function currentStyle() {
   const theme = document.documentElement.dataset.theme;
@@ -56,6 +61,10 @@ export function MapView() {
   const terrainOk = terrainAvailable(device.deviceMemory);
   const [terrainOn, setTerrainOn] = useState(false);
   const terrainState = useRef(false);
+  const [storms, setStorms] = useState<Storm[]>([]);
+  const [stormsOn, setStormsOn] = useState(true);
+  const stormState = useRef<StormCollection>(emptyStorms);
+  const syncStorms = useRef<() => void>(() => {});
   const syncTerrain = useRef<() => void>(() => {});
   const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
   const syncRadar = useRef<() => void>(() => {});
@@ -70,6 +79,10 @@ export function MapView() {
       .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
       .then(setWind)
       .catch(() => { if (!controller.signal.aborted) setWind(null); });
+    fetch("/api/storms", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ storms?: Storm[] }> : { storms: [] })
+      .then((data) => setStorms(data.storms ?? []))
+      .catch(() => {});
     return () => controller.abort();
   }, []);
 
@@ -97,6 +110,11 @@ export function MapView() {
     radarState.current = { frames, maxZoom: manifest?.maxZoom ?? 7, activeIndex, enabled: radarOn && available };
     syncRadar.current();
   }, [frames, manifest, activeIndex, radarOn, available]);
+
+  useEffect(() => {
+    stormState.current = stormsOn ? stormsToGeoJSON(storms) : emptyStorms;
+    syncStorms.current();
+  }, [storms, stormsOn]);
 
   useEffect(() => {
     terrainState.current = terrainOn;
@@ -152,6 +170,8 @@ export function MapView() {
       syncRadar.current = addRadar;
       const applyTerrain = () => {
         if (!liveMap.isStyleLoaded()) return;
+        // Also runs on "idle" (see applyStorms); skip when already in the wanted state.
+        if (terrainState.current === Boolean(liveMap.getTerrain())) return;
         if (terrainState.current) {
           if (!liveMap.getSource(TERRAIN_SOURCE)) liveMap.addSource(TERRAIN_SOURCE, terrainSource);
           if (!liveMap.getLayer(HILLSHADE_LAYER)) {
@@ -165,7 +185,34 @@ export function MapView() {
         }
       };
       syncTerrain.current = applyTerrain;
+      // isStyleLoaded() stays false until every source (e.g. radar tiles) has loaded, so this
+      // also runs on "idle"; `applied` keeps it from re-setting the same data every frame.
+      let applied: StormCollection | null = null;
+      const applyStorms = () => {
+        const data = stormState.current;
+        if (data === applied || !liveMap.isStyleLoaded()) return;
+        applied = data;
+        const source = liveMap.getSource(STORM_SOURCE);
+        if (source && "setData" in source) { (source as { setData: (d: StormCollection) => void }).setData(data); return; }
+        if (data.features.length === 0) return;
+        liveMap.addSource(STORM_SOURCE, { type: "geojson", data });
+        const red = "#d9483b";
+        liveMap.addLayer({ id: "storm-cone", type: "fill", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "cone"], paint: { "fill-color": red, "fill-opacity": 0.12 } });
+        liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": red, "line-width": 2.5 } });
+        liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": red, "line-width": 2, "line-dasharray": [2, 2] } });
+        liveMap.addLayer({ id: "storm-center", type: "circle", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], paint: { "circle-radius": 8, "circle-color": red, "circle-stroke-width": 3, "circle-stroke-color": "#ffffff" } });
+        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": red, "text-halo-color": "#ffffff", "text-halo-width": 1.5 } });
+      };
+      const removeStorms = () => {
+        applied = null;
+        for (const id of STORM_LAYERS) if (liveMap.getLayer(id)) liveMap.removeLayer(id);
+        if (liveMap.getSource(STORM_SOURCE)) liveMap.removeSource(STORM_SOURCE);
+      };
+      syncStorms.current = applyStorms;
+      liveMap.on("style.load", applyStorms);
+      liveMap.on("idle", applyStorms);
       liveMap.on("style.load", applyTerrain);
+      liveMap.on("idle", applyTerrain);
       liveMap.on("style.load", addRadar);
       liveMap.on("idle", addRadar);
       const pin = document.createElement("div");
@@ -197,6 +244,7 @@ export function MapView() {
         waitingForStyle = true;
         setStatus("loading");
         removeRadar();
+        removeStorms();
         liveMap.setStyle(next);
       });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -205,7 +253,12 @@ export function MapView() {
         setMapInstance(null);
         syncRadar.current = () => {};
         syncTerrain.current = () => {};
+        syncStorms.current = () => {};
+        liveMap.off("style.load", applyStorms);
+        liveMap.off("idle", applyStorms);
+        removeStorms();
         liveMap.off("style.load", applyTerrain);
+        liveMap.off("idle", applyTerrain);
         liveMap.off("style.load", addRadar);
         liveMap.off("idle", addRadar);
         removeRadar();
@@ -238,6 +291,12 @@ export function MapView() {
             className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
             {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
           </button>
+          {storms.length > 0 && (
+            <button type="button" aria-pressed={stormsOn} onClick={() => setStormsOn((on) => !on)}
+              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
+              {t("พายุ")} ({storms.length})
+            </button>
+          )}
           {terrainOk && (
             <button type="button" aria-pressed={terrainOn} onClick={() => setTerrainOn((on) => !on)}
               aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
@@ -250,7 +309,7 @@ export function MapView() {
           <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark={dark} />
         )}
         {available && radarOn && (
-          <div className="absolute inset-x-3 bottom-10 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
+          <div className="absolute inset-x-3 bottom-[4.5rem] z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setPlaying((value) => !value)} disabled={reducedMotion}
                 aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")}

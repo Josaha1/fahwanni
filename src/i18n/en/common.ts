@@ -11,6 +11,7 @@ export const common: Record<string, string> = {
   "ข้อมูลลมไม่พร้อมใช้งาน": "Wind unavailable",
   "เปิดแผนที่ 3 มิติ": "Turn on 3D map",
   "ปิดแผนที่ 3 มิติ": "Turn off 3D map",
+  "พายุ": "Storms",
   "เล่นภาพเรดาร์": "Play radar frames",
   "หยุดภาพเรดาร์": "Pause radar frames",
   "เวลาเรดาร์": "Radar time",

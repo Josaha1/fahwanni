@@ -134,6 +134,9 @@ h1, h2 { font-family: var(--font-mitr), sans-serif; font-weight: 600; line-heigh
 .emoji { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -0.3em; }
 .sticker { filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 4px 5px rgba(45,58,90,.22)); }
 :is([data-theme="dark"], [data-theme="night"]) .sticker { filter: none; }
+:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map :is(.maplibregl-ctrl-attrib, .maplibregl-ctrl-group) { background: var(--card); color: var(--foreground); }
+:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map .maplibregl-ctrl-attrib a { color: var(--foreground); }
+:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button) { filter: invert(1); }
 
 .app-shell {
   min-height: 100dvh;
