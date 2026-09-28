@@ -1,0 +1,2 @@
+<?xml version="1.0"?>
+<WeatherForecastDaily version="2.0"><header><title>Thailand Weather and Climate News</title><description>Weather Warning and Storm announces</description><uri>https://data.tmd.go.th/api/WeatherWarningNews/v2/index.php</uri><lastBuildDate>2026-09-28 13:26:17</lastBuildDate><copyRight>Thai Meteorological Department:2566</copyRight><generator>TMDData_API Services</generator><status>200 OK</status></header><Warnings/></WeatherForecastDaily>
