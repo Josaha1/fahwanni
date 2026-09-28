@@ -143,6 +143,13 @@ body:has(.map-shell) { background: #eef1f5; background-image: none; }
 .map-shell { position: relative; width: 100%; height: calc(100dvh - var(--nav-h, 88px)); overflow: hidden; background: var(--map-bg); color: var(--map-label); }
 .map-shell [hidden] { display: none; }
 .map-panel { background: var(--map-panel); color: var(--map-label); border: 1px solid var(--map-panel-border); border-radius: 20px; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 12px; }
+.map-search-position { position: absolute; z-index: 5; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 68px; }
+.map-search-pill { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 14px; border-radius: 999px; border: 1px solid var(--map-panel-border); background: var(--map-panel); color: var(--map-label); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+.map-search-pill > button:first-child { min-height: 44px; }
+.map-search-gps { width: 36px; height: 36px; }
+.map-search-input { min-height: 44px; flex: 1; padding: 0 12px; border-radius: 12px; border: 1px solid var(--map-panel-border); background: transparent; color: var(--map-label); }
+.map-search-result { color: var(--map-label); }
+.map-search-result:is(:hover, [aria-selected="true"]) { background: rgb(37 99 235 / .12); }
 .map-sheet { position: absolute; z-index: 5; left: 12px; right: 12px; bottom: 12px; max-height: 60%; overflow-y: auto; overscroll-behavior: contain; }
 .map-sheet-handle { display: block; width: 36px; height: 4px; margin: 0 auto 10px; border-radius: 999px; background: var(--map-muted); }
 .map-side-panel { position: absolute; z-index: 5; top: 16px; left: 16px; bottom: 16px; width: 360px; overflow-y: auto; }

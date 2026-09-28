@@ -26,6 +26,7 @@ import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
 import { useLastPlace } from "@/hooks/use-favourites";
+import { useCurrentLocation } from "@/hooks/use-current-location";
 import { useWeather } from "@/hooks/use-weather";
 import { useT } from "@/i18n/client";
 import type { Place } from "@/lib/place";
@@ -42,7 +43,6 @@ export function WeatherApp() {
   const { place, setPlace } = useLastPlace();
   const weather = useWeather(place, t.locale);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [locating, setLocating] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showStormBanner, setShowStormBanner] = useState(false);
 
@@ -66,31 +66,13 @@ export function WeatherApp() {
     setSearchOpen(false);
   }
 
-  function useCurrentLocation() {
-    if (locating) return;
-    if (!navigator.geolocation) {
+  const { locate, locating } = useCurrentLocation(
+    (next) => { setPlace(next); setSearchOpen(false); },
+    () => {
       if (place.id === "bangkok") setPlace(bangkok);
       toast.error(t("เข้าถึงตำแหน่งไม่ได้ ลองค้นหาเมืองแทน"));
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setPlace({
-          id: "gps", name: "ตำแหน่งปัจจุบัน", lat: coords.latitude,
-          lon: coords.longitude, source: "gps",
-        });
-        setSearchOpen(false);
-        setLocating(false);
-      },
-      () => {
-        if (place.id === "bangkok") setPlace(bangkok);
-        toast.error(t("เข้าถึงตำแหน่งไม่ได้ ลองค้นหาเมืองแทน"));
-        setLocating(false);
-      },
-      { timeout: 10_000, maximumAge: 600_000 },
-    );
-  }
+    },
+  );
 
   return (
     <main className="app-shell">
@@ -99,7 +81,7 @@ export function WeatherApp() {
         <SettingsSheet />
       </div>
       <OfflineSupport />
-      <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={useCurrentLocation} locating={locating} />
+      <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={locate} locating={locating} />
       <FavouritesRow place={place} onSelect={selectPlace} />
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">

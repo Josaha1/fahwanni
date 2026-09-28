@@ -31,6 +31,7 @@ import { useIsDesktop } from "./ui/use-is-desktop";
 import { MapSheet, type SheetPosition } from "./ui/map-sheet";
 import { MapSidePanel } from "./ui/map-side-panel";
 import { MapPanelContent } from "./ui/map-panel-content";
+import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 
 function initialSheetPosition(): SheetPosition {
@@ -239,7 +240,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     {storms.length > 0 && <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })} className="map-chip text-sm">{t("พายุ")} ({storms.length})</button>}
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
   </>;
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} timeline={timeline} details={details} layers={layers} />;
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} layers={layers} />;
 
   return <main className="map-shell" style={{
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
@@ -247,6 +248,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   } as CSSProperties}>
     <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
     {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
+    {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={sheetPosition}>{panelContent}</MapSheet>}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })} />

@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
+import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, timeline, details, layers }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, details, layers }: {
   placeName: string;
   compact: boolean;
+  desktop: boolean;
   timeline: ReactNode;
   details: ReactNode;
   layers: ReactNode;
@@ -11,7 +13,8 @@ export function MapPanelContent({ placeName, compact, timeline, details, layers 
   const t = useT();
   return (
     <>
-      {!compact && <h1 className="mb-3 text-lg">{t("แผนที่")} · {placeName}</h1>}
+      <h1 className="sr-only">{t("แผนที่")} · {placeName}</h1>
+      {desktop && <div className="mb-3"><MapSearchPill placeName={placeName} /></div>}
       {timeline}
       {!compact && <>
         {details}

@@ -32,7 +32,8 @@ export function usePlaceMarker(map: Map | null, lon: number, lat: number, label:
     const current = marker.current.getLngLat();
     marker.current.setLngLat(target);
     if (current.lng === lon && current.lat === lat) return;
-    if (reducedMotion) map.jumpTo({ center: target });
-    else map.easeTo({ center: target, duration: 800 });
+    const zoom = map.getZoom() < 7 ? 7 : undefined;
+    if (reducedMotion) map.jumpTo({ center: target, zoom });
+    else map.easeTo({ center: target, zoom, duration: 800 });
   }, [map, lon, lat, reducedMotion]);
 }

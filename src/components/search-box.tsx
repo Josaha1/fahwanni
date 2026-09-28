@@ -17,7 +17,7 @@ function placeLabel(place: Place, locale: Locale) {
   return locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
 }
 
-export function SearchBox({ locale, onSelect, onClose }: { locale: Locale; onSelect: (place: Place) => void; onClose: () => void }) {
+export function SearchBox({ locale, onSelect, onClose, variant = "card", className }: { locale: Locale; onSelect: (place: Place) => void; onClose: () => void; variant?: "card" | "compact"; className?: string }) {
   const t = useT();
   const { favourites } = useFavourites();
   const [query, setQuery] = useState("");
@@ -62,24 +62,24 @@ export function SearchBox({ locale, onSelect, onClose }: { locale: Locale; onSel
   }
 
   return (
-    <div className="placeholder-card mb-4" role="search">
+    <div className={variant === "compact" ? className : `placeholder-card mb-4${className ? ` ${className}` : ""}`} role="search">
       <div className="flex gap-2">
         <input ref={input} type="search" value={query} onChange={(event) => { setQuery(event.target.value); setActive(-1); }} onKeyDown={onKeyDown}
           placeholder={t("ค้นหาเมืองหรือจังหวัด")} aria-label={t("ค้นหาเมืองหรือจังหวัด")}
           role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="place-results"
           aria-activedescendant={active >= 0 && results[active] ? `place-option-${active}` : undefined}
-          className="min-h-12 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-foreground outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-given" />
+          className={variant === "compact" ? "map-search-input min-w-0 outline-none placeholder:text-muted" : "min-h-12 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-foreground outline-none placeholder:text-muted focus-visible:outline-2 focus-visible:outline-given"} />
         <button type="button" onClick={onClose} aria-label={t("ปิดการค้นหา")}
-          className="min-h-12 min-w-12 rounded-xl border border-border bg-card text-xl focus-visible:outline-2 focus-visible:outline-given">×</button>
+          className={variant === "compact" ? "map-icon-btn shrink-0 text-xl" : "min-h-12 min-w-12 rounded-xl border border-border bg-card text-xl focus-visible:outline-2 focus-visible:outline-given"}>×</button>
       </div>
-      <ul id="place-results" role="listbox" aria-label={t("ผลการค้นหา")} className="mt-2 max-h-80 overflow-y-auto">
+      <ul id="place-results" role="listbox" aria-label={t("ผลการค้นหา")} className={`mt-2 overflow-y-auto ${variant === "compact" ? "max-h-[50dvh]" : "max-h-80"}`}>
         {results.map((place, index) => (
           <li key={`${place.id}-${index}`} role="presentation">
             {!trimmed && index === 0 && favourites.length > 0 && <p className="px-3 pt-2 text-sm font-semibold text-muted">{t("เมืองโปรด")}</p>}
             {!trimmed && index === favourites.length && <p className="px-3 pt-3 text-sm font-semibold text-muted">{t("จังหวัดยอดนิยม")}</p>}
             <button type="button" id={`place-option-${index}`} role="option" aria-selected={active === index}
               onMouseEnter={() => setActive(index)} onClick={() => onSelect(place)}
-              className={`flex min-h-12 w-full flex-col justify-center rounded-xl px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-given ${active === index ? "bg-sky" : "hover:bg-sky"}`}>
+              className={`flex min-h-12 w-full flex-col justify-center rounded-xl px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-given ${variant === "compact" ? "map-search-result" : active === index ? "bg-sky" : "hover:bg-sky"}`}>
               <span className="font-semibold">{placeLabel(place, locale)}</span>
               {(place.admin || place.country) && <span className="text-sm text-muted">{[locale === "en" && place.source === "province" ? place.name : place.admin, place.country === "Thailand" ? t("ประเทศไทย") : place.country].filter(Boolean).join(" · ")}</span>}
             </button>
