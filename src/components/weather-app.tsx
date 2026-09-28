@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AdviceStrip } from "@/components/advice-strip";
 import { AlertsCard } from "@/components/alerts-card";
 import { AqiCard } from "@/components/aqi-card";
+import { MarineCard } from "@/components/marine-card";
 import { CurrentCard } from "@/components/current-card";
 import { DailyList } from "@/components/daily-list";
 import { FavouritesRow } from "@/components/favourites-row";
@@ -113,6 +114,7 @@ export function WeatherApp() {
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />
           <DailyList snapshot={weather.snapshot} isDark={isDark} />
           <AqiCard air={weather.air} />
+          <MarineCard lat={place.lat} lon={place.lon} />
           <SunCard snapshot={weather.snapshot} />
           <AlertsCard alerts={weather.snapshot.alerts} timeZone={weather.snapshot.timeZone} />
           <FavouritesOverview current={place} onSelect={selectPlace} isDark={isDark} />
