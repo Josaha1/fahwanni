@@ -8,7 +8,8 @@ function chunkUrl(points: { lat: number; lon: number }[]): string {
   const params = new URLSearchParams({
     latitude: points.map((p) => p.lat).join(","),
     longitude: points.map((p) => p.lon).join(","),
-    hourly: "wind_speed_10m,wind_direction_10m",
+    // Precipitation rides along in the same request: same locations, so no extra Open-Meteo quota.
+    hourly: "wind_speed_10m,wind_direction_10m,precipitation,precipitation_probability",
     wind_speed_unit: "kmh",
     forecast_hours: "24",
     timezone: "UTC",

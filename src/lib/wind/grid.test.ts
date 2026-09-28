@@ -85,3 +85,47 @@ describe("sampleAt", () => {
     expect(sampleAt(grid, 99, 100, 10)).toBeUndefined();
   });
 });
+
+describe("buildGrid precipitation", () => {
+  const withRain = (mm: number, pct: number, hours = 24) => ({
+    hourly: {
+      time: Array.from({ length: hours }, (_, h) => `2026-09-28T${String(h).padStart(2, "0")}:00`),
+      wind_speed_10m: Array(hours).fill(10),
+      wind_direction_10m: Array(hours).fill(180),
+      precipitation: Array(hours).fill(mm),
+      precipitation_probability: Array(hours).fill(pct),
+    },
+  });
+
+  it("keeps 12 hourly rain steps for every grid point", () => {
+    const grid = buildGrid(gridPoints().map((_, i) => withRain(i === 0 ? 3.44 : 0, i === 0 ? 87 : 5)))!;
+    expect(grid.precipHours).toHaveLength(12);
+    expect(grid.precipHours![1]).toBe("2026-09-28T01:00:00.000Z");
+    expect(grid.precip).toHaveLength(12);
+    expect(grid.precip![0]).toHaveLength(361);
+    expect(grid.precip![0][0]).toBe(3.4);
+    expect(grid.prob![11][0]).toBe(87);
+    expect(grid.prob![0][1]).toBe(5);
+  });
+
+  it("omits rain fields when the response has no precipitation (old shape)", () => {
+    const [first] = fixture;
+    const hourly: Record<string, unknown> = { ...first.hourly };
+    delete hourly.precipitation;
+    delete hourly.precipitation_probability;
+    const grid = buildGrid(gridPoints().map(() => ({ ...first, hourly })), 1)!;
+    expect(grid.precip).toBeUndefined();
+    expect(grid.precipHours).toBeUndefined();
+  });
+
+  it("parses the real fixture with rain", () => {
+    const [first] = fixture;
+    const grid = buildGrid(gridPoints().map(() => first), 1)!;
+    expect(grid.precipHours).toHaveLength(first.hourly.time.length);
+  });
+
+  it("stays under 60 KB with 8 wind steps and 12 rain steps", () => {
+    const grid = buildGrid(gridPoints().map((_, i) => ({ hourly: { ...withRain((i % 17) * 0.73, (i * 7) % 100).hourly, wind_speed_10m: Array(24).fill(10 + (i % 37) * 1.37), wind_direction_10m: Array(24).fill((i * 17) % 360) } })))!;
+    expect(JSON.stringify(grid).length).toBeLessThan(60_000);
+  });
+});
