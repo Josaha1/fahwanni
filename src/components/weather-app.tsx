@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CurrentPlaceholder } from "@/components/current-placeholder";
+import { AdviceStrip } from "@/components/advice-strip";
+import { AlertsCard } from "@/components/alerts-card";
+import { AqiCard } from "@/components/aqi-card";
+import { CurrentCard } from "@/components/current-card";
 import { LocationBar } from "@/components/location-bar";
 import { SearchBox } from "@/components/search-box";
 import { useLastPlace } from "@/hooks/use-favourites";
@@ -58,7 +61,22 @@ export function WeatherApp() {
       <h1 className="mb-6 text-3xl">{t("ฟ้าวันนี้")}</h1>
       <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={useCurrentLocation} locating={locating} />
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
-      <CurrentPlaceholder place={place} locale={t.locale} weather={weather} />
+      <div className="space-y-4">
+        <CurrentCard weather={weather} />
+        {weather.snapshot && <>
+          <AqiCard air={weather.air} />
+          <AlertsCard alerts={weather.snapshot.alerts} timeZone={weather.snapshot.timeZone} />
+          <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
+        </>}
+      </div>
+      <section aria-label={t("เบอร์ฉุกเฉิน")} className="mt-8 border-t border-border pt-4">
+        <h2 className="text-base">{t("เบอร์ฉุกเฉิน")}</h2>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <a href="tel:1784" className="flex min-h-11 items-center rounded-xl border border-border bg-card px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">{t("ปภ.")} 1784</a>
+          <a href="tel:1182" className="flex min-h-11 items-center rounded-xl border border-border bg-card px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">{t("กรมอุตุฯ")} 1182</a>
+          <a href="tel:1669" className="flex min-h-11 items-center rounded-xl border border-border bg-card px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">{t("เจ็บป่วยฉุกเฉิน")} 1669</a>
+        </div>
+      </section>
     </main>
   );
 }

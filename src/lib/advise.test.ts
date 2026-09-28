@@ -27,7 +27,7 @@ describe("advise", () => {
     ["wind", { gustKmh: 50 }, {}, "warn"],
     ["cooler", { days: [day(35), day(32)] }, {}, "tip"],
     ["sticky", { humidity: 85, tempC: 32 }, {}, "tip"],
-    ["rain-start", { hours: [hour("09", 50)] }, {}, "tip"],
+    ["rain-start", { hours: [hour("14", 50)] }, {}, "tip"],
     ["commute-rain", { hours: [hour("09", 40)] }, {}, "tip"],
     ["laundry-ok", { isDaytime: true, humidity: 74, hours: [hour("09", 19)] }, {}, "tip"],
     ["laundry-no", { isDaytime: true, humidity: 75, hours: [hour("09", 19)] }, {}, "tip"],
@@ -75,12 +75,15 @@ describe("advise", () => {
 
   it("uses snapshot timezone for displayed hours and commute windows", () => {
     const snapshot = { ...base(), hours: [hour("09", 50)] };
-    expect(advise(snapshot, {}, now)).toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "16:00" } });
+    expect(advise(snapshot, {}, now).map((item) => item.id)).not.toContain("rain-start");
     expect(advise(snapshot, {}, now)).toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "16:00" } });
-    expect(advise({ ...snapshot, timeZone: "UTC" }, {}, now)).toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "09:00" } });
+    expect(advise({ ...snapshot, timeZone: "UTC" }, {}, now).map((item) => item.id)).not.toContain("rain-start");
     expect(advise({ ...snapshot, timeZone: "UTC" }, {}, now)).toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "09:00" } });
     expect(advise({ ...base(), hours: [hour("13", 50), hour("09", 50)] }, {}, now))
-      .toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "16:00" } });
+      .toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "16:00" } });
+    const distinct = advise({ ...base(), hours: [hour("08", 50), hour("09", 40)] }, {}, now);
+    expect(distinct).toContainEqual({ id: "rain-start", severity: "tip", params: { hour: "15:00" } });
+    expect(distinct).toContainEqual({ id: "commute-rain", severity: "tip", params: { hour: "16:00" } });
   });
 
   it("limits forecasts to the next six hours and exercise rain to three", () => {

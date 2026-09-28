@@ -1,4 +1,5 @@
 import type { T } from "../i18n/core";
+import type { Locale } from "../i18n/core";
 import type { HeatBand } from "./advise";
 import type { Pm25Level } from "./air";
 
@@ -36,6 +37,31 @@ export function windWord(kmh: number, t: T): string {
   if (kmh < 39) return t("ลมปานกลาง");
   if (kmh < 62) return t("ลมแรง");
   return t("ลมแรงมาก");
+}
+
+const windDirections: Record<string, [string, string]> = {
+  NORTH: ["เหนือ", "north"],
+  NORTH_NORTHEAST: ["ตะวันออกเฉียงเหนือ", "northeast"],
+  NORTHEAST: ["ตะวันออกเฉียงเหนือ", "northeast"],
+  EAST_NORTHEAST: ["ตะวันออกเฉียงเหนือ", "northeast"],
+  EAST: ["ตะวันออก", "east"],
+  EAST_SOUTHEAST: ["ตะวันออกเฉียงใต้", "southeast"],
+  SOUTHEAST: ["ตะวันออกเฉียงใต้", "southeast"],
+  SOUTH_SOUTHEAST: ["ตะวันออกเฉียงใต้", "southeast"],
+  SOUTH: ["ใต้", "south"],
+  SOUTH_SOUTHWEST: ["ตะวันตกเฉียงใต้", "southwest"],
+  SOUTHWEST: ["ตะวันตกเฉียงใต้", "southwest"],
+  WEST_SOUTHWEST: ["ตะวันตกเฉียงใต้", "southwest"],
+  WEST: ["ตะวันตก", "west"],
+  WEST_NORTHWEST: ["ตะวันตกเฉียงเหนือ", "northwest"],
+  NORTHWEST: ["ตะวันตกเฉียงเหนือ", "northwest"],
+  NORTH_NORTHWEST: ["ตะวันตกเฉียงเหนือ", "northwest"],
+};
+
+export function windDirectionLabel(cardinal: string | undefined, locale: Locale): string | undefined {
+  const direction = cardinal && windDirections[cardinal];
+  if (!direction) return undefined;
+  return locale === "th" ? `ลมจากทิศ${direction[0]}` : `from the ${direction[1]}`;
 }
 
 export function humidityWord(percent: number, t: T): string {

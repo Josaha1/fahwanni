@@ -1,5 +1,6 @@
 import type { AirSnapshot } from "./air";
 import type { WeatherSnapshot } from "./weather/types";
+import { translator } from "../i18n/core";
 
 export const WEATHER_CACHE_MS = 10 * 60 * 1000;
 
@@ -44,5 +45,6 @@ export function weatherErrorCode(body: unknown): WeatherErrorCode {
 
 export function updatedAgo(savedAt: number, now: number, lang: "th" | "en"): string {
   const minutes = Math.max(0, Math.floor((now - savedAt) / 60_000));
-  return lang === "th" ? `อัปเดต ${minutes} นาทีที่แล้ว` : `Updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const t = translator(lang);
+  return minutes < 1 ? t("อัปเดตเมื่อสักครู่") : t("อัปเดต {n} นาทีที่แล้ว", { n: minutes });
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translator } from "../i18n/core";
-import { heatBandWord, humidityWord, pm25LevelWord, uvWord, windWord } from "./words";
+import { heatBandWord, humidityWord, pm25LevelWord, uvWord, windDirectionLabel, windWord } from "./words";
 
 const th = translator("th");
 const en = translator("en");
@@ -45,5 +45,32 @@ describe("weather words", () => {
     expect(uvWord(11, en)).toBe("Danger");
     expect(windWord(62, en)).toBe("Very strong wind");
     expect(humidityWord(85, en)).toBe("Very humid");
+  });
+
+  it.each([
+    ["NORTH", "เหนือ", "north"],
+    ["NORTH_NORTHEAST", "ตะวันออกเฉียงเหนือ", "northeast"],
+    ["NORTHEAST", "ตะวันออกเฉียงเหนือ", "northeast"],
+    ["EAST_NORTHEAST", "ตะวันออกเฉียงเหนือ", "northeast"],
+    ["EAST", "ตะวันออก", "east"],
+    ["EAST_SOUTHEAST", "ตะวันออกเฉียงใต้", "southeast"],
+    ["SOUTHEAST", "ตะวันออกเฉียงใต้", "southeast"],
+    ["SOUTH_SOUTHEAST", "ตะวันออกเฉียงใต้", "southeast"],
+    ["SOUTH", "ใต้", "south"],
+    ["SOUTH_SOUTHWEST", "ตะวันตกเฉียงใต้", "southwest"],
+    ["SOUTHWEST", "ตะวันตกเฉียงใต้", "southwest"],
+    ["WEST_SOUTHWEST", "ตะวันตกเฉียงใต้", "southwest"],
+    ["WEST", "ตะวันตก", "west"],
+    ["WEST_NORTHWEST", "ตะวันตกเฉียงเหนือ", "northwest"],
+    ["NORTHWEST", "ตะวันตกเฉียงเหนือ", "northwest"],
+    ["NORTH_NORTHWEST", "ตะวันตกเฉียงเหนือ", "northwest"],
+  ])("labels wind direction %s", (cardinal, thai, english) => {
+    expect(windDirectionLabel(cardinal, "th")).toBe(`ลมจากทิศ${thai}`);
+    expect(windDirectionLabel(cardinal, "en")).toBe(`from the ${english}`);
+  });
+
+  it("omits unknown wind directions", () => {
+    expect(windDirectionLabel("UNSPECIFIED", "th")).toBeUndefined();
+    expect(windDirectionLabel(undefined, "en")).toBeUndefined();
   });
 });

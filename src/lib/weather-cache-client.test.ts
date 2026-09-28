@@ -22,4 +22,11 @@ describe("weather client cache", () => {
     expect(updatedAgo(0, 120_000, "th")).toBe("อัปเดต 2 นาทีที่แล้ว");
     expect(updatedAgo(0, 60_000, "en")).toBe("Updated 1 minute ago");
   });
+
+  it("uses just now for updates under one minute", () => {
+    expect(updatedAgo(0, 0, "th")).toBe("อัปเดตเมื่อสักครู่");
+    expect(updatedAgo(0, 59_999, "th")).toBe("อัปเดตเมื่อสักครู่");
+    expect(updatedAgo(0, 59_999, "en")).toBe("Updated just now");
+    expect(updatedAgo(0, 60_000, "th")).toBe("อัปเดต 1 นาทีที่แล้ว");
+  });
 });

@@ -66,13 +66,15 @@ export function advise(snapshot: WeatherSnapshot, air: { pm25?: number } = {}, n
   }
 
   const rainStart = next24.find((hour) => (hour.rainChance ?? 0) >= 50 && hour.startTime);
-  if (rainStart?.startTime) add("rain-start", "tip", { hour: hourLabel(rainStart.startTime, timeZone) });
 
   const commuteRain = next24.find((hour) => {
     if (!hour.startTime || (hour.rainChance ?? 0) < 40) return false;
     const h = localHour(hour.startTime, timeZone);
     return (h >= 6 && h <= 9) || (h >= 16 && h <= 19);
   });
+  if (rainStart?.startTime && (!commuteRain?.startTime || hourLabel(rainStart.startTime, timeZone) !== hourLabel(commuteRain.startTime, timeZone))) {
+    add("rain-start", "tip", { hour: hourLabel(rainStart.startTime, timeZone) });
+  }
   if (commuteRain?.startTime) add("commute-rain", "tip", { hour: hourLabel(commuteRain.startTime, timeZone) });
 
   const nowHour = localHour(now, timeZone);
