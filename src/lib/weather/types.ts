@@ -39,6 +39,9 @@ export interface WeatherDay {
   night: WeatherPeriod;
   sunrise?: string;
   sunset?: string;
+  moonPhase?: string;
+  moonrise?: string;
+  moonset?: string;
 }
 
 export interface WeatherAlert {

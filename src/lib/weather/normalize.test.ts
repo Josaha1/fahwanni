@@ -97,3 +97,13 @@ describe("weather response normalization", () => {
     expect(normalize(current, hours, days, alerts)).toEqual(first);
   });
 });
+
+describe("moon events", () => {
+  it("passes the moon phase and first rise/set times through", () => {
+    const { current, hours, days, alerts } = parsedFixture();
+    const [day] = normalize(current, hours, days, alerts).days;
+    expect(day.moonPhase).toBe("FULL_MOON");
+    expect(day.moonrise).toBe("2026-09-28T18:30:00+07:00");
+    expect(day.moonset).toBeUndefined();
+  });
+});

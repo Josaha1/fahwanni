@@ -84,6 +84,9 @@ export function normalize(
       },
       sunrise: day.sunEvents?.sunriseTime,
       sunset: day.sunEvents?.sunsetTime,
+      moonPhase: day.moonEvents?.moonPhase,
+      moonrise: day.moonEvents?.moonriseTimes?.[0],
+      moonset: day.moonEvents?.moonsetTimes?.[0],
     })),
     alerts: (alerts.weatherAlerts ?? []).map((alert) => ({
       id: alert.alertId,
