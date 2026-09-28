@@ -48,6 +48,6 @@ export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
         </li>)}
       </ul>
     </section>)}
-    <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, USGS, JMA/GDACS")}</p>
+    <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>
   </dialog>;
 }

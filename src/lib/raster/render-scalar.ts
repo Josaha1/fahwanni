@@ -1,4 +1,5 @@
-import { tempColor } from "../map/palette";
+import { pm25Color, tempColor } from "../map/palette";
+import type { Pm25Grid } from "../pm25/grid";
 import type { WindGrid } from "../wind/grid";
 
 export type Corners = [[number, number], [number, number], [number, number], [number, number]];
@@ -59,5 +60,14 @@ export function renderTempImage(grid: WindGrid, hourIndex: number, width = 256, 
   return renderScalarImage(grid, (at) => {
     const hex = tempColor(at(temp));
     return [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)).concat(140) as [number, number, number, number];
+  }, width, height);
+}
+
+export function renderPm25Image(grid: Pm25Grid, hourIndex: number, width = 256, height = 256): ScalarImage | null {
+  const values = grid.pm25[hourIndex];
+  if (!values || values.length !== grid.nx * grid.ny) return null;
+  return renderScalarImage(grid, (at) => {
+    const hex = pm25Color(at(values));
+    return [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)).concat(150) as [number, number, number, number];
   }, width, height);
 }

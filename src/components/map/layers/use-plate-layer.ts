@@ -20,7 +20,8 @@ export function usePlateLayer(map: Map | null, saveData: boolean) {
 
   useStyleEffect(map, (live) => {
     if (saveData || idleMap !== live) return;
-    const layers = live.getStyle().layers;
+    const layers = live.getStyle()?.layers;
+    if (!layers) return;
     const waterIndex = layers.findIndex((layer) => layer.id === "water" && layer.type === "fill");
     if (waterIndex < 0) return;
     if (!live.getSource(SOURCE)) live.addSource(SOURCE, { type: "image", url: HOLOGRAM_URL, coordinates: hologramCoordinates() });

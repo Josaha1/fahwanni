@@ -62,7 +62,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
   useEffect(() => {
     if (!containerRef.current || !initialStyle) return;
     let created: Map | undefined;
-    let waitingForStyle = true;
+    let waitingForLoad = true;
     try {
       created = new Map({
         container: containerRef.current,
@@ -83,6 +83,7 @@ export function MapProvider({ containerRef, initialCenter, children }: {
       live.addControl(new AttributionControl({ compact: true, customAttribution: [
         '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
         '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
+        '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Air quality: Open-Meteo.com (CAMS, CC BY 4.0)</a>',
         TERRAIN_ATTRIBUTION,
         '<a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer">Earthquakes: USGS</a>',
       ] }), "bottom-right");
@@ -91,12 +92,13 @@ export function MapProvider({ containerRef, initialCenter, children }: {
       attribution?.classList.remove("maplibregl-compact-show");
       attribution?.removeAttribute("open");
 
-      live.once("load", () => setMap(live));
-      live.on("idle", () => {
-        if (waitingForStyle) { waitingForStyle = false; setStatus("ready"); }
+      live.once("load", () => {
+        waitingForLoad = false;
+        setMap(live);
+        setStatus("ready");
       });
-      live.on("error", () => {
-        if (waitingForStyle) { waitingForStyle = false; setStatus("error"); }
+      live.on("error", (event) => {
+        if (waitingForLoad && !("sourceId" in event) && !("tile" in event)) setStatus("error");
       });
       return () => {
         setMap(null);

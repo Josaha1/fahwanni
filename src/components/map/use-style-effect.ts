@@ -7,9 +7,9 @@ import type { Map } from "maplibre-gl";
  * Keeps a custom source/layer on the map across style reloads.
  *
  * Contract:
- * - `apply(map)` runs now (if the style is usable), again on every `style.load` (a `setStyle`
- *   drops all custom sources/layers) and on every `idle` (`isStyleLoaded()` stays false while
- *   raster tiles are still loading, so the first attempt can be skipped).
+ * - `apply(map)` runs now, again on every `style.load` (a `setStyle` drops all custom
+ *   sources/layers) and on every `idle`. A style that has not loaded yet can reject
+ *   a source/layer; the next event retries without waiting for raster tiles to load.
  * - `apply` must therefore be idempotent: check `getSource`/`getLayer` before adding and only
  *   update paint/data when it differs. Do not keep "already applied" flags outside the map —
  *   they would survive a style reload and skip the re-add.
@@ -19,8 +19,7 @@ export function useStyleEffect(map: Map | null, apply: (map: Map) => void, remov
   useEffect(() => {
     if (!map) return;
     const run = () => {
-      if (!map.isStyleLoaded()) return;
-      try { apply(map); } catch { /* A half-loaded style can reject a layer; the next idle retries. */ }
+      try { apply(map); } catch { /* A style that has not loaded yet can reject a layer; the next event retries. */ }
     };
     run();
     map.on("style.load", run);

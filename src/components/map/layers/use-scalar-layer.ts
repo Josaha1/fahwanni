@@ -13,7 +13,9 @@ export function useScalarLayer(map: Map | null, images: (ScalarImage | null)[], 
   useEffect(() => { visibility.current = { activeIndex, enabled }; }, [activeIndex, enabled]);
 
   useStyleEffect(map, (live) => {
-    const firstSymbol = live.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+    const layers = live.getStyle()?.layers;
+    if (!layers) return;
+    const firstSymbol = layers.find((layer) => layer.type === "symbol")?.id;
     images.forEach((image, index) => {
       if (!image) return;
       const id = idFor(idPrefix, index);

@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
+import { toast } from "sonner";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
 import { renderPrecipImage } from "@/lib/precip/render";
-import { renderTempImage } from "@/lib/raster/render-scalar";
+import { renderPm25Image, renderTempImage } from "@/lib/raster/render-scalar";
+import { pm25Level } from "@/lib/air";
+import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
 import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLabelKey, windHourFor } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
@@ -68,7 +71,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
-  const { manifest, wind, storms, quakes, initialIndex } = useMapData();
+  const { manifest, wind, pm25, pm25Status, loadPm25, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
   const { activeIndex, playing, primary, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
@@ -100,8 +103,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   }, [wind]);
   const modelHours = useMemo(() => modelImages.length ? wind?.precipHours?.slice(0, modelImages.length) ?? [] : [], [modelImages, wind]);
   const stops = useMemo(() => buildLayerTimeline(primary, {
-    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? wind?.tempHours : undefined,
-  }, nowIso), [primary, frames, modelHours, wind?.tempHours, nowIso]);
+    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? wind?.tempHours : primary === "pm25" ? pm25?.hours : undefined,
+  }, nowIso), [primary, frames, modelHours, wind?.tempHours, pm25?.hours, nowIso]);
   const tempImages = useMemo(() => {
     if (primary !== "temp" || !wind?.tempHours || !wind.temp) return [] as (ScalarImage | null)[];
     const images: (ScalarImage | null)[] = Array(wind.tempHours.length).fill(null);
@@ -120,6 +123,24 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     }
     return images;
   }, [primary, wind, stops]);
+  const pm25Images = useMemo(() => {
+    if (primary !== "pm25" || !pm25) return [] as (ScalarImage | null)[];
+    const images: (ScalarImage | null)[] = Array(pm25.hours.length).fill(null);
+    for (const stop of stops) {
+      const image = renderPm25Image(pm25, stop.index);
+      if (!image) continue;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (!context) continue;
+      const pixels = context.createImageData(image.width, image.height);
+      pixels.data.set(image.data);
+      context.putImageData(pixels, 0, 0);
+      images[stop.index] = { url: canvas.toDataURL(), coordinates: image.coordinates };
+    }
+    return images;
+  }, [primary, pm25, stops]);
   const defaultIdx = defaultIndexFor(primary, stops, nowIso);
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
@@ -134,6 +155,8 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const locationTemp = primary === "temp" && activeStop && wind?.temp?.[activeStop.index] && wind.feels?.[activeStop.index]
     ? { temp: sampleGrid(wind, wind.temp[activeStop.index], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[activeStop.index], place.lon, place.lat) }
     : null;
+  const locationPm25 = primary === "pm25" && activeStop && pm25?.pm25[activeStop.index]
+    ? sampleGrid(pm25, pm25.pm25[activeStop.index], place.lon, place.lat) : null;
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
@@ -144,6 +167,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
   useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
   useScalarLayer(mapInstance, tempImages, activeStop?.kind === "model" && primary === "temp" ? activeStop.index : -1, primary === "temp", "temp", 1);
+  useScalarLayer(mapInstance, pm25Images, activeStop?.kind === "model" && primary === "pm25" ? activeStop.index : -1, primary === "pm25", "pm25", 1);
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, quakesOn);
@@ -221,7 +245,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       <div className="min-w-0 flex-1">
         <input type="range" min={0} max={Math.max(0, stops.length - 1)} value={Math.min(activeIndex, Math.max(0, stops.length - 1))}
           onChange={(event) => dispatch({ type: "setIndex", index: Number(event.target.value) })}
-          disabled={!available} aria-label={t(primary === "temp" ? "เวลาอุณหภูมิ" : "เวลาฝน")}
+          disabled={!available} aria-label={t(primary === "temp" ? "เวลาอุณหภูมิ" : primary === "pm25" ? "เวลาฝุ่น PM2.5" : "เวลาฝน")}
           aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
           className="map-range w-full" />
         <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
@@ -245,6 +269,10 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     {locationTemp && locationTemp.temp !== null && locationTemp.feels !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {t("อุณหภูมิที่ตำแหน่งคุณ {temp}° (รู้สึกเหมือน {feels}°)", { temp: Math.round(locationTemp.temp), feels: Math.round(locationTemp.feels) })}
     </p>}
+    {primary === "pm25" && locationPm25 !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+      {t("ฝุ่น PM2.5 ที่ตำแหน่งคุณ {v} µg/m³ · {level}", { v: Math.round(locationPm25), level: pm25LevelWord(pm25Level(locationPm25), t) })}
+    </p>}
+    {primary === "pm25" && <p className="map-muted mt-1 text-xs">{t("ค่าประมาณจากแบบจำลอง (CAMS) — หน้าพยากรณ์ใช้ค่าจากสถานีตรวจวัด")}</p>}
     {primary === "rain" && radarSummary && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
         : radarSummary.nearestKm !== undefined
@@ -284,9 +312,16 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} />;
+    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(wind?.tempHours?.length && wind.temp?.some((hour) => hour.length > 0))}
-    onChange={(next) => dispatch({ type: "setPrimary", primary: next })} />;
+    pm25Loading={pm25Status === "loading"} onChange={(next) => {
+      dispatch({ type: "setPrimary", primary: next });
+      if (next === "pm25" && pm25Status !== "loading") loadPm25().catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
+        dispatch({ type: "setPrimary", primary: "rain" });
+      });
+    }} />;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} primaryPicker={primaryPicker} layers={layers}
     card={card} onProbeCenter={(trigger) => probeCenter(trigger)} />;
 

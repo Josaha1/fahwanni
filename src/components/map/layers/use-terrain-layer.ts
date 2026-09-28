@@ -8,9 +8,11 @@ import { useStyleEffect } from "../use-style-effect";
 export function useTerrainLayer(map: Map | null, enabled: boolean, reducedMotion: boolean) {
   useStyleEffect(map, (live) => {
     if (enabled) {
+      const layers = live.getStyle()?.layers;
+      if (!layers) return;
       if (!live.getSource(TERRAIN_SOURCE)) live.addSource(TERRAIN_SOURCE, terrainSource);
       if (!live.getLayer(HILLSHADE_LAYER)) {
-        const firstSymbol = live.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+        const firstSymbol = layers.find((layer) => layer.type === "symbol")?.id;
         live.addLayer({ id: HILLSHADE_LAYER, type: "hillshade", source: TERRAIN_SOURCE, paint: { "hillshade-exaggeration": 0.35 } }, firstSymbol);
       }
       if (!live.getTerrain()) live.setTerrain({ source: TERRAIN_SOURCE, exaggeration: 1.3 });

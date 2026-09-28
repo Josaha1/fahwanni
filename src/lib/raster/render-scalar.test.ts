@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { tempColor } from "../map/palette";
+import type { Pm25Grid } from "../pm25/grid";
 import { levelToRgba } from "../nowcast/intensity";
 import { MIN_PROB, precipAlpha, precipLevel, renderPrecipImage } from "../precip/render";
 import type { WindGrid } from "../wind/grid";
-import { latToMercY, mercYToLat, renderScalarImage, renderTempImage } from "./render-scalar";
+import { latToMercY, mercYToLat, renderPm25Image, renderScalarImage, renderTempImage } from "./render-scalar";
 
 const grid = {
   bbox: [92, 4, 110, 22], nx: 2, ny: 2, hours: [], u: [], v: [],
@@ -31,6 +32,18 @@ describe("renderScalarImage", () => {
     ]);
     expect(renderTempImage(grid, 0)).toBeNull();
     expect(renderTempImage(temperatureGrid, 1)).toBeNull();
+  });
+
+  it.each([[10, [59, 204, 255]], [50, [255, 162, 0]]])("renders a constant PM2.5 value of %i with its palette colour", (value, rgb) => {
+    const pm25Grid: Pm25Grid = {
+      bbox: grid.bbox, nx: grid.nx, ny: grid.ny, hours: ["2026-09-28T00:00:00.000Z"],
+      pm25: [Array(4).fill(value)], source: "open-meteo-cams",
+      attribution: { text: "Air quality: Open-Meteo.com (CAMS, CC BY 4.0)", url: "https://open-meteo.com" },
+    };
+    const image = renderPm25Image(pm25Grid, 0, 3, 3)!;
+    expect([...image.data.slice(16, 20)]).toEqual([...rgb, 150]);
+    expect(renderPm25Image(pm25Grid, 1)).toBeNull();
+    expect(renderPm25Image({ ...pm25Grid, pm25: [[]] }, 0)).toBeNull();
   });
 
   it("keeps precipitation bytes identical to the previous raster loop", () => {

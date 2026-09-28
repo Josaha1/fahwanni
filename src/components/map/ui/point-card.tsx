@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
+import { pm25Level } from "@/lib/air";
+import type { Pm25Grid } from "@/lib/pm25/grid";
 import { modelRainAt, sampleGrid, windAt } from "@/lib/map/probe";
 import type { PrimaryLayer } from "@/lib/map/legend";
 import type { TimelineStop } from "@/lib/timeline/frames";
@@ -15,18 +17,19 @@ import type { RadarFrame } from "@/lib/radar/types";
 import { distanceKm, type Storm } from "@/lib/storms/normalize";
 import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
 import type { WindGrid } from "@/lib/wind/grid";
-import { windWord } from "@/lib/words";
+import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import { readRadarLevel } from "../radar-tile";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
-export function PointCard({ probe, onClose, frame, wind, windHour, primary, activeStop, nowIso, storms, quakes }: {
+export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
   wind: WindGrid | null;
   windHour: number;
+  pm25: Pm25Grid | null;
   primary: PrimaryLayer;
   activeStop?: TimelineStop;
   nowIso: string;
@@ -49,6 +52,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, primary, acti
   const temp = probe.kind === "point" && wind && tempHour >= 0 && wind.temp?.[tempHour] && wind.feels?.[tempHour]
     ? { value: sampleGrid(wind, wind.temp[tempHour], probe.lon, probe.lat), feels: sampleGrid(wind, wind.feels[tempHour], probe.lon, probe.lat) }
     : null;
+  const currentPm25Hour = pm25?.hours.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
+  const pm25Hour = primary === "pm25" && activeStop ? activeStop.index : currentPm25Hour;
+  const pm25Value = probe.kind === "point" && pm25 && pm25Hour >= 0 && pm25.pm25[pm25Hour]
+    ? sampleGrid(pm25, pm25.pm25[pm25Hour], probe.lon, probe.lat) : null;
 
   useEffect(() => { heading.current?.focus(); }, [probe]);
   useEffect(() => {
@@ -77,6 +84,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, primary, acti
         </dd></div>
         <div className="flex justify-between gap-3"><dt>{t("ฝน 3 ชม. ข้างหน้า")}</dt><dd className="text-right font-semibold">{!rain || rain.level === 0 ? t("ไม่มีฝน") : t("{rain} ราว {time} น.", { rain: t(rainKeys[rain.level]), time: wind?.precipHours?.[rain.hourIndex] ? formatTime(wind.precipHours[rain.hourIndex], "Asia/Bangkok", t.locale) : "" })}</dd></div>
         {temp && temp.value !== null && temp.feels !== null && <div className="flex justify-between gap-3"><dt>{t("อุณหภูมิ")}</dt><dd className="text-right font-semibold">{t("{temp}° รู้สึกเหมือน {feels}°", { temp: Math.round(temp.value), feels: Math.round(temp.feels) })}</dd></div>}
+        {pm25Value !== null && <div className="flex justify-between gap-3"><dt>{t("ฝุ่น PM2.5")}</dt><dd className="text-right font-semibold">
+          {t("{v} µg/m³ · {level}", { v: Math.round(pm25Value), level: pm25LevelWord(pm25Level(pm25Value), t) })}
+          <small className="map-muted block font-normal">{t("ค่าประมาณจากแบบจำลอง (CAMS)")}</small>
+        </dd></div>}
         <div className="flex justify-between gap-3"><dt>{t("ลม")}</dt><dd className="text-right font-semibold">{breeze ? t("{wind} {speed} กม./ชม. จากทิศ{bearing}", { wind: windWord(breeze.speedKmh, t), speed: breeze.speedKmh, bearing: bearingWord(breeze.fromDeg, t) }) : t("ไม่ทราบ")}</dd></div>
       </dl>
       <button type="button" className="map-chip mt-3 w-full" onClick={() => { setPlace(point); router.push("/"); }}>{t("ดูพยากรณ์เต็ม")}</button>

@@ -12,7 +12,9 @@ export function useRadarLayer(map: Map | null, frames: RadarFrame[], maxZoom: nu
   useEffect(() => { visibility.current = { activeIndex, enabled }; }, [activeIndex, enabled]);
 
   useStyleEffect(map, (live) => {
-    const firstSymbol = live.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+    const layers = live.getStyle()?.layers;
+    if (!layers) return;
+    const firstSymbol = layers.find((layer) => layer.type === "symbol")?.id;
     frames.forEach((frame, index) => {
       const id = idFor(index);
       if (!live.getSource(id)) live.addSource(id, { type: "raster", tiles: [frame.tileUrl], tileSize: 256, maxzoom: maxZoom });
