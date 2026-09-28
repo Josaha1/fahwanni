@@ -109,6 +109,12 @@ describe("advise", () => {
     expect(advice.map((item) => item.id)).not.toContain("rain-start");
   });
 
+  it.each(["LIGHT_RAIN", "LIGHT_THUNDERSTORM_RAIN"])("skips umbrella when current %s already triggers raining-now", (conditionType) => {
+    const advice = advise({ ...base(), conditionType, hours: [hour("12", 65)] }, {}, "2026-09-28T12:17:00Z");
+    expect(advice.map((item) => item.id)).toContain("raining-now");
+    expect(advice.map((item) => item.id)).not.toContain("umbrella");
+  });
+
   it("only announces rain-start for an hour starting after now", () => {
     const current = hour("12", 65);
     const snapshot = { ...base(), conditionType: "CLOUDY", timeZone: "UTC", hours: [current] };

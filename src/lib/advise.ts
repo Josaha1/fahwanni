@@ -50,7 +50,7 @@ export function advise(snapshot: WeatherSnapshot, air: { pm25?: number } = {}, n
   const conditionGroup = describeCondition(snapshot.conditionType).group;
   const rainingNow = conditionGroup === "rain" || conditionGroup === "storm";
   if (rainingNow) add("raining-now", "tip");
-  if (next6.some((hour) => (hour.rainChance ?? 0) >= 40)) add("umbrella", "tip");
+  if (!rainingNow && next6.some((hour) => (hour.rainChance ?? 0) >= 40)) add("umbrella", "tip");
   if (next6.some((hour) => (hour.thunderChance ?? 0) >= 50)) add("storm", "warn");
 
   const band = snapshot.heatIndexC === undefined ? "none" : heatBand(snapshot.heatIndexC);
