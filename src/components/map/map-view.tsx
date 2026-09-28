@@ -46,12 +46,24 @@ const radarId = (index: number) => `rain-radar-${index}`;
 const modelId = (index: number) => `model-rain-${index}`;
 type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
 const STORM_SOURCE = "storms";
-const STORM_LAYERS = ["storm-cone", "storm-track", "storm-forecast", "storm-center", "storm-label"] as const;
+const STORM_LAYERS = ["storm-cone", "storm-track-glow", "storm-track", "storm-forecast-glow", "storm-forecast", "storm-center", "storm-label"] as const;
 const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
 const QUAKE_SOURCE = "quakes";
 type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
 const emptyQuakes: QuakeCollection = { type: "FeatureCollection", features: [] };
 const quakesToGeoJSON = (quakes: Quake[]): QuakeCollection => ({ type: "FeatureCollection", features: quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) });
+
+function initialControlOpen(key: string): boolean {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) return saved === "true";
+  } catch { /* Private browsing can deny storage. */ }
+  return !window.matchMedia("(max-width: 640px)").matches;
+}
+
+function rememberControlOpen(key: string, open: boolean): void {
+  try { localStorage.setItem(key, String(open)); } catch { /* Keep the control usable without storage. */ }
+}
 
 export function MapView() {
   const { place } = useLastPlace();
@@ -64,6 +76,8 @@ export function MapView() {
   const [radarOn, setRadarOn] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(() => initialControlOpen("fah-map-layers-open"));
+  const [panelOpen, setPanelOpen] = useState(() => initialControlOpen("fah-map-panel-open"));
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const [wind, setWind] = useState<WindGrid | null>(null);
@@ -226,6 +240,9 @@ export function MapView() {
         TERRAIN_ATTRIBUTION,
         '<a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer">Earthquakes: USGS</a>',
       ] }), "bottom-right");
+      const attribution = liveMap.getContainer().querySelector(".maplibregl-ctrl-attrib");
+      attribution?.classList.remove("maplibregl-compact-show");
+      attribution?.removeAttribute("open");
       const removeRadar = () => {
         for (let index = 0; index < 6; index++) {
           const id = radarId(index);
@@ -295,12 +312,13 @@ export function MapView() {
         if (source && "setData" in source) { (source as { setData: (d: StormCollection) => void }).setData(data); return; }
         if (data.features.length === 0) return;
         liveMap.addSource(STORM_SOURCE, { type: "geojson", data });
-        const red = "#d9483b";
-        liveMap.addLayer({ id: "storm-cone", type: "fill", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "cone"], paint: { "fill-color": red, "fill-opacity": 0.12 } });
-        liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": red, "line-width": 2.5 } });
-        liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": red, "line-width": 2, "line-dasharray": [2, 2] } });
-        liveMap.addLayer({ id: "storm-center", type: "circle", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], paint: { "circle-radius": 8, "circle-color": red, "circle-stroke-width": 3, "circle-stroke-color": "#ffffff" } });
-        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": red, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
+        liveMap.addLayer({ id: "storm-cone", type: "fill", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "cone"], paint: { "fill-color": NEON.accent, "fill-opacity": 0.12 } });
+        liveMap.addLayer({ id: "storm-track-glow", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": NEON.accent, "line-width": 11, "line-blur": 7, "line-opacity": 0.7 } });
+        liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": NEON.accent, "line-width": 2.5 } });
+        liveMap.addLayer({ id: "storm-forecast-glow", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 9, "line-blur": 6, "line-opacity": 0.6 } });
+        liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 2, "line-dasharray": [2, 2] } });
+        liveMap.addLayer({ id: "storm-center", type: "circle", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], paint: { "circle-radius": 8, "circle-color": NEON.accent, "circle-stroke-width": 3, "circle-stroke-color": NEON.label } });
+        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 1.4], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": NEON.accent, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
       };
       const removeStorms = () => {
         applied = null;
@@ -319,12 +337,12 @@ export function MapView() {
         liveMap.addSource(QUAKE_SOURCE, { type: "geojson", data });
         liveMap.addLayer({ id: "quake-circle", type: "circle", source: QUAKE_SOURCE, paint: {
           "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 4, 5, 6, 12, 7.5, 20],
-          "circle-color": ["interpolate", ["linear"], ["get", "mag"], 4, "#f5a524", 5.5, "#e8603c", 6.5, "#b3261e"],
-          "circle-opacity": 0.75, "circle-stroke-width": 1.5, "circle-stroke-color": "#ffffff",
+          "circle-color": NEON.quake, "circle-blur": 0.45,
+          "circle-opacity": 0.8, "circle-stroke-width": 1.5, "circle-stroke-color": NEON.quake,
         } });
         liveMap.addLayer({ id: "quake-label", type: "symbol", source: QUAKE_SOURCE, filter: [">=", ["get", "mag"], 5],
           layout: { "text-field": ["get", "label"], "text-offset": [0, 1.3], "text-size": 12, "text-font": ["Noto Sans Regular"] },
-          paint: { "text-color": "#b3261e", "text-halo-color": "#ffffff", "text-halo-width": 1.5 } });
+          paint: { "text-color": NEON.quake, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
       };
       const removeQuakes = () => {
         quakesApplied = null;
@@ -345,7 +363,8 @@ export function MapView() {
       const pin = document.createElement("div");
       pin.setAttribute("role", "img");
       pin.setAttribute("aria-label", placeName);
-      pin.className = "h-5 w-5 rounded-full border-[3px] border-white bg-given shadow-lg";
+      pin.className = "neon-pin";
+      pin.innerHTML = '<span class="neon-pulse"></span><span class="neon-sweep"></span><span class="neon-core"></span>';
       marker = new Marker({ element: pin }).setLngLat([place.lon, place.lat]).addTo(liveMap);
 
       liveMap.once("load", () => setMapInstance(liveMap));
@@ -395,107 +414,129 @@ export function MapView() {
   }, [place.lon, place.lat, placeName, attempt, mapStyle]);
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden">
+    <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
+      style={{ "--neon-bg": NEON.bg, "--neon-label": NEON.label, "--neon-muted": NEON.labelMuted, "--neon-pin": NEON.pin } as React.CSSProperties}>
       <header className="shrink-0 px-5 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}>
         <h1 className="text-lg">{t("แผนที่")} · {placeName}</h1>
       </header>
       <div className="relative min-h-0 flex-1" style={{ backgroundColor: NEON.bg }}>
         <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
-        <div className="absolute left-3 top-3 z-10">
-          <button type="button" disabled={!available} aria-pressed={available && radarOn}
-            onClick={() => { setRadarOn((on) => !on); setPlaying(false); }}
-            className="rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
-            {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
+        <div className="absolute left-3 top-3 z-10" style={{ maxWidth: "calc(100% - 5rem)" }}>
+          <button type="button" aria-expanded={layersOpen} aria-controls="map-layer-chips"
+            aria-label={layersOpen ? t("ซ่อนชั้นข้อมูล") : t("ชั้นข้อมูล")}
+            onClick={() => { const open = !layersOpen; setLayersOpen(open); rememberControlOpen("fah-map-layers-open", open); }}
+            className="neon-glass neon-toggle grid size-10 place-items-center rounded-full text-lg">
+            <span aria-hidden="true">{layersOpen ? "✕" : "☰"}</span>
           </button>
-          <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn}
-            onClick={() => setWindOn((on) => !on)}
-            className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm disabled:opacity-60">
-            {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
-          </button>
-          {storms.length > 0 && (
-            <button type="button" aria-pressed={stormsOn} onClick={() => setStormsOn((on) => !on)}
-              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
-              {t("พายุ")} ({storms.length})
+          <div id="map-layer-chips" hidden={!layersOpen} className="mt-2 flex flex-wrap gap-2">
+            <button type="button" disabled={!available} aria-pressed={available && radarOn}
+              onClick={() => { setRadarOn((on) => !on); setPlaying(false); }}
+              className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
+              {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
             </button>
-          )}
-          {quakes.length > 0 && (
-            <button type="button" aria-pressed={quakesOn} onClick={() => setQuakesOn((on) => !on)}
-              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
-              {t("แผ่นดินไหว")} ({quakes.length})
+            <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn}
+              onClick={() => setWindOn((on) => !on)}
+              className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold disabled:opacity-60">
+              {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
             </button>
-          )}
-          {terrainOk && (
-            <button type="button" aria-pressed={terrainOn} onClick={() => setTerrainOn((on) => !on)}
-              aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
-              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
-              3D
-            </button>
-          )}
+            {storms.length > 0 && (
+              <button type="button" aria-pressed={stormsOn} onClick={() => setStormsOn((on) => !on)}
+                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
+                {t("พายุ")} ({storms.length})
+              </button>
+            )}
+            {quakes.length > 0 && (
+              <button type="button" aria-pressed={quakesOn} onClick={() => setQuakesOn((on) => !on)}
+                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
+                {t("แผ่นดินไหว")} ({quakes.length})
+              </button>
+            )}
+            {terrainOk && (
+              <button type="button" aria-pressed={terrainOn} onClick={() => setTerrainOn((on) => !on)}
+                aria-label={terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ")}
+                className="neon-glass neon-chip rounded-full px-3 py-2 text-sm font-semibold">
+                3D
+              </button>
+            )}
+          </div>
         </div>
         {mapInstance && wind && windOn && status === "ready" && (
           <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} dark />
         )}
         {available && radarOn && (
-          <div className="absolute inset-x-3 bottom-[4.5rem] z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-3 text-foreground shadow-lg">
-            <div className="flex items-center gap-3">
+          <div className={`neon-glass absolute z-10 rounded-2xl p-3 ${panelOpen ? "inset-x-3 bottom-[4.5rem] mx-auto max-w-md" : "bottom-3 left-3"}`}
+            style={!panelOpen ? { maxWidth: "calc(100% - 1.5rem)" } : undefined}>
+            <div className="flex items-center gap-2">
               <button type="button" onClick={() => setPlaying((value) => !value)} disabled={reducedMotion || !frames.length}
                 aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")}
-                className="grid size-9 shrink-0 place-items-center rounded-full bg-given text-white disabled:opacity-50">
+                className="neon-play grid size-9 shrink-0 place-items-center rounded-full disabled:opacity-50">
                 {playing ? "Ⅱ" : "▶"}
               </button>
-              <div className="min-w-0 flex-1">
-                <input type="range" min={0} max={stops.length - 1} value={Math.min(activeIndex, stops.length - 1)}
-                  onChange={(event) => { setPlaying(false); setActiveIndex(Number(event.target.value)); }}
-                  aria-label={t("เวลาฝน")}
-                  aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
-                  className="w-full accent-given" />
-                <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
-                  <span className="bg-given" style={{ width: `${shares.radar * 100}%` }} />
-                  <span className="bg-violet-400/60" style={{ width: `${shares.model * 100}%` }} />
+              {!panelOpen && <span className="min-w-0 flex-1 truncate text-sm font-semibold">{activeTimeLabel}</span>}
+              <button type="button" aria-expanded={panelOpen} aria-controls="map-timeline-details"
+                aria-label={panelOpen ? t("ย่อแผงเวลา") : t("ขยายแผงเวลา")}
+                onClick={() => { const open = !panelOpen; setPanelOpen(open); rememberControlOpen("fah-map-panel-open", open); }}
+                className="neon-toggle order-last grid size-9 shrink-0 place-items-center rounded-full text-lg">
+                <span aria-hidden="true">{panelOpen ? "⌄" : "⌃"}</span>
+              </button>
+              {panelOpen && <>
+                <div className="min-w-0 flex-1">
+                  <input type="range" min={0} max={stops.length - 1} value={Math.min(activeIndex, stops.length - 1)}
+                    onChange={(event) => { setPlaying(false); setActiveIndex(Number(event.target.value)); }}
+                    aria-label={t("เวลาฝน")}
+                    aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
+                    className="neon-range w-full" />
+                  <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
+                    <span className="bg-cyan-400" style={{ width: `${shares.radar * 100}%` }} />
+                    <span className="bg-violet-400/60" style={{ width: `${shares.model * 100}%` }} />
+                  </div>
                 </div>
+                <span className="w-32 shrink-0 text-right text-sm font-semibold max-[400px]:w-24">
+                  {activeTimeLabel}
+                  {activeStop && <small className="neon-muted block text-xs font-normal">{t(stopLabelKey(activeStop))}</small>}
+                </span>
+              </>}
+            </div>
+            <div id="map-timeline-details" hidden={!panelOpen}>
+              {radarSummary && (
+                <p className="mt-2 text-sm font-semibold" aria-live="polite">
+                  {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
+                    : radarSummary.nearestKm !== undefined
+                      ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
+                      : t("ไม่มีฝนในรัศมี 100 กม.")}
+                  {radarSummary.heavyNearby && <span className="ml-1" style={{ color: NEON.accent }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
+                </p>
+              )}
+              {series.length > 0 && (
+                <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
+                  <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
+                  <div className="mt-1 flex min-w-0 gap-0.5 pb-1">
+                    {series.map((item) => {
+                      const index = stops.findIndex((stop) => stop.kind === item.kind && stop.time === item.time);
+                      const label = item.kind === "radar" ? t("ตอนนี้") : formatTime(item.time, "Asia/Bangkok", t.locale).slice(0, 2);
+                      const [r, g, b] = levelToRgba(item.level);
+                      return (
+                        <button key={`${item.kind}-${item.time}`} type="button" onClick={() => { setPlaying(false); setActiveIndex(index); }}
+                          aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
+                          aria-pressed={activeIndex === index}
+                          className="neon-series-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md py-1 text-[10px] focus-visible:outline-2">
+                          <span className="flex h-7 w-2 items-end rounded-sm bg-white/10" aria-hidden="true">
+                            {item.level > 0 && <span className="w-full rounded-sm" style={{ height: `${item.level * 25}%`, backgroundColor: `rgb(${r} ${g} ${b})` }} />}
+                          </span>
+                          <span className="whitespace-nowrap text-center leading-tight">{label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="neon-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
+                </section>
+              )}
+              <div className="neon-muted mt-2 flex items-center justify-between gap-3 text-xs">
+                <span>{t("ฝนเบา → ฝนหนัก")}</span>
+                {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
               </div>
-              <span className="w-32 shrink-0 text-right text-sm font-semibold">
-                {activeTimeLabel}
-                {activeStop && <small className="block text-xs font-normal text-muted">{t(stopLabelKey(activeStop))}</small>}
-              </span>
+              <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: "linear-gradient(to right, #9cdbff, #3383db, #ffe164, #e8473f)" }} aria-hidden="true" />
             </div>
-            {radarSummary && (
-              <p className="mt-2 text-sm font-semibold" aria-live="polite">
-                {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
-                  : radarSummary.nearestKm !== undefined
-                    ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
-                    : t("ไม่มีฝนในรัศมี 100 กม.")}
-                {radarSummary.heavyNearby && <span className="ml-1 text-zone-alert-ink">· {t("มีฝนหนักใกล้คุณ")}</span>}
-              </p>
-            )}
-            {series.length > 0 && (
-              <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
-                <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
-                <div className="mt-1 flex gap-1 overflow-x-auto pb-1">
-                  {series.map((item) => {
-                    const index = stops.findIndex((stop) => stop.kind === item.kind && stop.time === item.time);
-                    const label = item.kind === "radar" ? t("ตอนนี้") : t("+{n} ชม.", { n: Math.max(1, Math.ceil((Date.parse(item.time) - Date.parse(nowIso)) / 3_600_000)) });
-                    const [r, g, b] = levelToRgba(item.level);
-                    return (
-                      <button key={`${item.kind}-${item.time}`} type="button" onClick={() => { setPlaying(false); setActiveIndex(index); }}
-                        aria-label={t("{time}: {rain}", { time: label, rain: t(item.level ? "มีฝน" : "ไม่มีฝน") })}
-                        aria-pressed={activeIndex === index}
-                        className="flex min-w-8 flex-1 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-[10px] focus-visible:outline-2 focus-visible:outline-given aria-pressed:bg-given/10">
-                        <span className="flex h-7 w-3 items-end rounded-sm bg-foreground/10" aria-hidden="true">
-                          {item.level > 0 && <span className="w-full rounded-sm" style={{ height: `${item.level * 25}%`, backgroundColor: `rgb(${r} ${g} ${b})` }} />}
-                        </span>
-                        <span className="whitespace-nowrap">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-            <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
-              <span>{t("ฝนเบา → ฝนหนัก")}</span>
-              {frames.length > 0 && <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>}
-            </div>
-            <div className="mt-1 h-1.5 w-full rounded-full" style={{ background: "linear-gradient(to right, #9cdbff, #3383db, #ffe164, #e8473f)" }} aria-hidden="true" />
           </div>
         )}
         {status !== "ready" && (

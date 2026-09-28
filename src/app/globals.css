@@ -138,9 +138,32 @@ h1, h2 { font-family: var(--font-mitr), sans-serif; font-weight: 600; line-heigh
 .anim-icon { background-repeat: no-repeat; background-size: 2400% 100%; animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }
 @keyframes anim-icon-play { from { background-position: 0% 0; } to { background-position: 100% 0; } }
 @media (prefers-reduced-motion: reduce) { .anim-icon { animation: none; } }
-:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map :is(.maplibregl-ctrl-attrib, .maplibregl-ctrl-group) { background: var(--card); color: var(--foreground); }
-:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map .maplibregl-ctrl-attrib a { color: var(--foreground); }
-:is([data-theme="dark"], [data-theme="night"]) .maplibregl-map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button) { filter: invert(1); }
+body:has(.neon-map) { background: #070b1a; background-image: none; }
+.neon-map { background: var(--neon-bg); color: var(--neon-label); }
+.neon-map [hidden] { display: none; }
+.neon-glass, .neon-map .maplibregl-map :is(.maplibregl-ctrl-attrib, .maplibregl-ctrl-group) {
+  border: 1px solid rgb(56 232 255 / .25);
+  background: rgb(7 11 26 / .82);
+  color: var(--neon-label);
+  box-shadow: 0 0 18px rgb(56 232 255 / .14);
+  backdrop-filter: blur(12px);
+}
+.neon-map .maplibregl-map .maplibregl-ctrl-attrib a { color: var(--neon-label); }
+.neon-map .maplibregl-map .maplibregl-ctrl-group button + button { border-top-color: rgb(56 232 255 / .25); }
+.neon-map .maplibregl-map :is(.maplibregl-ctrl-group button, .maplibregl-ctrl-attrib-button) { filter: invert(1); }
+.neon-map .maplibregl-map .maplibregl-ctrl-attrib { max-width: min(85vw, 320px); }
+.neon-map :is(.neon-toggle, .neon-chip, .neon-play, .neon-series-item):focus-visible { outline: 2px solid var(--neon-pin); outline-offset: 2px; }
+.neon-chip[aria-pressed="true"], .neon-series-item[aria-pressed="true"] { border-color: rgb(56 232 255 / .7); background: rgb(56 232 255 / .15); box-shadow: 0 0 16px rgb(56 232 255 / .3); }
+.neon-play { background: var(--neon-pin); color: var(--neon-bg); }
+.neon-range { accent-color: var(--neon-pin); }
+.neon-muted { color: var(--neon-muted); }
+.neon-pin { position: relative; width: 40px; height: 40px; pointer-events: none; }
+.neon-core { position: absolute; inset: 15px; border-radius: 50%; background: var(--neon-pin); box-shadow: 0 0 8px 3px var(--neon-pin), 0 0 20px 7px rgb(56 232 255 / .35); }
+.neon-sweep { position: absolute; inset: 4px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 255deg, rgb(56 232 255 / .05) 290deg, var(--neon-pin) 360deg); mask: radial-gradient(circle, transparent 57%, #000 61%); animation: neon-sweep 4s linear infinite; }
+.neon-pulse { position: absolute; inset: 11px; border: 1px solid var(--neon-pin); border-radius: 50%; animation: neon-pulse 2.4s ease-out infinite; }
+@keyframes neon-sweep { to { transform: rotate(360deg); } }
+@keyframes neon-pulse { to { transform: scale(2.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .neon-sweep, .neon-pulse { animation: none; } }
 
 .app-shell {
   min-height: 100dvh;
