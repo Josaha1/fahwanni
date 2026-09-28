@@ -33,12 +33,58 @@ describe("service worker routing", () => {
     expect(route("/manifest.json")).toBeNull();
   });
 
-  it("keeps an offline copy of the home page only for full page loads", () => {
+  it("keeps offline copies of both pages only for full page loads", () => {
     expect(route("/", { mode: "navigate" })).toBe("page");
+    expect(route("/map", { mode: "navigate" })).toBe("page");
     expect(route("/?_rsc=abc", { mode: "navigate" })).toBeNull();
+    expect(route("/map?_rsc=abc", { mode: "navigate" })).toBeNull();
     expect(route("/", { mode: "navigate", headers: { get: (n) => (n === "RSC" ? "1" : null) } })).toBeNull();
+    expect(route("/map", { mode: "navigate", headers: { get: (n) => (n === "RSC" ? "1" : null) } })).toBeNull();
     expect(route("/")).toBeNull();
+    expect(route("/map")).toBeNull();
     expect(route("/settings", { mode: "navigate" })).toBeNull();
+  });
+
+  it("serves each page's own cached response when navigation is offline", async () => {
+    type CachedResponse = { body: string; ok: boolean; redirected: boolean; type: string; clone: () => CachedResponse };
+    const responses = new Map<string, CachedResponse>();
+    const key = (request: string | Req) => new URL(typeof request === "string" ? request : request.url, origin).href;
+    const cache = {
+      put: async (request: Req, response: CachedResponse) => { responses.set(key(request), response); },
+      match: async (request: Req) => responses.get(key(request)),
+    };
+    let offline = false;
+    let fetchHandler: (event: { request: Req; respondWith: (response: Promise<CachedResponse>) => void }) => void = () => {};
+    const worker = {
+      fahRoute: scope.fahRoute,
+      location: { origin },
+      addEventListener: (name: string, handler: typeof fetchHandler) => { if (name === "fetch") fetchHandler = handler; },
+    };
+    new Function("self", "caches", "fetch", "importScripts", readFileSync("public/sw.js", "utf8"))(
+      worker,
+      { open: async () => cache },
+      async (request: Req) => {
+        if (offline) throw new Error("offline");
+        const response: CachedResponse = { body: new URL(request.url).pathname, ok: true, redirected: false, type: "basic", clone() { return this; } };
+        return response;
+      },
+      () => {},
+    );
+    const navigate = (path: string) => {
+      let response: Promise<CachedResponse> | undefined;
+      fetchHandler({
+        request: { method: "GET", url: `${origin}${path}`, mode: "navigate", headers: { get: () => null } },
+        respondWith: (result) => { response = result; },
+      });
+      return response!;
+    };
+
+    expect((await navigate("/")).body).toBe("/");
+    expect((await navigate("/map")).body).toBe("/map");
+    expect([...responses.keys()]).toEqual([`${origin}/`, `${origin}/map`]);
+    offline = true;
+    expect((await navigate("/map")).body).toBe("/map");
+    expect((await navigate("/")).body).toBe("/");
   });
 
   it("never touches APIs, other pages, other origins or writes", () => {
@@ -57,6 +103,7 @@ describe("service worker routing", () => {
     expect(warmable(`${origin}/manifest.webmanifest`)).toBe(true);
     expect(warmable("https://maps.gstatic.com/weather/v1/rain.svg")).toBe(true);
     expect(warmable(`${origin}/`)).toBe(false);
+    expect(warmable(`${origin}/map`)).toBe(false);
     expect(warmable(`${origin}/api/weather`)).toBe(false);
     expect(warmable("https://cdn.example.com/_next/static/x.js")).toBe(false);
     expect(warmable("https://maps.gstatic.com/other/rain.svg")).toBe(false);

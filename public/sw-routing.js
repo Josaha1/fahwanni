@@ -1,4 +1,4 @@
-/* Only the home page, build assets, app icons, and weather icons use the offline cache. */
+/* Forecast and map pages, build assets, app icons, and weather icons use the offline cache. */
 self.fahRoute = function fahRoute(request, origin) {
   if (request.method !== "GET") return null;
   const url = new URL(request.url);
@@ -9,7 +9,7 @@ self.fahRoute = function fahRoute(request, origin) {
   if (url.pathname.startsWith("/_next/static/")) return "static";
   if (/^\/icon[^/]*\.png$/.test(url.pathname) || url.pathname === "/apple-touch-icon.png" || url.pathname === "/manifest.webmanifest") return "static";
   const rsc = url.searchParams.has("_rsc") || (request.headers && request.headers.get("RSC"));
-  if (url.pathname === "/" && request.mode === "navigate" && !rsc) return "page";
+  if ((url.pathname === "/" || url.pathname === "/map") && request.mode === "navigate" && !rsc) return "page";
   return null;
 };
 

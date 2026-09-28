@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { ThemeController } from "@/components/theme-controller";
+import { BottomNav } from "@/components/bottom-nav";
 import { VersionWatcher } from "@/components/version-watcher";
 import { LocaleProvider } from "@/i18n/client";
 import { getLocale } from "@/i18n/server";
@@ -60,7 +61,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${anuphan.variable} ${mitr.variable} antialiased`}>
         <Script id="fah-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeController />
-        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <LocaleProvider locale={locale}>{children}<BottomNav /></LocaleProvider>
         <VersionWatcher />
         <Toaster position="top-center" toastOptions={{ style: { background: "var(--card)", color: "var(--foreground)", borderColor: "var(--border)", fontFamily: "inherit" } }} />
         <SpeedInsights />

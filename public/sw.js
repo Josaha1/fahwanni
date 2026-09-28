@@ -1,4 +1,4 @@
-/* Cache the last weather page and static assets for offline use. */
+/* Cache visited app pages and static assets for offline use. */
 
 importScripts("/sw-routing.js");
 
@@ -35,10 +35,10 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
     const res = await fetch(request);
-    if (res.ok && !res.redirected && res.type === "basic") await cache.put("/", res.clone()).catch(() => {});
+    if (res.ok && !res.redirected && res.type === "basic") await cache.put(request, res.clone()).catch(() => {});
     return res;
   } catch (error) {
-    const hit = await cache.match("/");
+    const hit = await cache.match(request);
     if (hit) return hit;
     throw error;
   }

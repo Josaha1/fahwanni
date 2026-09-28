@@ -1,5 +1,9 @@
 export const common: Record<string, string> = {
   "ฟ้าวันนี้": "Today's Sky",
+  "นำทางหลัก": "Main navigation",
+  "พยากรณ์": "Forecast",
+  "แผนที่": "Map",
+  "กำลังเตรียมแผนที่…": "Map coming soon…",
   "ค้นหาเมืองหรือจังหวัด": "Search city or province",
   "ค้นหาสถานที่": "Search places",
   "ปิดการค้นหา": "Close search",
