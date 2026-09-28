@@ -8,6 +8,7 @@ import { AlertsCard } from "@/components/alerts-card";
 import { AqiCard } from "@/components/aqi-card";
 import { MarineCard } from "@/components/marine-card";
 import { FarmCard } from "@/components/farm-card";
+import { LongWeekendCard } from "@/components/long-weekend-card";
 import { CurrentCard } from "@/components/current-card";
 import { DailyList } from "@/components/daily-list";
 import { FavouritesRow } from "@/components/favourites-row";
@@ -114,6 +115,7 @@ export function WeatherApp() {
           <BestTimeCard snapshot={weather.snapshot} air={weather.air} />
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />
           <DailyList snapshot={weather.snapshot} isDark={isDark} />
+          <LongWeekendCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
           <AqiCard air={weather.air} />
           <MarineCard lat={place.lat} lon={place.lon} />
           <FarmCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
