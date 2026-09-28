@@ -78,7 +78,9 @@ GOOGLE_MAPS_API_KEY=your_api_key_here
 
 ## Deploy บน Vercel
 
-นำโปรเจกต์ขึ้น Vercel แล้วกำหนด Environment Variable `GOOGLE_MAPS_API_KEY` ในโปรเจกต์สำหรับ environment ที่ใช้งาน ตั้ง region เป็น `sin1` (Singapore) ตาม `vercel.json` และ deploy ใหม่หลังเพิ่มหรือเปลี่ยนคีย์ อย่าใส่คีย์ในตัวแปร `NEXT_PUBLIC_` หรือ commit `.env.local`
+หมุนเวียน Google API key ก่อน deploy จากนั้น import รีโป `github.com/Josaha1/fahwanni` ใน Vercel ระบบจะตรวจพบ Next.js อัตโนมัติ กำหนด Environment Variable `GOOGLE_MAPS_API_KEY` สำหรับทั้ง Production และ Preview แล้ว deploy ใหม่หลังเพิ่มหรือเปลี่ยนคีย์ อย่าใส่คีย์ในตัวแปร `NEXT_PUBLIC_` หรือ commit `.env.local`
+
+Region ตั้งเป็น `sin1` (Singapore) ใน `vercel.json` ไฟล์ภาพที่เรนเดอร์ด้วย Blender ถูก commit ไว้แล้ว เพราะ Vercel รัน Blender ไม่ได้ ส่วน `public/vendor` สร้างจากแพ็กเกจ MapLibre ระหว่าง `prebuild` หลัง deploy ตรวจ URL ด้วย `npm run verify:deploy -- https://<deployment-url>`
 
 ## โครงสร้างโปรเจกต์
 

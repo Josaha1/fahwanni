@@ -9,6 +9,9 @@ export async function GET() {
   if (fresh) return Response.json(fresh, { headers });
 
   const snapshot = await fetchStorms();
-  cache.set("storms", snapshot);
-  return Response.json(snapshot, { headers });
+  if (snapshot.sources.jma === "ok" && snapshot.sources.gdacs === "ok") {
+    cache.set("storms", snapshot);
+    return Response.json(snapshot, { headers });
+  }
+  return Response.json(cache.getStale("storms") ?? snapshot, { headers: { "Cache-Control": "no-store" } });
 }

@@ -10,6 +10,9 @@ export async function GET() {
   if (fresh) return Response.json(fresh, { headers });
 
   const manifest = await fetchRadar();
-  cache.set("radar", manifest);
-  return Response.json(manifest, { headers });
+  if (manifest.provider === "rainviewer") {
+    cache.set("radar", manifest);
+    return Response.json(manifest, { headers });
+  }
+  return Response.json(cache.getStale("radar") ?? manifest, { headers: { "Cache-Control": "no-store" } });
 }

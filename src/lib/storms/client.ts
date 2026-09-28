@@ -12,7 +12,7 @@ export type StormSnapshot = {
 };
 
 async function getJson(url: string, fetchImpl: typeof fetch): Promise<unknown> {
-  const response = await fetchImpl(url, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
+  const response = await fetchImpl(url, { next: { revalidate: 900 }, signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error(`Storm source returned ${response.status}`);
   return response.json();
 }

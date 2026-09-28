@@ -20,6 +20,7 @@ describe("fetchWeather", () => {
       const url = new URL(String(input));
       urls.push(url);
       expect(init?.method).toBe("GET");
+      expect(init?.cache).toBe("no-store");
       expect(init?.signal).toBeInstanceOf(AbortSignal);
       return responseFor(url.pathname);
     });

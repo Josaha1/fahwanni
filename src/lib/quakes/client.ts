@@ -3,7 +3,7 @@ import "server-only";
 import { parseUsgs, QUAKE_BBOX, type Quake } from "./usgs";
 
 /** M ≥ 4 in the region for the last 7 days; failures give an empty list. */
-export async function fetchQuakes(now = new Date(), fetchImpl: typeof fetch = fetch): Promise<Quake[]> {
+export async function fetchQuakes(now = new Date(), fetchImpl: typeof fetch = fetch): Promise<Quake[] | null> {
   const params = new URLSearchParams({
     format: "geojson",
     minlatitude: String(QUAKE_BBOX.minLat),
@@ -15,9 +15,9 @@ export async function fetchQuakes(now = new Date(), fetchImpl: typeof fetch = fe
     orderby: "time",
   });
   try {
-    const response = await fetchImpl(`https://earthquake.usgs.gov/fdsnws/event/1/query?${params}`, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
-    return response.ok ? parseUsgs(await response.json()) : [];
+    const response = await fetchImpl(`https://earthquake.usgs.gov/fdsnws/event/1/query?${params}`, { next: { revalidate: 600 }, signal: AbortSignal.timeout(10_000) });
+    return response.ok ? parseUsgs(await response.json()) : null;
   } catch {
-    return [];
+    return null;
   }
 }

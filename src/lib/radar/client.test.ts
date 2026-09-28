@@ -7,7 +7,7 @@ describe("fetchRadar", () => {
     const fetchImpl = vi.fn(async () => Response.json(fixture));
     const result = await fetchRadar(fetchImpl as typeof fetch);
     expect(fetchImpl).toHaveBeenCalledWith("https://api.rainviewer.com/public/weather-maps.json", {
-      cache: "no-store", signal: expect.any(AbortSignal),
+      next: { revalidate: 300 }, signal: expect.any(AbortSignal),
     });
     expect(result.provider).toBe("rainviewer");
   });

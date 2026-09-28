@@ -27,7 +27,7 @@ export async function fetchWindGrid(fetchImpl: typeof fetch = fetch): Promise<Wi
   const chunks = Array.from({ length: CHUNKS }, (_, i) => points.slice(i * size, (i + 1) * size));
   try {
     const parts = await Promise.all(chunks.map(async (chunk) => {
-      const response = await fetchImpl(chunkUrl(chunk), { cache: "no-store", signal: AbortSignal.timeout(30_000) });
+      const response = await fetchImpl(chunkUrl(chunk), { next: { revalidate: 10800 }, signal: AbortSignal.timeout(30_000) });
       if (!response.ok) throw new Error(`open-meteo ${response.status}`);
       const body: unknown = await response.json();
       // A single location comes back as an object, several as an array.

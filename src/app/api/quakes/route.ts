@@ -9,6 +9,9 @@ export async function GET() {
   const fresh = cache.getFresh("quakes");
   if (fresh) return Response.json({ quakes: fresh }, { headers });
   const quakes = await fetchQuakes();
-  cache.set("quakes", quakes);
-  return Response.json({ quakes }, { headers });
+  if (quakes) {
+    cache.set("quakes", quakes);
+    return Response.json({ quakes }, { headers });
+  }
+  return Response.json({ quakes: cache.getStale("quakes") ?? [] }, { headers: { "Cache-Control": "no-store" } });
 }

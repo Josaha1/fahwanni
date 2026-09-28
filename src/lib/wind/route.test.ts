@@ -46,3 +46,17 @@ it("returns 503 when the first fetch fails", async () => {
   expect(await response.json()).toEqual({ error: "upstream" });
   expect(response.headers.get("Cache-Control")).toBe("no-store");
 });
+
+it("serves the last good grid when Open-Meteo returns 429 after expiry", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  vi.mocked(fetchWindGrid).mockResolvedValueOnce(grid).mockResolvedValueOnce(null);
+  const GET = await loadRoute();
+
+  await GET();
+  vi.setSystemTime(3 * HOUR);
+  const response = await GET();
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(grid);
+  expect(fetchWindGrid).toHaveBeenCalledTimes(2);
+});

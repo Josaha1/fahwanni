@@ -1,5 +1,5 @@
 import { parseLatLon, roundCoord } from "@/lib/geo";
-import type { MarineSnapshot } from "@/lib/marine";
+import { toMarine, type MarineSnapshot } from "@/lib/marine";
 import { fetchMarine } from "@/lib/marine-client";
 import { WeatherCache } from "@/lib/weather/cache";
 
@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   if (fresh) return Response.json(fresh, { headers });
 
   const marine = await fetchMarine(lat, lon);
-  cache.set(key, marine);
-  return Response.json(marine, { headers });
+  if (marine) {
+    cache.set(key, marine);
+    return Response.json(marine, { headers });
+  }
+  return Response.json(cache.getStale(key) ?? toMarine(null, lat, lon), { headers: { "Cache-Control": "no-store" } });
 }

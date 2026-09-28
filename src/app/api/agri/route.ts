@@ -1,5 +1,5 @@
 import { fetchAgri } from "@/lib/agri-client";
-import type { AgriSnapshot } from "@/lib/agri";
+import { toAgri, type AgriSnapshot } from "@/lib/agri";
 import { parseLatLon, roundCoord } from "@/lib/geo";
 import { WeatherCache } from "@/lib/weather/cache";
 
@@ -18,6 +18,9 @@ export async function GET(request: Request) {
   if (fresh) return Response.json(fresh, { headers });
 
   const agri = await fetchAgri(lat, lon);
-  cache.set(key, agri);
-  return Response.json(agri, { headers });
+  if (agri) {
+    cache.set(key, agri);
+    return Response.json(agri, { headers });
+  }
+  return Response.json(cache.getStale(key) ?? toAgri(null), { headers: { "Cache-Control": "no-store" } });
 }

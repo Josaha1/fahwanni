@@ -6,7 +6,7 @@ const headers = { "Cache-Control": "public, s-maxage=86400" };
 async function searchOpenMeteo(q: string, lang: string): Promise<unknown> {
   const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
   url.search = new URLSearchParams({ name: q, count: "8", language: lang, format: "json" }).toString();
-  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  const response = await fetch(url, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(`Open-Meteo ${response.status}`);
   return response.json();
 }
