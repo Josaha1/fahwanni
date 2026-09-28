@@ -6,6 +6,8 @@ import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
 import { renderPrecipImage } from "@/lib/precip/render";
+import { renderTempImage } from "@/lib/raster/render-scalar";
+import { sampleGrid } from "@/lib/map/probe";
 import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLabelKey, windHourFor } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
@@ -33,6 +35,7 @@ import { MapPanelContent } from "./ui/map-panel-content";
 import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 import { PointCard } from "./ui/point-card";
+import { PrimaryPicker } from "./ui/primary-picker";
 import { LegendChip } from "./ui/legend-chip";
 import { LegendDialog } from "./ui/legend-dialog";
 import { useProbe } from "./use-probe";
@@ -67,9 +70,9 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
   const { manifest, wind, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, undefined, initialMapState);
-  const { activeIndex, playing, rainOn, overlays } = mapState;
+  const { activeIndex, playing, primary, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
-  const rainVisible = mapState.primary === "rain" && rainOn;
+  const rainVisible = primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
   const focusLayers = useRef(false);
@@ -96,20 +99,41 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     return images.every(Boolean) ? images : [];
   }, [wind]);
   const modelHours = useMemo(() => modelImages.length ? wind?.precipHours?.slice(0, modelImages.length) ?? [] : [], [modelImages, wind]);
-  const stops = useMemo(() => buildLayerTimeline(mapState.primary, {
-    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: undefined,
-  }, nowIso), [mapState.primary, frames, modelHours, nowIso]);
-  const defaultIdx = defaultIndexFor(mapState.primary, stops, nowIso);
+  const stops = useMemo(() => buildLayerTimeline(primary, {
+    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? wind?.tempHours : undefined,
+  }, nowIso), [primary, frames, modelHours, wind?.tempHours, nowIso]);
+  const tempImages = useMemo(() => {
+    if (primary !== "temp" || !wind?.tempHours || !wind.temp) return [] as (ScalarImage | null)[];
+    const images: (ScalarImage | null)[] = Array(wind.tempHours.length).fill(null);
+    for (const stop of stops) {
+      const image = renderTempImage(wind, stop.index);
+      if (!image) continue;
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext("2d");
+      if (!context) continue;
+      const pixels = context.createImageData(image.width, image.height);
+      pixels.data.set(image.data);
+      context.putImageData(pixels, 0, 0);
+      images[stop.index] = { url: canvas.toDataURL(), coordinates: image.coordinates };
+    }
+    return images;
+  }, [primary, wind, stops]);
+  const defaultIdx = defaultIndexFor(primary, stops, nowIso);
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
   const shares = segmentShares(stops);
-  const activeTimeLabel = activeStop?.kind === "model"
+  const activeTimeLabel = activeStop?.kind === "model" && primary === "rain"
     ? t("+{n} ชม. · {time} น.", { n: Math.max(0, Math.ceil((Date.parse(activeStop.time) - Date.parse(nowIso)) / 3_600_000)), time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) })
     : activeStop ? t("{time} น.", { time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) }) : "";
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
+  const locationTemp = primary === "temp" && activeStop && wind?.temp?.[activeStop.index] && wind.feels?.[activeStop.index]
+    ? { temp: sampleGrid(wind, wind.temp[activeStop.index], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[activeStop.index], place.lon, place.lat) }
+    : null;
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
@@ -119,6 +143,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const terrainOk = terrainAvailable(device.deviceMemory);
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
   useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
+  useScalarLayer(mapInstance, tempImages, activeStop?.kind === "model" && primary === "temp" ? activeStop.index : -1, primary === "temp", "temp", 1);
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, quakesOn);
@@ -196,7 +221,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       <div className="min-w-0 flex-1">
         <input type="range" min={0} max={Math.max(0, stops.length - 1)} value={Math.min(activeIndex, Math.max(0, stops.length - 1))}
           onChange={(event) => dispatch({ type: "setIndex", index: Number(event.target.value) })}
-          disabled={!available} aria-label={t("เวลาฝน")}
+          disabled={!available} aria-label={t(primary === "temp" ? "เวลาอุณหภูมิ" : "เวลาฝน")}
           aria-valuetext={activeStop ? `${t(stopLabelKey(activeStop))} · ${activeTimeLabel}` : ""}
           className="map-range w-full" />
         <div className="mt-1 flex h-1 w-full overflow-hidden rounded-full" aria-hidden="true">
@@ -217,14 +242,17 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     </button>}
   </div>;
   const details = <div>
-    {radarSummary && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+    {locationTemp && locationTemp.temp !== null && locationTemp.feels !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+      {t("อุณหภูมิที่ตำแหน่งคุณ {temp}° (รู้สึกเหมือน {feels}°)", { temp: Math.round(locationTemp.temp), feels: Math.round(locationTemp.feels) })}
+    </p>}
+    {primary === "rain" && radarSummary && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
         : radarSummary.nearestKm !== undefined
           ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
           : t("ไม่มีฝนในรัศมี 100 กม.")}
       {radarSummary.heavyNearby && <span className="ml-1" style={{ color: DATA.storm }}>· {t("มีฝนหนักใกล้คุณ")}</span>}
     </p>}
-    {series.length > 0 && <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
+    {primary === "rain" && series.length > 0 && <section className="mt-3" aria-label={t("ฝนที่ตำแหน่งคุณ: {summary}", { summary: t(seriesSummary.key, seriesSummary.params) })}>
       <h2 className="text-xs font-semibold">{t("ฝนที่ตำแหน่งคุณ")}</h2>
       <div className="mt-1 flex min-w-0 gap-0.5 pb-1">
         {series.map((item) => {
@@ -243,12 +271,12 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       </div>
       <p className="map-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
     </section>}
-    {frames.length > 0 && <p className="map-muted mt-2 text-right text-xs">{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</p>}
+    {primary === "rain" && frames.length > 0 && <p className="map-muted mt-2 text-right text-xs">{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</p>}
   </div>;
   const layers = <>
-    <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
+    {primary === "rain" && <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
       {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
-    </button>
+    </button>}
     <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn} onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })} className="map-chip text-sm disabled:opacity-60">
       {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
     </button>
@@ -256,8 +284,10 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} storms={storms} quakes={quakes} />;
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} layers={layers}
+    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} />;
+  const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(wind?.tempHours?.length && wind.temp?.some((hour) => hour.length > 0))}
+    onChange={(next) => dispatch({ type: "setPrimary", primary: next })} />;
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} primaryPicker={primaryPicker} layers={layers}
     card={card} onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
   return <main className="map-shell" style={{

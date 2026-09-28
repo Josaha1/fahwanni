@@ -17,9 +17,9 @@ export function pointPlace(lat: number, lon: number): Place {
   const coordinates = `${roundedLat.toFixed(2)}, ${roundedLon.toFixed(2)}`;
   return {
     id: `point-${roundedLat}-${roundedLon}`,
-    name: p.km < 15 ? p.th : p.km <= 50 ? `ใกล้${p.th}` : coordinates,
-    admin: p.km < 15 ? p.en : p.km <= 50 ? `Near ${p.en}` : coordinates,
-    ...(p.km <= 50 ? { country: "Thailand" } : {}),
+    name: p.km < 15 ? p.th : p.km <= 100 ? `ใกล้${p.th}` : coordinates,
+    admin: p.km < 15 ? p.en : p.km <= 100 ? `Near ${p.en}` : coordinates,
+    ...(p.km <= 100 ? { country: "Thailand" } : {}),
     lat: roundedLat, lon: roundedLon, source: "search",
   };
 }

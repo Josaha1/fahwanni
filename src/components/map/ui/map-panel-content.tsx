@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, desktop, timeline, details, layers, card, onProbeCenter }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, details, primaryPicker, layers, card, onProbeCenter }: {
   placeName: string;
   compact: boolean;
   desktop: boolean;
   timeline: ReactNode;
   details: ReactNode;
+  primaryPicker: ReactNode;
   layers: ReactNode;
   card: ReactNode;
   onProbeCenter: (trigger: HTMLButtonElement) => void;
@@ -24,7 +25,8 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, details
         {details}
         <section className="mt-4" aria-labelledby="map-layers">
           <h2 id="map-layers" tabIndex={-1} className="mb-2 text-sm font-semibold">{t("ชั้นข้อมูล")}</h2>
-          <div className="flex flex-wrap gap-2">{layers}</div>
+          {primaryPicker}
+          <div className="mt-2 flex flex-wrap gap-2">{layers}</div>
         </section>
       </>}
     </>

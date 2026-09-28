@@ -159,6 +159,9 @@ body:has(.map-shell) { background: #eef1f5; background-image: none; }
 .map-side-panel { position: absolute; z-index: 5; top: 16px; left: 16px; bottom: 16px; width: 360px; overflow-y: auto; }
 .map-action-rail { position: absolute; z-index: 5; right: 12px; top: calc(12px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 8px; }
 .map-chip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--map-panel-border); background: var(--map-panel); color: var(--map-label); font-weight: 600; }
+.map-segment { display: flex; padding: 3px; border-radius: 999px; background: var(--map-panel-border); }
+.map-segment > button { flex: 1; min-height: 40px; border-radius: 999px; color: var(--map-label); font-weight: 600; }
+.map-segment > button[aria-checked="true"] { background: var(--map-accent); color: #fff; }
 .map-icon-btn { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; border: 1px solid var(--map-panel-border); background: var(--map-panel); color: var(--map-label); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
 :is(.map-chip, .map-icon-btn)[aria-pressed="true"] { background: var(--map-accent); color: #fff; border-color: transparent; }
 .map-play { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; background: var(--map-accent); color: #fff; }
