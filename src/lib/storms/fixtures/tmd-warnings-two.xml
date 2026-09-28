@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<WeatherForecastDaily version="2.0"><header><title>Thailand Weather and Climate News</title><description>Weather Warning and Storm announces</description><uri>https://data.tmd.go.th/api/WeatherWarningNews/v2/index.php</uri><lastBuildDate>2026-09-28 13:26:17</lastBuildDate></header><Warnings>
+  <Warning><title>ประกาศพายุลูกแรก</title><description>ระวังฝนหนัก &amp; ลมแรง</description><announcedAt>2026-09-28 13:00:00</announcedAt><uri>https://www.tmd.go.th/warning/1</uri></Warning>
+  <Warning><title><![CDATA[ประกาศฉบับที่ 2]]></title><description>คลื่นสูง 2–3 เมตร</description></Warning>
+</Warnings></WeatherForecastDaily>

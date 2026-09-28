@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { AdviceStrip } from "@/components/advice-strip";
 import { AlertsCard } from "@/components/alerts-card";
@@ -25,6 +26,8 @@ const bangkok: Place = {
   lat: 13.75, lon: 100.50, source: "province",
 };
 
+const StormBanner = dynamic(() => import("@/components/storm-banner").then((module) => module.StormBanner), { ssr: false });
+
 export function WeatherApp() {
   const t = useT();
   const { place, setPlace } = useLastPlace();
@@ -32,6 +35,13 @@ export function WeatherApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [showStormBanner, setShowStormBanner] = useState(false);
+
+  useEffect(() => {
+    let timer: number;
+    const frame = window.requestAnimationFrame(() => { timer = window.setTimeout(() => setShowStormBanner(true), 0); });
+    return () => { window.cancelAnimationFrame(frame); window.clearTimeout(timer); };
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -84,6 +94,7 @@ export function WeatherApp() {
       <FavouritesRow place={place} onSelect={selectPlace} />
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
+        {showStormBanner && <StormBanner place={place} />}
         <CurrentCard weather={weather} />
         {weather.snapshot && <>
           <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
