@@ -13,6 +13,7 @@ import type { WindGrid } from "@/lib/wind/grid";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
 import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
+import type { Quake } from "@/lib/quakes/usgs";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
@@ -28,6 +29,10 @@ const radarId = (index: number) => `rain-radar-${index}`;
 const STORM_SOURCE = "storms";
 const STORM_LAYERS = ["storm-cone", "storm-track", "storm-forecast", "storm-center", "storm-label"] as const;
 const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
+const QUAKE_SOURCE = "quakes";
+type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
+const emptyQuakes: QuakeCollection = { type: "FeatureCollection", features: [] };
+const quakesToGeoJSON = (quakes: Quake[]): QuakeCollection => ({ type: "FeatureCollection", features: quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) });
 
 function currentStyle() {
   const theme = document.documentElement.dataset.theme;
@@ -69,6 +74,10 @@ export function MapView() {
   const [stormsOn, setStormsOn] = useState(true);
   const stormState = useRef<StormCollection>(emptyStorms);
   const syncStorms = useRef<() => void>(() => {});
+  const [quakes, setQuakes] = useState<Quake[]>([]);
+  const [quakesOn, setQuakesOn] = useState(true);
+  const quakeState = useRef<QuakeCollection>(emptyQuakes);
+  const syncQuakes = useRef<() => void>(() => {});
   const syncTerrain = useRef<() => void>(() => {});
   const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
   const syncRadar = useRef<() => void>(() => {});
@@ -86,6 +95,10 @@ export function MapView() {
     fetch("/api/storms", { signal: controller.signal })
       .then((response) => response.ok ? response.json() as Promise<{ storms?: Storm[] }> : { storms: [] })
       .then((data) => setStorms(data.storms ?? []))
+      .catch(() => {});
+    fetch("/api/quakes", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ quakes?: Quake[] }> : { quakes: [] })
+      .then((data) => setQuakes(data.quakes ?? []))
       .catch(() => {});
     return () => controller.abort();
   }, []);
@@ -121,6 +134,11 @@ export function MapView() {
   }, [storms, stormsOn]);
 
   useEffect(() => {
+    quakeState.current = quakesOn ? quakesToGeoJSON(quakes) : emptyQuakes;
+    syncQuakes.current();
+  }, [quakes, quakesOn]);
+
+  useEffect(() => {
     terrainState.current = terrainOn;
     syncTerrain.current();
     mapInstance?.easeTo({ ...terrainCamera(terrainOn, reducedMotion), bearing: terrainOn ? mapInstance.getBearing() : 0 });
@@ -151,6 +169,7 @@ export function MapView() {
         '<a href="https://www.rainviewer.com" target="_blank" rel="noopener noreferrer">Weather data by RainViewer</a>',
         '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Wind: Open-Meteo.com (CC BY 4.0)</a>',
         TERRAIN_ATTRIBUTION,
+        '<a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer">Earthquakes: USGS</a>',
       ] }), "bottom-right");
       const removeRadar = () => {
         for (let index = 0; index < 6; index++) {
@@ -213,6 +232,32 @@ export function MapView() {
         if (liveMap.getSource(STORM_SOURCE)) liveMap.removeSource(STORM_SOURCE);
       };
       syncStorms.current = applyStorms;
+      let quakesApplied: QuakeCollection | null = null;
+      const applyQuakes = () => {
+        const data = quakeState.current;
+        if (data === quakesApplied || !liveMap.isStyleLoaded()) return;
+        quakesApplied = data;
+        const source = liveMap.getSource(QUAKE_SOURCE);
+        if (source && "setData" in source) { (source as { setData: (d: QuakeCollection) => void }).setData(data); return; }
+        if (data.features.length === 0) return;
+        liveMap.addSource(QUAKE_SOURCE, { type: "geojson", data });
+        liveMap.addLayer({ id: "quake-circle", type: "circle", source: QUAKE_SOURCE, paint: {
+          "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 4, 5, 6, 12, 7.5, 20],
+          "circle-color": ["interpolate", ["linear"], ["get", "mag"], 4, "#f5a524", 5.5, "#e8603c", 6.5, "#b3261e"],
+          "circle-opacity": 0.75, "circle-stroke-width": 1.5, "circle-stroke-color": "#ffffff",
+        } });
+        liveMap.addLayer({ id: "quake-label", type: "symbol", source: QUAKE_SOURCE, filter: [">=", ["get", "mag"], 5],
+          layout: { "text-field": ["get", "label"], "text-offset": [0, 1.3], "text-size": 12, "text-font": ["Noto Sans Regular"] },
+          paint: { "text-color": "#b3261e", "text-halo-color": "#ffffff", "text-halo-width": 1.5 } });
+      };
+      const removeQuakes = () => {
+        quakesApplied = null;
+        for (const id of ["quake-circle", "quake-label"]) if (liveMap.getLayer(id)) liveMap.removeLayer(id);
+        if (liveMap.getSource(QUAKE_SOURCE)) liveMap.removeSource(QUAKE_SOURCE);
+      };
+      syncQuakes.current = applyQuakes;
+      liveMap.on("style.load", applyQuakes);
+      liveMap.on("idle", applyQuakes);
       liveMap.on("style.load", applyStorms);
       liveMap.on("idle", applyStorms);
       liveMap.on("style.load", applyTerrain);
@@ -249,6 +294,7 @@ export function MapView() {
         setStatus("loading");
         removeRadar();
         removeStorms();
+        removeQuakes();
         liveMap.setStyle(next);
       });
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -258,6 +304,10 @@ export function MapView() {
         syncRadar.current = () => {};
         syncTerrain.current = () => {};
         syncStorms.current = () => {};
+        syncQuakes.current = () => {};
+        liveMap.off("style.load", applyQuakes);
+        liveMap.off("idle", applyQuakes);
+        removeQuakes();
         liveMap.off("style.load", applyStorms);
         liveMap.off("idle", applyStorms);
         removeStorms();
@@ -299,6 +349,12 @@ export function MapView() {
             <button type="button" aria-pressed={stormsOn} onClick={() => setStormsOn((on) => !on)}
               className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
               {t("พายุ")} ({storms.length})
+            </button>
+          )}
+          {quakes.length > 0 && (
+            <button type="button" aria-pressed={quakesOn} onClick={() => setQuakesOn((on) => !on)}
+              className="ml-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-semibold text-foreground shadow-sm aria-pressed:bg-given aria-pressed:text-white">
+              {t("แผ่นดินไหว")} ({quakes.length})
             </button>
           )}
           {terrainOk && (
