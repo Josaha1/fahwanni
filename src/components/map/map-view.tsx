@@ -15,6 +15,8 @@ import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
 import { HILLSHADE_LAYER, TERRAIN_ATTRIBUTION, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
 import { WindCanvas } from "./wind-canvas";
+import { useRadarSummary } from "./use-radar-summary";
+import { bearingWord } from "@/lib/storms/present";
 
 setWorkerUrl(`/vendor/maplibre/${version}/maplibre-gl-worker.mjs`);
 
@@ -48,6 +50,8 @@ export function MapView() {
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const available = frames.length > 0;
   const activeFrame = frames[Math.min(activeIndex, frames.length - 1)];
+  // Always the newest frame: "where is the rain now", independent of the scrubber.
+  const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const [mapInstance, setMapInstance] = useState<Map | null>(null);
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windOn, setWindOn] = useState(true);
@@ -325,6 +329,15 @@ export function MapView() {
                 {activeFrame && t("{time} น.", { time: formatTime(activeFrame.time, "Asia/Bangkok", t.locale) })}
               </span>
             </div>
+            {radarSummary && (
+              <p className="mt-2 text-sm font-semibold" aria-live="polite">
+                {radarSummary.overhead ? t("ตอนนี้ฝนตกอยู่ตรงตำแหน่งของคุณ")
+                  : radarSummary.nearestKm !== undefined
+                    ? t("ฝนใกล้สุดห่าง ~{km} กม. ทางทิศ{dir}", { km: radarSummary.nearestKm, dir: bearingWord(radarSummary.bearingDeg ?? 0, t) })
+                    : t("ไม่มีฝนในรัศมี 100 กม.")}
+                {radarSummary.heavyNearby && <span className="ml-1 text-zone-alert-ink">· {t("มีฝนหนักใกล้คุณ")}</span>}
+              </p>
+            )}
             <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
               <span>{t("ฝนเบา → ฝนหนัก")}</span>
               <span>{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</span>

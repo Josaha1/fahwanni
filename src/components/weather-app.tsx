@@ -13,6 +13,7 @@ import { HourlyStrip } from "@/components/hourly-strip";
 import { LocationBar } from "@/components/location-bar";
 import { OfflineSupport } from "@/components/offline-support";
 import { SearchBox } from "@/components/search-box";
+import { SeasonChip } from "@/components/season-chip";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
@@ -96,6 +97,7 @@ export function WeatherApp() {
       <div className="space-y-4">
         {showStormBanner && <StormBanner place={place} />}
         <CurrentCard weather={weather} />
+        <SeasonChip lat={place.lat} lon={place.lon} />
         {weather.snapshot && <>
           <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />

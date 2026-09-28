@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/client";
 import { describeCondition, iconUrl } from "@/lib/condition";
 import { formatDayLabel, formatFullDate } from "@/lib/format";
+import { weeklyOutlook } from "@/lib/outlook";
 import type { WeatherDay, WeatherPeriod, WeatherSnapshot } from "@/lib/weather/types";
 import { uvWord, windWord } from "@/lib/words";
 
@@ -33,6 +34,17 @@ export function DailyList({ snapshot, isDark }: { snapshot: WeatherSnapshot; isD
   return (
     <section className="placeholder-card min-w-0" aria-label={t("พยากรณ์ 10 วัน")}>
       <h2 className="text-xl">{t("พยากรณ์ 10 วัน")}</h2>
+      {(() => {
+        const outlook = weeklyOutlook(days);
+        if (!outlook) return null;
+        const parts = [outlook.rainyDays === 0
+          ? t("{n} วันข้างหน้าไม่ค่อยมีฝน", { n: outlook.days })
+          : t("{n} วันข้างหน้า ฝนตก {rainy} วัน", { n: outlook.days, rainy: outlook.rainyDays })];
+        if (outlook.hottest) parts.push(t("ร้อนสุด {max}° {day}", { max: Math.round(outlook.hottest.maxC), day: formatDayLabel(outlook.hottest.date, today, zone, t.locale) }));
+        if (outlook.trend === "warmer") parts.push(t("ปลายสัปดาห์อากาศร้อนขึ้น"));
+        if (outlook.trend === "cooler") parts.push(t("ปลายสัปดาห์อากาศเย็นลง"));
+        return <p className="mt-1 text-sm text-muted">{parts.join(" · ")}</p>;
+      })()}
       <ul className="mt-3 divide-y divide-border">
         {days.map((day: WeatherDay, index) => {
           const date = day.date ?? day.startTime?.slice(0, 10) ?? "";
