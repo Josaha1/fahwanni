@@ -1,41 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Marker } from "maplibre-gl";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
-import type { RadarFrame, RadarManifest } from "@/lib/radar/types";
+import type { RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
-import { renderPrecipImage, type PrecipImage } from "@/lib/precip/render";
+import { renderPrecipImage } from "@/lib/precip/render";
 import { buildTimeline, defaultIndex, nextPlayIndex, segmentShares, stopLabelKey } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { currentHourIndex, windMotion } from "@/lib/wind/particles";
-import { stormsToGeoJSON, type StormCollection } from "@/lib/storms/geojson";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
-import { HILLSHADE_LAYER, TERRAIN_SOURCE, terrainAvailable, terrainCamera, terrainSource } from "@/lib/map/terrain";
+import { terrainAvailable } from "@/lib/map/terrain";
 import { NEON, rainLegendGradient } from "@/lib/map/neon-palette";
-import { HOLOGRAM_URL, hologramCoordinates, hologramOpacity } from "@/lib/map/hologram";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { MapProvider, useMapContext } from "./map-provider";
-import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
-
-const radarId = (index: number) => `rain-radar-${index}`;
-const modelId = (index: number) => `model-rain-${index}`;
-type ModelRainImage = { url: string; coordinates: PrecipImage["coordinates"] };
-const STORM_SOURCE = "storms";
-const STORM_LAYERS = ["storm-cone", "storm-track-glow", "storm-track", "storm-forecast-glow", "storm-forecast", "storm-label"] as const;
-const emptyStorms: StormCollection = { type: "FeatureCollection", features: [] };
-const QUAKE_SOURCE = "quakes";
-const HOLOGRAM_SOURCE = "hologram";
-const HOLOGRAM_LAYER = "neon-hologram";
-type QuakeCollection = { type: "FeatureCollection"; features: { type: "Feature"; properties: { mag: number; label: string }; geometry: { type: "Point"; coordinates: [number, number] } }[] };
-const emptyQuakes: QuakeCollection = { type: "FeatureCollection", features: [] };
-const quakesToGeoJSON = (quakes: Quake[]): QuakeCollection => ({ type: "FeatureCollection", features: quakes.map((q) => ({ type: "Feature", properties: { mag: q.mag, label: `M${q.mag.toFixed(1)}` }, geometry: { type: "Point", coordinates: [q.lon, q.lat] } })) });
+import { bearingWord } from "@/lib/storms/present";
+import { useRadarLayer } from "./layers/use-radar-layer";
+import { useScalarLayer, type ScalarImage } from "./layers/use-scalar-layer";
+import { useStormLayer } from "./layers/use-storm-layer";
+import { useQuakeLayer } from "./layers/use-quake-layer";
+import { useTerrainLayer } from "./layers/use-terrain-layer";
+import { usePlateLayer } from "./layers/use-plate-layer";
+import { usePlaceMarker } from "./layers/use-place-marker";
 
 function initialControlOpen(key: string): boolean {
   try {
@@ -75,7 +66,7 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const [wind, setWind] = useState<WindGrid | null>(null);
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const modelImages = useMemo(() => {
-    if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ModelRainImage | null)[];
+    if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ScalarImage | null)[];
     const images = wind.precipHours.slice(0, 12).map((_, index) => {
       const image = renderPrecipImage(wind, index);
       if (!image) return null;
@@ -112,20 +103,18 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
   const windHour = wind ? currentHourIndex(wind.hours, nowIso) : 0;
   const terrainOk = terrainAvailable(device.deviceMemory);
   const [terrainOn, setTerrainOn] = useState(false);
-  const terrainState = useRef(false);
   const [storms, setStorms] = useState<Storm[]>([]);
   const [stormsOn, setStormsOn] = useState(true);
-  const stormState = useRef<StormCollection>(emptyStorms);
-  const syncStorms = useRef<() => void>(() => {});
   const [quakes, setQuakes] = useState<Quake[]>([]);
   const [quakesOn, setQuakesOn] = useState(true);
-  const quakeState = useRef<QuakeCollection>(emptyQuakes);
-  const syncQuakes = useRef<() => void>(() => {});
-  const syncTerrain = useRef<() => void>(() => {});
-  const radarState = useRef({ frames: [] as RadarFrame[], maxZoom: 7, activeIndex: 0, enabled: true });
-  const syncRadar = useRef<() => void>(() => {});
-  const modelState = useRef({ images: [] as (ModelRainImage | null)[], activeIndex: -1, enabled: true });
-  const syncModel = useRef<() => void>(() => {});
+
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, radarOn);
+  useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, radarOn, "model-rain", 1);
+  useStormLayer(mapInstance, storms, stormsOn);
+  useQuakeLayer(mapInstance, quakes, quakesOn);
+  useTerrainLayer(mapInstance, terrainOn, reducedMotion);
+  usePlateLayer(mapInstance, device.saveData);
+  usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,247 +160,6 @@ function MapScreen({ container }: { container: RefObject<HTMLDivElement | null> 
       activeStop?.kind === "radar" && activeStop.index === frames.length - 1 ? 1500 : 600);
     return () => window.clearTimeout(timer);
   }, [playing, reducedMotion, radarOn, frames.length, activeIndex, activeStop, stops]);
-
-  useEffect(() => {
-    radarState.current = { frames, maxZoom: manifest?.maxZoom ?? 7, activeIndex: activeStop?.kind === "radar" ? activeStop.index : -1, enabled: radarOn };
-    syncRadar.current();
-    modelState.current = { images: modelImages, activeIndex: activeStop?.kind === "model" ? activeStop.index : -1, enabled: radarOn };
-    syncModel.current();
-  }, [frames, manifest, activeStop, radarOn, modelImages]);
-
-  useEffect(() => {
-    stormState.current = stormsOn ? stormsToGeoJSON(storms) : emptyStorms;
-    syncStorms.current();
-  }, [storms, stormsOn]);
-
-  useEffect(() => {
-    quakeState.current = quakesOn ? quakesToGeoJSON(quakes) : emptyQuakes;
-    syncQuakes.current();
-  }, [quakes, quakesOn]);
-
-  useEffect(() => {
-    terrainState.current = terrainOn;
-    syncTerrain.current();
-    mapInstance?.easeTo({ ...terrainCamera(terrainOn, reducedMotion), bearing: terrainOn ? mapInstance.getBearing() : 0 });
-  }, [terrainOn, mapInstance, reducedMotion]);
-
-  useEffect(() => {
-    if (!mapInstance || !stormsOn) return;
-    const markers = storms.map((storm) => {
-      const element = document.createElement("div");
-      element.className = "neon-typhoon";
-      element.setAttribute("role", "img");
-      element.setAttribute("aria-label", t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name }));
-      return new Marker({ element, anchor: "center" }).setLngLat([storm.position.lon, storm.position.lat]).addTo(mapInstance);
-    });
-    return () => markers.forEach((marker) => marker.remove());
-  }, [mapInstance, storms, stormsOn, t]);
-
-  // The pin lives as long as the map; a new place moves it and the camera instead of rebuilding.
-  const marker = useRef<Marker | null>(null);
-  useEffect(() => {
-    if (!mapInstance) return;
-    const pin = document.createElement("div");
-    pin.setAttribute("role", "img");
-    pin.className = "neon-pin";
-    pin.innerHTML = '<span class="neon-pulse"></span><span class="neon-sweep"></span><span class="neon-core"></span>';
-    const created = new Marker({ element: pin }).setLngLat(mapInstance.getCenter()).addTo(mapInstance);
-    marker.current = created;
-    return () => { created.remove(); marker.current = null; };
-  }, [mapInstance]);
-
-  useEffect(() => {
-    marker.current?.getElement().setAttribute("aria-label", placeName);
-  }, [mapInstance, placeName]);
-
-  useEffect(() => {
-    if (!mapInstance || !marker.current) return;
-    const target: [number, number] = [place.lon, place.lat];
-    const current = marker.current.getLngLat();
-    marker.current.setLngLat(target);
-    if (current.lng === target[0] && current.lat === target[1]) return;
-    if (reducedMotion) mapInstance.jumpTo({ center: target });
-    else mapInstance.easeTo({ center: target, duration: 800 });
-  }, [mapInstance, place.lon, place.lat, reducedMotion]);
-
-  useEffect(() => {
-    if (!mapInstance) return;
-    const liveMap = mapInstance;
-    {
-      const removeRadar = () => {
-        for (let index = 0; index < 6; index++) {
-          const id = radarId(index);
-          if (liveMap.getLayer(id)) liveMap.removeLayer(id);
-          if (liveMap.getSource(id)) liveMap.removeSource(id);
-        }
-      };
-      let firstIdle = false;
-      const applyHologram = () => {
-        if (device.saveData || !firstIdle || !liveMap.isStyleLoaded()) return;
-        const layers = liveMap.getStyle().layers;
-        const waterIndex = layers.findIndex((layer) => layer.id === "water" && layer.type === "fill");
-        if (waterIndex < 0) return;
-        if (!liveMap.getSource(HOLOGRAM_SOURCE)) liveMap.addSource(HOLOGRAM_SOURCE, { type: "image", url: HOLOGRAM_URL, coordinates: hologramCoordinates() });
-        if (!liveMap.getLayer(HOLOGRAM_LAYER)) liveMap.addLayer({
-          id: HOLOGRAM_LAYER, type: "raster", source: HOLOGRAM_SOURCE,
-          paint: { "raster-opacity": hologramOpacity() as ["interpolate", ["linear"], ["zoom"], number, number, number, number], "raster-resampling": "linear", "raster-fade-duration": 0 },
-        }, layers[waterIndex + 1]?.id);
-      };
-      const onHologramIdle = () => {
-        firstIdle = true;
-        applyHologram();
-      };
-      const removeHologram = () => {
-        if (liveMap.getLayer(HOLOGRAM_LAYER)) liveMap.removeLayer(HOLOGRAM_LAYER);
-        if (liveMap.getSource(HOLOGRAM_SOURCE)) liveMap.removeSource(HOLOGRAM_SOURCE);
-      };
-      const addRadar = () => {
-        if (!liveMap.isStyleLoaded()) return;
-        const { frames, maxZoom, activeIndex, enabled } = radarState.current;
-        const firstSymbol = liveMap.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
-        frames.forEach((frame, index) => {
-          const id = radarId(index);
-          if (!liveMap.getSource(id)) liveMap.addSource(id, { type: "raster", tiles: [frame.tileUrl], tileSize: 256, maxzoom: maxZoom });
-          if (!liveMap.getLayer(id)) liveMap.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 }, "raster-saturation": 0.35, "raster-contrast": 0.15, "raster-resampling": "linear" } }, firstSymbol);
-          const opacity = enabled && index === activeIndex ? 0.7 : 0;
-          if (liveMap.getPaintProperty(id, "raster-opacity") !== opacity) liveMap.setPaintProperty(id, "raster-opacity", opacity);
-        });
-      };
-      syncRadar.current = addRadar;
-      const removeModel = () => {
-        for (let index = 0; index < 12; index++) {
-          const id = modelId(index);
-          if (liveMap.getLayer(id)) liveMap.removeLayer(id);
-          if (liveMap.getSource(id)) liveMap.removeSource(id);
-        }
-      };
-      const applyModel = () => {
-        if (!liveMap.isStyleLoaded()) return;
-        const { images, activeIndex, enabled } = modelState.current;
-        const firstSymbol = liveMap.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
-        images.forEach((image, index) => {
-          if (!image) return;
-          const id = modelId(index);
-          if (!liveMap.getSource(id)) liveMap.addSource(id, { type: "image", url: image.url, coordinates: image.coordinates });
-          if (!liveMap.getLayer(id)) liveMap.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0, "raster-opacity-transition": { duration: 0 } } }, firstSymbol);
-          const opacity = enabled && index === activeIndex ? 1 : 0;
-          if (liveMap.getPaintProperty(id, "raster-opacity") !== opacity) liveMap.setPaintProperty(id, "raster-opacity", opacity);
-        });
-      };
-      syncModel.current = applyModel;
-      const applyTerrain = () => {
-        if (!liveMap.isStyleLoaded()) return;
-        // Also runs on "idle" (see applyStorms); skip when already in the wanted state.
-        if (terrainState.current === Boolean(liveMap.getTerrain())) return;
-        if (terrainState.current) {
-          if (!liveMap.getSource(TERRAIN_SOURCE)) liveMap.addSource(TERRAIN_SOURCE, terrainSource);
-          if (!liveMap.getLayer(HILLSHADE_LAYER)) {
-            const firstSymbol = liveMap.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
-            liveMap.addLayer({ id: HILLSHADE_LAYER, type: "hillshade", source: TERRAIN_SOURCE, paint: { "hillshade-exaggeration": 0.35 } }, firstSymbol);
-          }
-          liveMap.setTerrain({ source: TERRAIN_SOURCE, exaggeration: 1.3 });
-        } else {
-          if (liveMap.getTerrain()) liveMap.setTerrain(null);
-          if (liveMap.getLayer(HILLSHADE_LAYER)) liveMap.removeLayer(HILLSHADE_LAYER);
-        }
-      };
-      syncTerrain.current = applyTerrain;
-      // isStyleLoaded() stays false until every source (e.g. radar tiles) has loaded, so this
-      // also runs on "idle"; `applied` keeps it from re-setting the same data every frame.
-      let applied: StormCollection | null = null;
-      const applyStorms = () => {
-        const data = stormState.current;
-        if (data === applied || !liveMap.isStyleLoaded()) return;
-        applied = data;
-        const source = liveMap.getSource(STORM_SOURCE);
-        if (source && "setData" in source) { (source as { setData: (d: StormCollection) => void }).setData(data); return; }
-        if (data.features.length === 0) return;
-        liveMap.addSource(STORM_SOURCE, { type: "geojson", data });
-        liveMap.addLayer({ id: "storm-cone", type: "fill", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "cone"], paint: { "fill-color": NEON.accent, "fill-opacity": 0.12 } });
-        liveMap.addLayer({ id: "storm-track-glow", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": NEON.accent, "line-width": 11, "line-blur": 7, "line-opacity": 0.7 } });
-        liveMap.addLayer({ id: "storm-track", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "track"], paint: { "line-color": NEON.accent, "line-width": 2.5 } });
-        liveMap.addLayer({ id: "storm-forecast-glow", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 9, "line-blur": 6, "line-opacity": 0.6 } });
-        liveMap.addLayer({ id: "storm-forecast", type: "line", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "forecast"], paint: { "line-color": NEON.accent, "line-width": 2, "line-dasharray": [2, 2] } });
-        liveMap.addLayer({ id: "storm-label", type: "symbol", source: STORM_SOURCE, filter: ["==", ["get", "kind"], "center"], layout: { "text-field": ["get", "name"], "text-offset": [0, 2.7], "text-size": 13, "text-font": ["Noto Sans Regular"] }, paint: { "text-color": NEON.accent, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
-      };
-      const removeStorms = () => {
-        applied = null;
-        for (const id of STORM_LAYERS) if (liveMap.getLayer(id)) liveMap.removeLayer(id);
-        if (liveMap.getSource(STORM_SOURCE)) liveMap.removeSource(STORM_SOURCE);
-      };
-      syncStorms.current = applyStorms;
-      let quakesApplied: QuakeCollection | null = null;
-      const applyQuakes = () => {
-        const data = quakeState.current;
-        if (data === quakesApplied || !liveMap.isStyleLoaded()) return;
-        quakesApplied = data;
-        const source = liveMap.getSource(QUAKE_SOURCE);
-        if (source && "setData" in source) { (source as { setData: (d: QuakeCollection) => void }).setData(data); return; }
-        if (data.features.length === 0) return;
-        liveMap.addSource(QUAKE_SOURCE, { type: "geojson", data });
-        liveMap.addLayer({ id: "quake-circle", type: "circle", source: QUAKE_SOURCE, paint: {
-          "circle-radius": ["interpolate", ["linear"], ["get", "mag"], 4, 5, 6, 12, 7.5, 20],
-          "circle-color": NEON.quake, "circle-blur": 0.45,
-          "circle-opacity": 0.8, "circle-stroke-width": 1.5, "circle-stroke-color": NEON.quake,
-        } });
-        liveMap.addLayer({ id: "quake-label", type: "symbol", source: QUAKE_SOURCE, filter: [">=", ["get", "mag"], 5],
-          layout: { "text-field": ["get", "label"], "text-offset": [0, 1.3], "text-size": 12, "text-font": ["Noto Sans Regular"] },
-          paint: { "text-color": NEON.quake, "text-halo-color": NEON.halo, "text-halo-width": 1.5 } });
-      };
-      const removeQuakes = () => {
-        quakesApplied = null;
-        for (const id of ["quake-circle", "quake-label"]) if (liveMap.getLayer(id)) liveMap.removeLayer(id);
-        if (liveMap.getSource(QUAKE_SOURCE)) liveMap.removeSource(QUAKE_SOURCE);
-      };
-      syncQuakes.current = applyQuakes;
-      liveMap.on("style.load", applyQuakes);
-      liveMap.on("idle", applyQuakes);
-      liveMap.on("style.load", applyStorms);
-      liveMap.on("idle", applyStorms);
-      liveMap.on("style.load", applyTerrain);
-      liveMap.on("idle", applyTerrain);
-      liveMap.on("style.load", addRadar);
-      liveMap.on("idle", addRadar);
-      liveMap.on("style.load", applyModel);
-      liveMap.on("idle", applyModel);
-      liveMap.on("style.load", applyHologram);
-      liveMap.on("idle", onHologramIdle);
-      // The map fired "load" before this effect ran: apply now, and repaint so "idle" follows.
-      applyQuakes();
-      applyStorms();
-      applyTerrain();
-      addRadar();
-      applyModel();
-      liveMap.triggerRepaint();
-
-      return () => {
-        syncRadar.current = () => {};
-        syncModel.current = () => {};
-        syncTerrain.current = () => {};
-        syncStorms.current = () => {};
-        syncQuakes.current = () => {};
-        liveMap.off("style.load", applyQuakes);
-        liveMap.off("idle", applyQuakes);
-        liveMap.off("style.load", applyStorms);
-        liveMap.off("idle", applyStorms);
-        liveMap.off("style.load", applyTerrain);
-        liveMap.off("idle", applyTerrain);
-        liveMap.off("style.load", addRadar);
-        liveMap.off("idle", addRadar);
-        liveMap.off("style.load", applyModel);
-        liveMap.off("idle", applyModel);
-        liveMap.off("style.load", applyHologram);
-        liveMap.off("idle", onHologramIdle);
-        try {
-          removeQuakes();
-          removeStorms();
-          removeRadar();
-          removeModel();
-          removeHologram();
-        } catch { /* The provider may already have removed the map (retry/unmount). */ }
-      };
-    }
-  }, [mapInstance, device.saveData]);
 
   return (
     <main className="neon-map mx-auto flex h-[calc(100dvh-73px-env(safe-area-inset-bottom))] max-w-3xl flex-col overflow-hidden"
