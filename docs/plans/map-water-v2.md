@@ -299,3 +299,103 @@ scripts/verify-deploy.mjs (add `/api/rain-risk`), src/i18n/en/*.ts.
 Verify: `npx vitest run src/lib/rain-risk src/lib/map` ; `npm run typecheck && npm run lint && node scripts/i18n-check.mjs` ;
 `curl -s localhost:3457/api/rain-risk | head -c 600` after `npm run build && PORT=3457 npm run start` (Claude runs it);
 headless (Claude): water mode shows the rain points + province list; tap a point → rain card; weather mode hides them.
+
+### Order from here (Claude)
+10 → 11 → 18 → 17 → 19 → 16 → 15 → 20 → 12 → 14. All of them touch map-view.tsx, so they run one at a time.
+
+### Task 11 — water summary + เขื่อนใกล้ฉัน (detailed)
+Files: src/lib/dams/summary.ts (+ test), src/components/map/ui/water-panel.tsx (new — move the water panel JSX out of
+map-view.tsx into this component; props: dams, damsStatus, rainRisk, rainRiskStatus, place, onSelectDam, onSelectRain,
+legend button/ref + later sections), src/components/map/map-view.tsx, i18n.
+1. `waterSummary(dams: Dam[], rain: RainStation[] | null)` → `{ over80: number; over100: number; highRelease: number;
+   heavyRain: number | null }` (over80 counts storagePct > 80 including > 100; over100 counts > 100).
+   `nearestDams(dams, place, n = 3)` → `{ dam, km }[]` by great-circle distance (reuse src/lib/geo.ts if it has
+   haversine, else add one in summary.ts), ascending. Tests with fixture-rid (Bangkok → 3 nearest, ids stable).
+2. Water panel order: dam legend strip → summary line (one line, bold numbers:
+   `เขื่อนน้ำมาก (เกิน 80%) {a} · เกินความจุ {b} · ระบายน้ำมาก {c}` and, when rain data is ready,
+   ` · สถานีฝนหนัก {d}`) → dam source stamp → `เขื่อนใกล้ฉัน` (3 rows: name, `{km} กม.`, `{pct}%` coloured dot;
+   tap → `onSelectDam(id)` which selects the dam card AND `map.easeTo({ center: [lon, lat], zoom: max(zoom, 8) })`,
+   duration 0 with reduced motion) → heavy-rain section (task 10) → hint line.
+   `เขื่อนใกล้ฉัน` uses `place` from useLastPlace (label `ใกล้{placeName}` when the place is not GPS).
+Verify: `npx vitest run src/lib/dams` ; typecheck/lint/i18n ; headless: water panel shows the summary numbers
+matching /api/dams, 3 nearest rows for Bangkok, tapping one opens its card.
+
+### Task 18 — เบอร์ฉุกเฉิน (detailed)
+Water panel, after the heavy-rain section: `<details>` (closed by default) summary `เบอร์ฉุกเฉิน`, inside a
+flex-wrap of `map-chip` links: `ปภ. 1784` (tel:1784), `กรมชลประทาน 1460` (tel:1460), `เจ็บป่วยฉุกเฉิน 1669`
+(tel:1669), `เหตุด่วนเหตุร้าย 191` (tel:191). Static constant `EMERGENCY_NUMBERS` in src/lib/emergency.ts with a test
+that every number matches /^\d{3,4}$/ and hrefs are `tel:`. The dam card's dam-break section reuses the constant
+(first two entries). Verify: vitest ; headless: 4 tel links in water mode.
+
+### Task 17 — TMD warnings in water mode (detailed)
+/api/tmd-warnings already exists (items: {title, description, announcedAt?, url?}). In water mode, load it
+(use-map-data `tmdWarnings` like dams, no toast on failure — just nothing shown). Show at the TOP of the water panel
+(not floating): one row per item (max 2, then `+{n} ประกาศ`), `⚠ {title}` bold + announcedAt time, a
+`<details>` with the description and a link `อ่านประกาศ` (url, target _blank, only when url is https), and a ✕
+that hides that item for the session (sessionStorage `fah-tmd-dismissed` = JSON array of `announcedAt|title`).
+Pure helper `visibleWarnings(items, dismissed)` + `warningKey(item)` in src/lib/tmd.ts with tests.
+Verify: vitest ; headless with `page.route('**/api/tmd-warnings', …)` returning 2 items → both shown, ✕ hides one,
+reload in the same tab keeps it hidden.
+
+### Task 19 — ติดตามเขื่อน / watchlist (detailed)
+src/lib/dams/watchlist.ts (+ test): storage key `fah-dam-watch`, value `Record<damId, { pct: number; date: string;
+prevPct?: number; prevDate?: string }>`; `readWatch()` / `writeWatch()` (try/catch, invalid JSON → {}),
+`toggleWatch(watch, dam)`, `refreshWatch(watch, dams)` (for each watched dam present in dams: if dam.date > entry.date
+then prevPct/prevDate = old pct/date and pct/date = current; else unchanged), `watchRows(watch, dams)` →
+`{ dam, change: number | null /* pct − prevPct */, since: string | null }[]` in watch insertion order.
+UI: dam card header gets a star toggle button (`☆`/`★`, aria-pressed, aria-label `ติดตามเขื่อนนี้`/`เลิกติดตามเขื่อนนี้`).
+Water panel: when the watch list is non-empty, section `เขื่อนที่ติดตาม` right after the summary line: rows
+name · `{pct}%` · change `+3.2% จากวันที่ {date}` (green/red not needed — use ▲/▼ text + map-muted), tap → select dam.
+refreshWatch runs once when dams load in water mode and the result is written back.
+Verify: vitest (toggle, refresh on a newer date, no change on the same date, rows order, bad JSON) ; headless:
+star Bhumibol → row appears after reload; with localStorage preset to an older date the change text shows.
+
+### Task 16 — แนวโน้มเขื่อน 7 วัน (detailed)
+RID history: `https://app.rid.go.th/reservoir/api/dam/public/{YYYY-MM-DD}` — same shape as today's (checked
+2026-09-29: 200, CORS *, 12 KB). Note: no ▲▼ on map markers (the map font may lack the glyphs) — trend is shown in
+the dam card and the watchlist rows only.
+1. `src/lib/dams/trend.ts` (+ test): `trendDates(dataDate, days = 7)` → the 7 previous dates (oldest first);
+   `buildTrend(reports: { date: string; dams: Dam[] }[])` → `{ dates: string[]; pct: Record<string, (number | null)[]> }`
+   aligned by date (null when a dam is missing on a date); `trendDelta(values)` = last non-null − first non-null or null.
+2. `/api/dams-trend`: gets today's report via fetchDams (reuse), fetches the 7 previous dates in parallel with
+   `next: { revalidate: 21600 }` + 15 s timeout, parses each with parseRidDams, skips failed dates, returns
+   buildTrend(...) incl. today. WeatherCache 6 h, `s-maxage=21600, stale-while-revalidate=86400`, 503 when nothing.
+   Add to scripts/verify-deploy.mjs.
+3. Client: loaded lazily the first time a dam card opens (use-map-data `damsTrend` / `loadDamsTrend`); the dam card shows
+   below the storage meter an inline SVG sparkline (width 100%, height 36, stroke band colour, dots for nulls skipped)
+   with `7 วัน: {+/-x.x}%` text; loading = nothing; failure = nothing.
+Verify: vitest ; `curl -s localhost:3457/api/dams-trend | head -c 400` ; headless card shows the sparkline.
+
+### Task 15 — ฝนสะสมคาดการณ์ 3 วัน (detailed)
+Model grid is 19×19 over 92–110°E, 4–22°N (1° cells) — coarse; wording must say it is a model estimate.
+1. `src/lib/rain-risk/accumulation.ts` (+ test): `accumulateRain(days: { hours: string[]; precip: ArrayLike<number>[] }[],
+   fromMs: number, hours = 72)` → `{ values: Float32Array; toMs: number } | null` summing hourly `precip` for hour times
+   t with fromMs < t ≤ fromMs + hours·3600 s, de-duplicating hours; null when fewer than hours − 2 hours are covered.
+   `accumulationRgba(mm)` → null below 90; [249,115,22,110] for 90–<150; [185,28,28,140] for ≥ 150.
+2. Hook `use-rain-accumulation.ts`: when enabled (water mode + toggle on), fetch `/api/wind?day=0..3` (the same URLs
+   the time bar uses, so the browser cache is shared), accumulate from now, render with `renderScalarImage(scalarGrid,
+   (at) => accumulationRgba(at(values)))` into a canvas → data URL → MapLibre image source `rain-accum` + raster layer
+   below the first symbol layer and below `rain-risk-circle`/`dam-circle`. Computed once per water-mode session
+   (recompute when `nowMs` hour changes).
+3. Water panel: chip toggle `ฝนสะสม 3 วัน` (aria-pressed, default on) + badge `พยากรณ์ (แบบจำลอง)` + one muted line
+   `พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม`. Legend section
+   `ฝนสะสม 3 วัน (แบบจำลอง)` with the two fills. Toggle state in the map reducer? No — local state in map-view.
+Verify: vitest ; headless: water mode shows the `rain-accum` layer when the model has ≥ 90 mm somewhere
+(or force it with page.route on /api/wind returning heavy precip), toggle hides it.
+
+### Task 20 — ข้อมูลออฟไลน์ (detailed)
+1. public/sw-routing.js: return `"data"` for same-origin GET `/api/dams`, `/api/rain-risk`, `/api/tmd-warnings`,
+   `/api/dams-trend`, `/data/dam-paths.geojson`, `/data/dam-downstream.json` (other /api stay null). public/sw.js:
+   `"data"` → networkFirst into a separate cache `fah-data-v1` (keep it on activate; clear it on `clear-cache` too).
+2. New test src/lib/sw-routing.test.ts that evaluates public/sw-routing.js with node:vm in a sandbox `{ self: {} }`
+   and checks the routes above plus that `/api/weather` stays null and pages/static are unchanged.
+3. Water panel: when offline (`useSyncExternalStore` on online/offline events, server snapshot true), show
+   `ข้อมูลออฟไลน์ เมื่อ {HH:MM} น.` from `dams.fetchedAt` in the source stamp (map-warning style).
+Verify: vitest ; headless: load water mode online, `context.setOffline(true)`, reload → dams still drawn and the
+offline line shows.
+
+### Task 12 — legend / i18n / attribution sweep (detailed)
+Check, fix only gaps: legend dialog in water mode lists dams, rain risk, 3-day accumulation, route (with the
+flow line swatch) and its source line reads `ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · เส้นทางน้ำ:
+HydroRIVERS (CC BY 4.0)`; map attribution has RID, TMD, HydroRIVERS, Open-Meteo; every new Thai key has English.
+Verify: legend tests, i18n-check, headless screenshot of the legend dialog in water mode (both themes).
