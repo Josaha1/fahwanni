@@ -23,6 +23,7 @@ import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { Dam } from "@/lib/dams/types";
+import { trendDelta, type DamTrend } from "@/lib/dams/trend";
 import type { DamWatch } from "@/lib/dams/watchlist";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { Downstream } from "@/lib/dams/paths";
@@ -39,7 +40,7 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, rainRisk,
+export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, rainRisk,
   watch, onToggleWatch, downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
@@ -57,6 +58,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   storms: Storm[];
   quakes: Quake[];
   dams: DamsPayload | null;
+  damsTrend: DamTrend | null;
   watch: DamWatch;
   onToggleWatch: (dam: Dam) => void;
   rainRisk: RainRisk | null;
@@ -78,6 +80,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   const storm = probe.kind === "storm" ? storms.find((item) => item.id === probe.id) : undefined;
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
   const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
+  const damTrend = dam && damsTrend?.dates.at(-1) === dam.date ? damsTrend?.pct[dam.id] : undefined;
   const rainStation = probe.kind === "rain" ? rainRisk?.stations.find((item) => item.id === probe.id) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
@@ -174,6 +177,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
         <p className="mt-1 font-semibold">{percent.format(dam.storagePct)}% · {t(damBandWord(dam.band))}</p>
         <p className="map-muted">{t("{storage} / {capacity} ล้าน ลบ.ม.", { storage: number.format(dam.storageMcm), capacity: number.format(dam.capacityMcm) })}</p>
         {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
+        {damTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} color={damBandColor(dam.band)} />}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
@@ -204,6 +208,32 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
   </section>;
+}
+
+function DamSparkline({ values, color }: { values: (number | null)[]; color: string }) {
+  const t = useT();
+  const delta = trendDelta(values);
+  if (delta === null) return null;
+  const present = values.filter((value): value is number => value !== null);
+  const min = Math.min(...present), max = Math.max(...present);
+  const y = (value: number) => max === min ? 18 : 30 - (value - min) / (max - min) * 24;
+  const x = (index: number) => 4 + index / Math.max(values.length - 1, 1) * 92;
+  const segments: string[] = [];
+  let segment: string[] = [];
+  values.forEach((value, index) => {
+    if (value === null) {
+      if (segment.length > 1) segments.push(segment.join(" "));
+      segment = [];
+    } else segment.push(`${x(index)},${y(value)}`);
+  });
+  if (segment.length > 1) segments.push(segment.join(" "));
+  const change = `${delta >= 0 ? "+" : ""}${new Intl.NumberFormat(t.intl, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(delta)}`;
+  return <div className="mt-2">
+    <svg className="w-full" height="36" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+      {segments.map((points) => <polyline key={points} points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}
+    </svg>
+    <p className="map-muted text-xs">{t("7 วัน: {change}%", { change })}</p>
+  </div>;
 }
 
 function DownstreamDetails({ downstream }: { downstream: Downstream }) {

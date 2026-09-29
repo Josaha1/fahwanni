@@ -6,6 +6,7 @@ import type { WindGrid } from "@/lib/wind/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
+import type { DamTrend } from "@/lib/dams/trend";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { TmdWarnings } from "@/lib/tmd";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
@@ -19,6 +20,9 @@ export function useMapData() {
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windSettled, setWindSettled] = useState(false);
   const [dams, setDams] = useState<DamsPayload | null>(null);
+  const [damsTrend, setDamsTrend] = useState<DamTrend | null>(null);
+  const damsTrendRequest = useRef<Promise<void> | null>(null);
+  const damsTrendLoaded = useRef(false);
   const [rainRisk, setRainRisk] = useState<RainRisk | null>(null);
   const [tmdWarnings, setTmdWarnings] = useState<TmdWarnings | null>(null);
   const [tmdWarningsStatus, setTmdWarningsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -61,6 +65,17 @@ export function useMapData() {
         }
       });
     damsRequest.current = request;
+    return request;
+  }, []);
+
+  const loadDamsTrend = useCallback((): Promise<void> => {
+    if (damsTrendLoaded.current) return Promise.resolve();
+    if (damsTrendRequest.current) return damsTrendRequest.current;
+    const request = fetch("/api/dams-trend")
+      .then((response) => { if (!response.ok) throw new Error("dam trend unavailable"); return response.json() as Promise<DamTrend>; })
+      .then((data) => { damsTrendLoaded.current = true; setDamsTrend(data); })
+      .finally(() => { damsTrendRequest.current = null; });
+    damsTrendRequest.current = request;
     return request;
   }, []);
 
@@ -202,5 +217,5 @@ export function useMapData() {
     };
   }, [loadDams, loadRainRisk, loadTmdWarnings]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
 }

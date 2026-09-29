@@ -353,6 +353,7 @@ export const common: Record<string, string> = {
   "ติดตามเขื่อนนี้": "Watch this dam",
   "เลิกติดตามเขื่อนนี้": "Stop watching this dam",
   "{change}% จากวันที่ {date}": "{change}% since {date}",
+  "7 วัน: {change}%": "7 days: {change}%",
   "ใกล้{name}": "Near {name}",
   "สังเกต": "Observed",
   "ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}": "Royal Irrigation Department data · {date}",
