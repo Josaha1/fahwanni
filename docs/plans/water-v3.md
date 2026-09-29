@@ -1,6 +1,6 @@
 # Plan: Water v3 — ติดตามแม่น้ำ, หน้า "น้ำ", การ์ดหน้าแรก, เทียบปีก่อน/2554
 
-Status: APPROVED (2026-09-29)
+Status: DONE (2026-09-29) — live at fahwanni.vercel.app, verify:deploy 18/18
 
 ## Context
 User (2026-09-29): "ในเรื่องของน้ำ ทำยังไงให้น่าใช้และครบน่าติดตามกว่านี้".
