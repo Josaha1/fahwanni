@@ -1,12 +1,15 @@
 import * as shapefile from "shapefile";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
-import { parseThaiWater } from "../../src/lib/dams/thaiwater.ts";
+import { DAM_REGISTRY } from "../../src/lib/dams/registry.ts";
 import { provinces } from "../../src/lib/provinces.ts";
 import { alongKm, distanceKm, douglasPeucker, pointToSegmentKm } from "./geo.mjs";
 
+// Builds public/data/dam-paths.geojson and dam-downstream.json from the dam registry (Wikidata / OSM
+// coordinates) and HydroRIVERS v10 (CC BY 4.0). Provinces along each route come from src/lib/provinces.ts.
+//   node scripts/dams/build-paths.mjs [--hydro .cache/hydro/HydroRIVERS_v10_as_shp/HydroRIVERS_v10_as]
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const args = process.argv.slice(2);
 function option(name, fallback) {
@@ -15,19 +18,9 @@ function option(name, fallback) {
   if (!args[index + 1] || args[index + 1].startsWith("--")) throw new Error(`${name} requires a path`);
   return args[index + 1];
 }
-const input = option("--input", null);
 const hydro = option("--hydro", join(root, ".cache/hydro/HydroRIVERS_v10_as_shp/HydroRIVERS_v10_as"));
-const raw = input
-  ? JSON.parse(await readFile(input, "utf8"))
-  : await (async () => {
-    const response = await fetch("https://api-v3.thaiwater.net/api/v1/thaiwater30/public/thailand_main");
-    if (!response.ok) throw new Error(`ThaiWater HTTP ${response.status}`);
-    return response.json();
-  })();
-const { dams, stations, barrage } = parseThaiWater(raw);
-if (!dams.length) throw new Error("ThaiWater input contains no valid dams");
-const targets = barrage ? [...dams, barrage] : dams;
-if (!barrage) console.warn("Warning: C.13 is absent; Chao Phraya barrage has no path");
+const dams = DAM_REGISTRY;
+const targets = dams;
 
 const reaches = new Map();
 const source = await shapefile.open(`${hydro}.shp`, `${hydro}.dbf`);
@@ -121,8 +114,8 @@ for (const dam of targets) {
     const result = alongKm([item.lon, item.lat], path);
     return result.distanceKm <= limit ? [{ [key]: item[key], km: round(result.km) }] : [];
   }).sort((a, b) => a.km - b.km || String(a[key]).localeCompare(String(b[key])));
-  downstream[dam.id] = { km: round(km), stations: matches(stations, 3, "code"),
-    provinces: matches(provinces, 15, "id") };
+  // No river stations: no source with published terms (see docs/plans/map-water-v2.md).
+  downstream[dam.id] = { km: round(km), stations: [], provinces: matches(provinces, 15, "id") };
   const coordinates = douglasPeucker(path, 0.003)
     .map((point) => point.map((value) => Math.round(value * 10000) / 10000));
   features.push({ type: "Feature", properties: { damId: dam.id, km: round(km) },
