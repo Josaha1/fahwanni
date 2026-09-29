@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { useT } from "@/i18n/client";
 import { damBandColor } from "@/lib/dams/bands";
 import type { DamsPayload } from "@/lib/dams/client";
@@ -8,14 +8,25 @@ import { formatFullDate, formatTime } from "@/lib/format";
 import type { Place } from "@/lib/place";
 import { provinces } from "@/lib/provinces";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
+import { visibleWarnings, warningKey, type TmdWarnings } from "@/lib/tmd";
 import { DamLegendStrip } from "./legend-chip";
 
-export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, place, placeName, onSelectDam, onSelectRain,
+const DISMISSED_KEY = "fah-tmd-dismissed";
+
+function readDismissed(): string[] {
+  try {
+    const value: unknown = JSON.parse(sessionStorage.getItem(DISMISSED_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((key): key is string => typeof key === "string") : [];
+  } catch { return []; }
+}
+
+export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
   legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   rainRisk: RainRisk | null;
   rainRiskStatus: "idle" | "loading" | "ready" | "error";
+  tmdWarnings: TmdWarnings | null;
   place: Place;
   placeName: string;
   onSelectDam: (id: string) => void;
@@ -26,6 +37,13 @@ export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, place, 
   onShowAllRainProvinces: () => void;
 }) {
   const t = useT();
+  const [dismissed, setDismissed] = useState<string[]>(readDismissed);
+  const warnings = visibleWarnings(tmdWarnings?.items ?? [], dismissed);
+  const dismissWarning = (key: string) => {
+    const next = [...dismissed, key];
+    setDismissed(next);
+    try { sessionStorage.setItem(DISMISSED_KEY, JSON.stringify(next)); } catch { /* Keep dismissal for this visit. */ }
+  };
   const summary = damsStatus === "ready" && dams ? waterSummary(dams.dams, rainRiskStatus === "ready" && rainRisk ? rainRisk.stations : null) : null;
   const nearby = damsStatus === "ready" && dams ? nearestDams(dams.dams, place) : [];
   const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
@@ -33,6 +51,29 @@ export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, place, 
   const percent = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
 
   return <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
+    {warnings.length > 0 && <section className="space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
+      {warnings.slice(0, 2).map((item) => {
+        const key = warningKey(item);
+        const announcedAt = item.announcedAt?.replace(/^([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2})$/, "$1T$2+07:00");
+        const time = announcedAt && !Number.isNaN(Date.parse(announcedAt)) ? formatTime(announcedAt, "Asia/Bangkok", t.locale) : null;
+        return <article key={key} className="rounded-lg border p-3" style={{ borderColor: "var(--map-panel-border)" }}>
+          <div className="flex items-start gap-2">
+            <span className="map-warning" aria-hidden="true">⚠</span>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">{item.title}</p>
+              {time && <p className="map-muted text-xs">{t("ประกาศเมื่อ {time} น.", { time })}</p>}
+            </div>
+            <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิดประกาศ {title}", { title: item.title })} onClick={() => dismissWarning(key)}>✕</button>
+          </div>
+          <details className="mt-1">
+            <summary className="cursor-pointer font-semibold">{t("ดูเพิ่มเติม")}</summary>
+            <p className="mt-1 whitespace-pre-line">{item.description}</p>
+            {item.url && /^https:\/\//i.test(item.url) && <a className="mt-1 inline-block underline" href={item.url} target="_blank" rel="noopener noreferrer">{t("อ่านประกาศ")}</a>}
+          </details>
+        </article>;
+      })}
+      {warnings.length > 2 && <p className="map-muted text-xs">{t("+{n} ประกาศ", { n: warnings.length - 2 })}</p>}
+    </section>}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
     {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
     {damsStatus === "ready" && dams ? <>

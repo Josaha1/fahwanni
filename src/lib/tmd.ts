@@ -1,6 +1,14 @@
 export type TmdWarning = { title: string; description: string; announcedAt?: string; url?: string };
 export type TmdWarnings = { items: TmdWarning[] };
 
+export function warningKey(item: TmdWarning): string {
+  return `${item.announcedAt ?? ""}|${item.title}`;
+}
+
+export function visibleWarnings(items: TmdWarning[], dismissed: readonly string[]): TmdWarning[] {
+  return items.filter((item) => !dismissed.includes(warningKey(item)));
+}
+
 function content(xml: string, names: string[]): string | undefined {
   for (const name of names) {
     const match = xml.match(new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)<\\/${name}\\s*>`, "i"));

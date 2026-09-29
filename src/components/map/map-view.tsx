@@ -88,7 +88,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
-  const { manifest, wind, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, storms, quakes } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
   const { mode, timeMs, playing, primary, rainOn, overlays } = mapState;
@@ -225,6 +225,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       toast.error(t("ข้อมูลฝนหนักไม่พร้อมใช้งาน"));
     });
   }, [water, rainRiskStatus, loadRainRisk, t]);
+
+  useEffect(() => {
+    if (water && tmdWarningsStatus === "idle") loadTmdWarnings().catch(() => {});
+  }, [water, tmdWarningsStatus, loadTmdWarnings]);
 
   // A newly opened card expands the sheet once; after that the user can collapse it (the card title
   // stays visible at the top of the collapsed sheet).
@@ -457,7 +461,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: next });
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
-  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus}
+  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
     onSelectDam={(id) => {

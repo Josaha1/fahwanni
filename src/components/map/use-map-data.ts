@@ -7,9 +7,10 @@ import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
+import type { TmdWarnings } from "@/lib/tmd";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
-type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk";
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk" | "tmdWarnings";
 type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
@@ -19,6 +20,11 @@ export function useMapData() {
   const [windSettled, setWindSettled] = useState(false);
   const [dams, setDams] = useState<DamsPayload | null>(null);
   const [rainRisk, setRainRisk] = useState<RainRisk | null>(null);
+  const [tmdWarnings, setTmdWarnings] = useState<TmdWarnings | null>(null);
+  const [tmdWarningsStatus, setTmdWarningsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const tmdWarningsRequest = useRef<Promise<void> | null>(null);
+  const tmdWarningsController = useRef<AbortController | null>(null);
+  const tmdWarningsLoaded = useRef(false);
   const [rainRiskStatus, setRainRiskStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const rainRiskRequest = useRef<Promise<void> | null>(null);
   const rainRiskController = useRef<AbortController | null>(null);
@@ -27,7 +33,7 @@ export function useMapData() {
   const damsRequest = useRef<Promise<void> | null>(null);
   const damsController = useRef<AbortController | null>(null);
   const damsLoaded = useRef(false);
-  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null, rainRisk: null });
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null, rainRisk: null, tmdWarnings: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
 
@@ -85,9 +91,36 @@ export function useMapData() {
     return request;
   }, []);
 
+  const loadTmdWarnings = useCallback((refresh = false): Promise<void> => {
+    if (!refresh && tmdWarningsLoaded.current) return Promise.resolve();
+    if (!refresh && tmdWarningsRequest.current) return tmdWarningsRequest.current;
+    tmdWarningsController.current?.abort();
+    const controller = new AbortController();
+    tmdWarningsController.current = controller;
+    if (!tmdWarningsLoaded.current) setTmdWarningsStatus("loading");
+    const request = fetch("/api/tmd-warnings", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("TMD warnings unavailable"); return response.json() as Promise<TmdWarnings>; })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        lastFetched.current.tmdWarnings = Date.now();
+        tmdWarningsLoaded.current = true;
+        setTmdWarnings(data);
+        setTmdWarningsStatus("ready");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted && !tmdWarningsLoaded.current) setTmdWarningsStatus("error"); throw error; })
+      .finally(() => {
+        if (tmdWarningsController.current === controller) {
+          tmdWarningsRequest.current = null;
+          tmdWarningsController.current = null;
+        }
+      });
+    tmdWarningsRequest.current = request;
+    return request;
+  }, []);
+
   useEffect(() => {
-    const controllers: Partial<Record<Exclude<DataKey, "dams" | "rainRisk">, AbortController>> = {};
-    const replaceController = (key: Exclude<DataKey, "dams" | "rainRisk">) => {
+    const controllers: Partial<Record<Exclude<DataKey, "dams" | "rainRisk" | "tmdWarnings">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "dams" | "rainRisk" | "tmdWarnings">) => {
       controllers[key]?.abort();
       const controller = new AbortController();
       controllers[key] = controller;
@@ -148,6 +181,7 @@ export function useMapData() {
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
       if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
       if (lastFetched.current.rainRisk !== null && shouldRefresh(lastFetched.current.rainRisk, now, 30 * 60_000)) loadRainRisk(true).catch(() => {});
+      if (lastFetched.current.tmdWarnings !== null && shouldRefresh(lastFetched.current.tmdWarnings, now, 15 * 60_000)) loadTmdWarnings(true).catch(() => {});
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
     loadRadar();
@@ -164,8 +198,9 @@ export function useMapData() {
       Object.values(controllers).forEach((controller) => controller.abort());
       damsController.current?.abort();
       rainRiskController.current?.abort();
+      tmdWarningsController.current?.abort();
     };
-  }, [loadDams, loadRainRisk]);
+  }, [loadDams, loadRainRisk, loadTmdWarnings]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, storms, quakes };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
 }
