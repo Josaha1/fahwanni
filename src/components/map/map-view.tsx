@@ -23,6 +23,7 @@ import { DATA } from "@/lib/map/palette";
 import { WindCanvas } from "./wind-canvas";
 import { useRadarSummary } from "./use-radar-summary";
 import { useMapData } from "./use-map-data";
+import { useForecastDays } from "./use-forecast-days";
 import { MapProvider, useMapContext } from "./map-provider";
 import { bearingWord } from "@/lib/storms/present";
 import { useRadarLayer } from "./layers/use-radar-layer";
@@ -66,15 +67,19 @@ export function MapView() {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
   const [urlView] = useState(() => parseUrlView(window.location.search));
+  const [initialFocus] = useState(() => {
+    const value = new URLSearchParams(window.location.search).get("focus");
+    return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null;
+  });
   return (
     <MapProvider containerRef={container} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
       ? [urlView.lon, urlView.lat] : [place.lon, place.lat]} initialZoom={urlView.z}>
-      <MapScreen container={container} urlView={urlView} />
+      <MapScreen container={container} urlView={urlView} initialFocus={initialFocus} />
     </MapProvider>
   );
 }
 
-function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView }) {
+function MapScreen({ container, urlView, initialFocus }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView; initialFocus: string | null }) {
   const { place } = useLastPlace();
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
@@ -165,6 +170,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const defaultIdx = defaultIndexFor(primary, stops, nowIso);
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
+  const focusTime = initialFocus ? Date.parse(initialFocus) : activeStop ? Date.parse(activeStop.time) : null;
+  // Task 5 will use these loaded grids for rendering; the current map layers still use the legacy responses.
+  useForecastDays({ source: "wind", enabled: true, focusTime, nowMs: Date.parse(nowIso) });
+  useForecastDays({ source: "pm25", enabled: primary === "pm25", focusTime, nowMs: Date.parse(nowIso) });
   const shares = segmentShares(stops);
   const activeTimeLabel = activeStop?.kind === "model" && primary === "rain"
     ? t("+{n} ชม. · {time} น.", { n: Math.max(0, Math.ceil((Date.parse(activeStop.time) - Date.parse(nowIso)) / 3_600_000)), time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) })
@@ -318,9 +327,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const viewQuery = useCallback(() => {
     if (!mapInstance) return null;
     const center = mapInstance.getCenter();
-    return formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
+    const query = formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
       t: activeStop?.time ?? pendingTime.current, ov: overlays, dam: activePathId ?? undefined });
-  }, [mapInstance, primary, activeStop?.time, overlays, activePathId]);
+    return initialFocus ? `${query}&focus=${encodeURIComponent(initialFocus)}` : query;
+  }, [mapInstance, primary, activeStop?.time, overlays, activePathId, initialFocus]);
 
   useEffect(() => {
     if (!mapInstance) return;
