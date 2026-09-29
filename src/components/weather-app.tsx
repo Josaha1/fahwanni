@@ -37,6 +37,7 @@ const bangkok: Place = {
 };
 
 const StormBanner = dynamic(() => import("@/components/storm-banner").then((module) => module.StormBanner), { ssr: false });
+const DamsBanner = dynamic(() => import("@/components/dams-banner").then((module) => module.DamsBanner), { ssr: false });
 
 export function WeatherApp() {
   const t = useT();
@@ -86,6 +87,7 @@ export function WeatherApp() {
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
         {showStormBanner && <StormBanner place={place} />}
+        {showStormBanner && <DamsBanner place={place} />}
         <CurrentCard weather={weather} />
         <SeasonChip lat={place.lat} lon={place.lon} />
         {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
