@@ -7,7 +7,7 @@ it("returns null on a 429 without caching the error", async () => {
     const url = new URL(args[0] as string);
     expect(url.searchParams.get("hourly")?.split(",")).toEqual([
       "wind_speed_10m", "wind_direction_10m", "precipitation", "precipitation_probability",
-      "temperature_2m", "apparent_temperature",
+      "temperature_2m", "apparent_temperature", "cloud_cover",
     ]);
     expect(url.searchParams.get("forecast_days")).toBe("7");
     expect(url.searchParams.has("forecast_hours")).toBe(false);
@@ -22,7 +22,7 @@ it("returns null on a 429 without caching the error", async () => {
   expect(fetchImpl).toHaveBeenCalled();
 });
 
-it("fetches four chunks and keeps each upstream response below 2 MB", async () => {
+it("fetches five chunks and keeps each upstream response below 2 MB", async () => {
   const sizes: number[] = [];
   const fetchImpl = vi.fn(async (input: string | URL | Request) => {
     const url = new URL(input.toString());
@@ -33,7 +33,7 @@ it("fetches four chunks and keeps each upstream response below 2 MB", async () =
     return new Response(json);
   });
   const days = await fetchWindDays(fetchImpl as typeof fetch);
-  expect(fetchImpl).toHaveBeenCalledTimes(4);
+  expect(fetchImpl).toHaveBeenCalledTimes(5);
   expect(Math.max(...sizes)).toBeLessThan(2_000_000);
   expect(days).toHaveLength(7);
   const grid = await fetchWindGrid(fetchImpl as typeof fetch, Date.parse("2026-09-28T00:00:00+07:00"));

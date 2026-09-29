@@ -1,4 +1,4 @@
-import { pm25Color, tempColor } from "../map/palette";
+import { cloudRgba, heatColor, pm25Color, tempColor } from "../map/palette";
 import { probabilityRgba, rainModeAt, rainRgba } from "../precip/render";
 import { sampleSeries, type HourlySeries } from "../timeline/store";
 import { lerpGrid } from "../timeline/time";
@@ -61,4 +61,15 @@ export function renderTempAt(series: HourlySeries, t: number, grid: GridShape, w
 export function renderPm25At(series: HourlySeries, t: number, grid: GridShape, width = 256, height = 256, out?: Uint8ClampedArray): ScalarImage | null {
   const pm25 = valuesAt(series, "pm25", t, grid.nx * grid.ny);
   return pm25 ? renderScalarImage(grid, (at) => color(pm25Color(at(pm25)), 150), width, height, out) : null;
+}
+
+export function renderCloudAt(series: HourlySeries, t: number, grid: GridShape, width = 256, height = 256, out?: Uint8ClampedArray): ScalarImage | null {
+  const cloud = valuesAt(series, "cloud", t, grid.nx * grid.ny);
+  return cloud ? renderScalarImage(grid, (at) => cloudRgba(at(cloud)), width, height, out) : null;
+}
+
+/** "Heat index" layer from the model's apparent temperature, banded like the home page's heat advice. */
+export function renderHeatAt(series: HourlySeries, t: number, grid: GridShape, width = 256, height = 256, out?: Uint8ClampedArray): ScalarImage | null {
+  const feels = valuesAt(series, "feels", t, grid.nx * grid.ny);
+  return feels ? renderScalarImage(grid, (at) => color(heatColor(at(feels)), 150), width, height, out) : null;
 }

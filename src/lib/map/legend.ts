@@ -1,11 +1,11 @@
-import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
+import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor, HEAT_STOPS, cloudRgba } from "./palette";
 import { damBandColor, damBandWord } from "../dams/bands";
 import { probabilityRgba, type RainMode } from "../precip/render";
 import { riverColors } from "../rivers/colors";
 import { statusWord } from "../rivers/status";
 import type { RiverStatus } from "../rivers/types";
 
-export type PrimaryLayer = "rain" | "temp" | "pm25";
+export type PrimaryLayer = "rain" | "temp" | "pm25" | "heat" | "cloud";
 export type Legend = { title: string; unit: string; note?: string; steps: { color: string; label: string; value: string }[] };
 export type Swatch =
   | { kind: "line"; color: string; dashed?: boolean }
@@ -91,6 +91,18 @@ export function legendFor(primary: PrimaryLayer, rainMode?: RainMode): Legend {
         color, label: ["หนาว", "เย็น", "สบาย", "อบอุ่น", "ร้อน", "ร้อนจัด"][index],
         value: ["≤15", "20", "25", "30", "35", "40+"][index],
       })),
+    };
+    case "heat": return {
+      title: "ดัชนีความร้อน", unit: "°C", note: "ประมาณจากอุณหภูมิที่รู้สึก (แบบจำลอง)", steps: HEAT_STOPS.map(([, color], index) => ({
+        color, label: ["ปกติ", "เฝ้าระวัง", "เตือนภัย", "อันตราย", "อันตรายมาก"][index],
+        value: ["<27", "27–33", "33–42", "42–52", "52+"][index],
+      })),
+    };
+    case "cloud": return {
+      title: "เมฆ", unit: "%", note: "ปริมาณเมฆจากแบบจำลอง", steps: [30, 60, 100].map((pct, index) => {
+        const [r, g, b, a] = cloudRgba(pct)!;
+        return { color: `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(2)})`, label: ["เมฆบางส่วน", "เมฆมาก", "ครึ้มทั้งหมด"][index], value: ["30", "60", "100"][index] };
+      }),
     };
     case "pm25": return {
       title: "ฝุ่น PM2.5", unit: "µg/m³", note: "ค่าประมาณจากแบบจำลอง (CAMS)", steps: [

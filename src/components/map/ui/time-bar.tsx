@@ -18,7 +18,7 @@ export function localizeLabel(t: Translate, label: { key: string; params: Record
 
 /** "พ. 14:37 · พยากรณ์ · ค่าประมาณระหว่างชั่วโมง" — shared by the bar and the point card. */
 export function timeLabelText(t: Translate, time: number, domain: TimeDomain,
-  { radarTime, primary, lastAvailable }: { radarTime?: number; primary: "rain" | "temp" | "pm25"; lastAvailable?: number }): string {
+  { radarTime, primary, lastAvailable }: { radarTime?: number; primary: "rain" | "temp" | "pm25" | "heat" | "cloud"; lastAvailable?: number }): string {
   const badge = timeBadge(time, domain, { radarTime, onModelHour: time % HOUR === 0, primary });
   const unavailable = lastAvailable !== undefined && time > lastAvailable;
   return `${localizeLabel(t, handleLabel(time))} · ${unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}`;
@@ -31,7 +31,7 @@ export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, r
   onTogglePlay: () => void;
   radarStart?: number;
   radarTime?: number;
-  primary: "rain" | "temp" | "pm25";
+  primary: "rain" | "temp" | "pm25" | "heat" | "cloud";
   lastAvailable?: number;
   mode: "fit" | "scroll";
 }) {

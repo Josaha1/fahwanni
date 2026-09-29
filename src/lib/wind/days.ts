@@ -14,6 +14,8 @@ export interface ForecastDay {
   prob: number[][];
   temp: number[][];
   feels: number[][];
+  /** Total cloud cover %, 0–100. */
+  cloud: number[][];
   source: "open-meteo";
   attribution: { text: string; url: string };
 }
@@ -27,9 +29,10 @@ const hourlySchema = z.object({
   precipitation_probability: z.array(z.number().nullable()),
   temperature_2m: z.array(z.number().nullable()),
   apparent_temperature: z.array(z.number().nullable()),
+  cloud_cover: z.array(z.number().nullable()),
 });
 const locationSchema = z.object({ hourly: hourlySchema });
-const keys = ["wind_speed_10m", "wind_direction_10m", "precipitation", "precipitation_probability", "temperature_2m", "apparent_temperature"] as const;
+const keys = ["wind_speed_10m", "wind_direction_10m", "precipitation", "precipitation_probability", "temperature_2m", "apparent_temperature", "cloud_cover"] as const;
 const round = (n: number) => Math.round(n * 10) / 10 || 0;
 
 /** Open-Meteo's Asia/Bangkok timestamps have no offset; their wall time is UTC+07:00. */
@@ -73,7 +76,7 @@ export function buildDays(locations: unknown[]): ForecastDay[] {
     if (hours.some((hour) => hour === null) ||
       hours.some((hour, index) => hour !== new Date(Date.parse(hours[0]!) + index * 3_600_000).toISOString())) continue;
     const fields = { u: [] as number[][], v: [] as number[][], precip: [] as number[][],
-      prob: [] as number[][], temp: [] as number[][], feels: [] as number[][] };
+      prob: [] as number[][], temp: [] as number[][], feels: [] as number[][], cloud: [] as number[][] };
     for (let hour = 0; hour < indices.length; hour++) {
       for (const field of Object.keys(fields) as (keyof typeof fields)[]) fields[field].push([]);
     }
@@ -81,7 +84,7 @@ export function buildDays(locations: unknown[]): ForecastDay[] {
     for (const row of rows) {
       const values = keys.map((key) => fill(indices.map((index) => row[key][index])));
       if (values.some((value) => value === null)) { valid = false; break; }
-      const [speed, direction, precipitation, probability, temperature, apparent] = values as number[][];
+      const [speed, direction, precipitation, probability, temperature, apparent, cloudCover] = values as number[][];
       for (let hour = 0; hour < indices.length; hour++) {
         const { u, v } = toUV(speed[hour], direction[hour]);
         fields.u[hour].push(round(u));
@@ -90,6 +93,7 @@ export function buildDays(locations: unknown[]): ForecastDay[] {
         fields.prob[hour].push(Math.round(probability[hour]));
         fields.temp[hour].push(Math.round(temperature[hour]));
         fields.feels[hour].push(Math.round(apparent[hour]));
+        fields.cloud[hour].push(Math.round(cloudCover[hour]));
       }
     }
     if (valid) days.push({ day, date, bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY,

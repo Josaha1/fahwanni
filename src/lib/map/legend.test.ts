@@ -3,7 +3,7 @@ import { riverColors } from "../rivers/colors";
 import { translator } from "../../i18n/core";
 import { damBandColor } from "../dams/bands";
 import { probabilityRgba } from "../precip/render";
-import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
+import { cloudRgba, DATA, heatColor, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 import { damLegendStrip, legendFor, legendGradient, overlayLegend } from "./legend";
 
 const cssColor = (probability: number) => {
@@ -147,5 +147,24 @@ describe("overlayLegend", () => {
     const en = translator("en");
     expect(en(strip.title)).not.toBe(strip.title);
     expect(en(strip.unit)).not.toBe(strip.unit);
+  });
+});
+
+describe("heat and cloud layers", () => {
+  it("bands heat like the home page advice and fades clouds in above 15 %", () => {
+    expect([26, 27, 33, 42, 52, 60].map(heatColor)).toEqual(["#7cc86f", "#f2d24b", "#f0913a", "#d6453d", "#8b1d5a", "#8b1d5a"]);
+    expect(cloudRgba(10)).toBeNull();
+    expect(cloudRgba(100)![3]).toBe(Math.round(0.75 * 255));
+    expect(cloudRgba(57.5)![3]).toBe(Math.round(0.5 * 0.75 * 255));
+  });
+
+  it("has legends with English for both new layers", () => {
+    const en = translator("en");
+    for (const primary of ["heat", "cloud"] as const) {
+      const legend = legendFor(primary);
+      expect(en(legend.title)).not.toBe(legend.title);
+      for (const step of legend.steps) expect(en(step.label)).not.toBe(step.label);
+      expect(legend.note && en(legend.note)).not.toBe(legend.note);
+    }
   });
 });

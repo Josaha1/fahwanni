@@ -12,7 +12,8 @@ import { rainSourceAt } from "@/lib/timeline/rain-source";
 import { HOUR, lerpGrid, makeDomain, MINUTE, roundTo } from "@/lib/timeline/time";
 import { advance, DEFAULT_PLAY_SPEED, isPlaySpeed, nextPlaySpeed, PLAY_SPEEDS, type PlaySpeed } from "@/lib/timeline/play";
 import { pm25Level } from "@/lib/air";
-import { pm25LevelWord } from "@/lib/words";
+import { heatBandWord, pm25LevelWord } from "@/lib/words";
+import { heatBand } from "@/lib/advise";
 import { sampleGrid } from "@/lib/map/probe";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
@@ -162,6 +163,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         ? { temp: sampleGrid(wind, wind.temp[legacyTempHour], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[legacyTempHour], place.lon, place.lat) }
         : null
     : null;
+  const locationHeat = primary === "heat" && windSeries ? seriesValueAt(windSeries, "feels", effectiveTime, place.lon, place.lat, scalarGrid) : null;
+  const locationCloud = primary === "cloud" && windSeries ? seriesValueAt(windSeries, "cloud", effectiveTime, place.lon, place.lat, scalarGrid) : null;
   const pm25Sample = pm25Series ? sampleSeries(pm25Series, "pm25", effectiveTime) : null;
   const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
   const locationPm25 = primary === "pm25" && pm25Values ? sampleGrid(scalarGrid, pm25Values, place.lon, place.lat) : null;
@@ -183,6 +186,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     waterRadarOn || (rainVisible && hasRadarFrame), waterRadarOn ? 0.5 : rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
   useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && (rainSource.kind === "model" || (rainSource.kind === "blend" && rainSource.modelOpacity > 0)), series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: rainSource.kind === "blend" ? rainSource.modelOpacity : 1, size: rainImageSize });
   useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
+  useTimeImageLayer(mapInstance, { id: "heat", enabled: !water && primary === "heat", series: windSeries, timeMs: effectiveTime, nowMs, kind: "heat", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
+  useTimeImageLayer(mapInstance, { id: "cloud", enabled: !water && primary === "cloud", series: windSeries, timeMs: effectiveTime, nowMs, kind: "cloud", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
@@ -490,6 +495,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const waterStepper = <WaterDayStepper day={waterDay} nowMs={nowMs} playing={water && playing} reducedMotion={reducedMotion}
     onChange={(day) => { dispatch({ type: "stop" }); dispatch({ type: "setWaterDay", day }); }} onTogglePlay={() => dispatch({ type: "togglePlay" })} />;
   const details = <div>
+    {primary === "heat" && locationHeat !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+      {t("ดัชนีความร้อนที่ตำแหน่งคุณ ~{v}° · {band}", { v: Math.round(locationHeat), band: heatBandWord(heatBand(locationHeat), t) })}
+    </p>}
+    {primary === "cloud" && locationCloud !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
+      {t("เมฆที่ตำแหน่งคุณ {v}%", { v: Math.round(locationCloud) })}
+    </p>}
+    {(primary === "heat" || primary === "cloud") && <p className="map-muted mt-1 text-xs">{t("ค่าประมาณจากแบบจำลอง Open-Meteo ความละเอียดราว 100 กม.")}</p>}
     {locationTemp && locationTemp.temp !== null && locationTemp.feels !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {t("อุณหภูมิที่ตำแหน่งคุณ {temp}° (รู้สึกเหมือน {feels}°)", { temp: Math.round(locationTemp.temp), feels: Math.round(locationTemp.feels) })}
     </p>}
@@ -544,6 +556,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
     onSelectDam={(id) => select({ kind: "dam", id })} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
+    cloudAvailable={Boolean(windSeries?.grids.cloud?.some((row) => row.length > 0))}
     pm25Loading={pm25Loading} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });
     }} />;

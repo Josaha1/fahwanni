@@ -4,16 +4,20 @@ import { useRef, type KeyboardEvent } from "react";
 import { useT } from "@/i18n/client";
 import type { PrimaryLayer } from "@/lib/map/legend";
 
-export function PrimaryPicker({ primary, tempAvailable, pm25Loading, onChange }: {
+export function PrimaryPicker({ primary, tempAvailable, cloudAvailable, pm25Loading, onChange }: {
   primary: PrimaryLayer;
   tempAvailable: boolean;
+  /** A day cached before cloud cover was fetched has no cloud grid. */
+  cloudAvailable: boolean;
   pm25Loading: boolean;
   onChange: (primary: PrimaryLayer) => void;
 }) {
   const t = useT();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-  const options: PrimaryLayer[] = tempAvailable ? ["rain", "temp", "pm25"] : ["rain", "pm25"];
-  const labels = { rain: "ฝน", temp: "อุณหภูมิ", pm25: "ฝุ่น PM2.5" } as const;
+  const options: PrimaryLayer[] = [
+    "rain", ...(tempAvailable ? ["temp", "heat"] as const : []), "pm25", ...(cloudAvailable ? ["cloud"] as const : []),
+  ];
+  const labels: Record<PrimaryLayer, string> = { rain: "ฝน", temp: "อุณหภูมิ", heat: "ดัชนีความร้อน", pm25: "ฝุ่น PM2.5", cloud: "เมฆ" };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();

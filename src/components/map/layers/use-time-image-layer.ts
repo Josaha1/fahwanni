@@ -2,19 +2,19 @@
 
 import { useEffect, useRef } from "react";
 import type { ImageSource, Map } from "maplibre-gl";
-import { renderPm25At, renderRainAt, renderTempAt } from "@/lib/raster/render-at";
+import { renderCloudAt, renderHeatAt, renderPm25At, renderRainAt, renderTempAt } from "@/lib/raster/render-at";
 import type { ScalarImage } from "@/lib/raster/render-scalar";
 import { rainModeAt } from "@/lib/precip/render";
 import type { HourlySeries } from "@/lib/timeline/store";
 import { useStyleEffect } from "../use-style-effect";
 
-type Kind = "rain" | "temp" | "pm25";
+type Kind = "rain" | "temp" | "pm25" | "heat" | "cloud";
 type Grid = { bbox: readonly [number, number, number, number]; nx: number; ny: number };
 type Encoded = { url: string; coordinates: ScalarImage["coordinates"] };
 type Request = { series: HourlySeries; minute: number; kind: Kind; grid: Grid; nowMs: number; size: number; leadBucket: string };
 
 export function useTimeImageLayer(map: Map | null, { id, enabled, series, timeMs, nowMs, kind, grid, beforeSymbol, opacity, size }: {
-  id: "model-rain" | "temp" | "pm25"; enabled: boolean; series: HourlySeries | null; timeMs: number | null;
+  id: "model-rain" | "temp" | "pm25" | "heat" | "cloud"; enabled: boolean; series: HourlySeries | null; timeMs: number | null;
   nowMs: number; kind: Kind; grid: Grid; beforeSymbol: true; opacity: number; size: number;
 }) {
   const latest = useRef<Encoded | null>(null);
@@ -151,7 +151,9 @@ export function useTimeImageLayer(map: Map | null, { id, enabled, series, timeMs
         const t = next.minute * 60_000;
         const image = next.kind === "rain" ? renderRainAt(next.series, t, next.grid, next.nowMs, next.size, next.size, data.data)
           : next.kind === "temp" ? renderTempAt(next.series, t, next.grid, next.size, next.size, data.data)
-            : renderPm25At(next.series, t, next.grid, next.size, next.size, data.data);
+            : next.kind === "heat" ? renderHeatAt(next.series, t, next.grid, next.size, next.size, data.data)
+              : next.kind === "cloud" ? renderCloudAt(next.series, t, next.grid, next.size, next.size, data.data)
+                : renderPm25At(next.series, t, next.grid, next.size, next.size, data.data);
         if (!image) return;
         context.putImageData(data, 0, 0);
         encoding.current = true;

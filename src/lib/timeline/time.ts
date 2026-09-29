@@ -88,7 +88,7 @@ export function dayLabel(t: number) {
   return { key: "{day} {date} {month}", params: { day, date, month } };
 }
 
-export function timeBadge(t: number, d: TimeDomain, source: { radarTime?: number; onModelHour: boolean; primary: "rain" | "temp" | "pm25" }) {
+export function timeBadge(t: number, d: TimeDomain, source: { radarTime?: number; onModelHour: boolean; primary: "rain" | "temp" | "pm25" | "heat" | "cloud" }) {
   if (t > d.now && t - d.now <= 60 * MINUTE && source.primary === "rain" && source.radarTime !== undefined) {
     return { key: "เรดาร์ล่าสุด ({n} นาทีก่อน) · กำลังเปลี่ยนเป็นพยากรณ์", params: { n: Math.round((d.now - source.radarTime) / MINUTE) } };
   }

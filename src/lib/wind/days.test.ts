@@ -15,7 +15,7 @@ describe("buildDays", () => {
       expect(day.date).toBe(`2026-${index < 3 ? "09" : "10"}-${String(index < 3 ? 28 + index : index - 2).padStart(2, "0")}`);
       expect(day.hours).toHaveLength(24);
       expect(day.u[0]).toHaveLength(361);
-      for (const field of ["u", "v", "precip", "prob", "temp", "feels"] as const) {
+      for (const field of ["u", "v", "precip", "prob", "temp", "feels", "cloud"] as const) {
         expect(day[field]).toHaveLength(24);
         expect(day[field][23]).toHaveLength(361);
       }
@@ -44,7 +44,7 @@ describe("buildDays", () => {
     rows[0].hourly.temperature_2m[150] = null as unknown as number;
     for (const row of rows) {
       for (const key of ["wind_speed_10m", "wind_direction_10m", "precipitation",
-        "precipitation_probability", "temperature_2m", "apparent_temperature"] as const) {
+        "precipitation_probability", "temperature_2m", "apparent_temperature", "cloud_cover"] as const) {
         row.hourly[key].fill(null as unknown as number, 163);
       }
     }
@@ -52,14 +52,14 @@ describe("buildDays", () => {
     expect(days).toHaveLength(7);
     expect(days[6].hours).toHaveLength(19);
     expect(days[6].hours.at(-1)).toBe(new Date(`${rows[0].hourly.time[162]}+07:00`).toISOString());
-    for (const field of ["u", "v", "precip", "prob", "temp", "feels"] as const) {
+    for (const field of ["u", "v", "precip", "prob", "temp", "feels", "cloud"] as const) {
       expect(days[6][field]).toHaveLength(19);
     }
     expect(days[6].temp[6][0]).toBe(days[6].temp[5][0]);
 
     for (const row of rows) {
       for (const key of ["wind_speed_10m", "wind_direction_10m", "precipitation",
-        "precipitation_probability", "temperature_2m", "apparent_temperature"] as const) {
+        "precipitation_probability", "temperature_2m", "apparent_temperature", "cloud_cover"] as const) {
         row.hourly[key].fill(null as unknown as number, 144);
       }
     }

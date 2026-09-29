@@ -28,6 +28,21 @@ export function tempColor(c: number): string {
   return TEMP_STOPS.at(-1)![1];
 }
 
+/** Heat bands match the home page's heat-index advice (src/lib/advise.ts heatBand). */
+export const HEAT_STOPS = [
+  [27, "#7cc86f"], [33, "#f2d24b"], [42, "#f0913a"], [52, "#d6453d"], [Infinity, "#8b1d5a"],
+] as const;
+
+export function heatColor(c: number): string {
+  return HEAT_STOPS.find(([upper]) => c < upper)![1];
+}
+
+/** Cloud cover as a neutral grey veil: clear below 15 %, up to 75 % opaque at overcast. */
+export function cloudRgba(pct: number): [number, number, number, number] | null {
+  if (!(pct > 15)) return null;
+  return [138, 148, 166, Math.round(Math.min(1, (pct - 15) / 85) * 0.75 * 255)];
+}
+
 export const PM25_COLORS: Record<Pm25Level, string> = {
   "very-good": "#3bccff",
   good: "#92d050",

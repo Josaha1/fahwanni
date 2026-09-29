@@ -36,7 +36,7 @@ export function parseUrlView(search: string): UrlView {
   if (lat !== undefined) view.lat = lat;
   if (lon !== undefined) view.lon = lon;
   if (z !== undefined) view.z = z;
-  if (layer === "rain" || layer === "temp" || layer === "pm25") view.layer = layer;
+  if (layer === "rain" || layer === "temp" || layer === "pm25" || layer === "heat" || layer === "cloud") view.layer = layer;
   if (time && /^\d{7,9}$/.test(time)) view.t = Number(time) * 60_000;
   else if (time && /^\d{4}-\d\d-\d\d/.test(time) && Number.isFinite(Date.parse(time))) view.t = Math.round(Date.parse(time) / 60_000) * 60_000;
   if (dam && /^[a-z0-9-]+$/.test(dam)) view.dam = dam;

@@ -6,7 +6,7 @@ import { daysToLoad, localDayIndex, mergeDays, type HourlySeries, type Pm25Var, 
 import type { ForecastDay } from "@/lib/wind/days";
 import type { Pm25Day } from "@/lib/pm25/days";
 
-const WIND_VARS: WindVar[] = ["u", "v", "precip", "prob", "temp", "feels"];
+const WIND_VARS: WindVar[] = ["u", "v", "precip", "prob", "temp", "feels", "cloud"];
 const PM25_VARS: Pm25Var[] = ["pm25"];
 const RETRY_MS = 60_000;
 const REFRESH_MS = 3 * 60 * 60_000;
@@ -62,7 +62,7 @@ export function useForecastDays({ source, enabled, focusTime, nowMs }: {
         const rows = source === "wind"
           ? (data as ForecastDay)[variable as WindVar]
           : (data as Pm25Day)[variable as Pm25Var];
-        chunk[variable] = rows.map((row) => Float32Array.from(row));
+        if (rows) chunk[variable] = rows.map((row) => Float32Array.from(row));
       }
       chunks.current.set(day, chunk);
       lastFetched.current = Date.now();

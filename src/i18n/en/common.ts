@@ -470,4 +470,13 @@ export const common: Record<string, string> = {
   "ติดตาม": "Watched",
   "แม่น้ำ": "River",
   "ฝนตอนนี้ (เรดาร์)": "Rain now (radar)",
+  "เมฆ": "Clouds",
+  "ประมาณจากอุณหภูมิที่รู้สึก (แบบจำลอง)": "Estimated from the model's feels-like temperature",
+  "ปริมาณเมฆจากแบบจำลอง": "Cloud cover from the model",
+  "เมฆบางส่วน": "Partly cloudy",
+  "เมฆมาก": "Mostly cloudy",
+  "ครึ้มทั้งหมด": "Overcast",
+  "ดัชนีความร้อนที่ตำแหน่งคุณ ~{v}° · {band}": "Heat index at your location ~{v}° · {band}",
+  "เมฆที่ตำแหน่งคุณ {v}%": "Cloud cover at your location {v}%",
+  "ค่าประมาณจากแบบจำลอง Open-Meteo ความละเอียดราว 100 กม.": "Open-Meteo model estimate at about 100 km resolution",
 };

@@ -1,7 +1,7 @@
 import { TZDate } from "@date-fns/tz";
 import { bracket, DAY, HOUR } from "./time";
 
-export type WindVar = "u" | "v" | "precip" | "prob" | "temp" | "feels";
+export type WindVar = "u" | "v" | "precip" | "prob" | "temp" | "feels" | "cloud";
 export type Pm25Var = "pm25";
 
 export interface HourlySeries {
@@ -22,8 +22,9 @@ export function mergeDays(days: DayGrids[], vars: string[]): HourlySeries {
     if (times.at(-1) === hour.time) continue;
     times.push(hour.time);
     for (const variable of vars) {
-      const row = (hour.day[variable] as ArrayLike<number>[])[hour.index];
-      grids[variable].push(row instanceof Float32Array ? row : Float32Array.from(row));
+      const row = (hour.day[variable] as ArrayLike<number>[] | undefined)?.[hour.index];
+      // A day cached before a variable existed gets an empty row; samplers treat it as missing.
+      grids[variable].push(row === undefined ? new Float32Array(0) : row instanceof Float32Array ? row : Float32Array.from(row));
     }
   }
   return { times, grids };
