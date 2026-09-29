@@ -12,7 +12,7 @@ import { provinces } from "@/lib/provinces";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { visibleWarnings, type TmdWarnings } from "@/lib/tmd";
 import { DamLegendStrip } from "./legend-chip";
-import { filterDams, findWater, type DamFilter } from "@/lib/water/find";
+import { findWater } from "@/lib/water/find";
 import { TmdWarningList } from "@/components/water/tmd-warnings";
 
 const DISMISSED_KEY = "fah-tmd-dismissed";
@@ -30,9 +30,8 @@ function subscribeOnline(onChange: () => void) {
   return () => { window.removeEventListener("online", onChange); window.removeEventListener("offline", onChange); };
 }
 
-export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay, rainStartDate,
-  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, allRoutes, onToggleAllRoutes, rainAccumOn, rainAccumStatus, onToggleRainAccum,
-  damFilter, onDamFilter, riverPoints, onSelectRiver, radar, onToggleRadar }: {
+export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay,
+  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, riverPoints, onSelectRiver }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
@@ -44,23 +43,12 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onSelectDam: (id: string) => void;
   onSelectRain: (id: string) => void;
   waterDay: number;
-  rainStartDate: string;
   legendButton: RefObject<HTMLButtonElement | null>;
   onOpenLegend: () => void;
   showAllRainProvinces: boolean;
   onShowAllRainProvinces: () => void;
-  allRoutes: boolean;
-  onToggleAllRoutes: () => void;
-  /** Newest radar frame overlay ("ฝนตอนนี้"), off by default. */
-  radar: { on: boolean; available: boolean; ageKey: string; age: number; warn: boolean };
-  onToggleRadar: () => void;
-  damFilter: DamFilter;
-  onDamFilter: (filter: DamFilter) => void;
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
   onSelectRiver: (id: string) => void;
-  rainAccumOn: boolean;
-  rainAccumStatus: "loading" | "shown" | "none" | "unavailable";
-  onToggleRainAccum: () => void;
 }) {
   const t = useT();
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
@@ -93,23 +81,8 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" className="map-chip text-sm" aria-pressed={allRoutes} onClick={onToggleAllRoutes}>{t("เส้นทางน้ำทุกเขื่อน")}</button>
-      {radar.available && <button type="button" className="map-chip text-sm" aria-pressed={radar.on} onClick={onToggleRadar}>{t("ฝนตอนนี้ (เรดาร์)")}</button>}
-    </div>
-    {radar.on && <p className={`${radar.warn ? "map-warning" : "map-muted"} text-xs`}>{radar.warn && <span aria-hidden="true">⚠ </span>}{t(radar.ageKey, { n: radar.age })}</p>}
-    {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams} watch={watch} damFilter={damFilter} onDamFilter={onDamFilter}
+    {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams}
       riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver} />}
-    <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-label={t("ฝนสะสม 3 วัน")}>
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="map-chip text-sm" aria-pressed={rainAccumOn} onClick={onToggleRainAccum}>{t("ฝนสะสม 3 วัน")}</button>
-        <span className="map-water-badge">{t("พยากรณ์ (แบบจำลอง)")}</span>
-      </div>
-      {waterDay > 0 && <p className="map-muted mt-1 text-xs">{t("ฝนสะสม 3 วัน เริ่ม {date}", { date: formatFullDate(`${rainStartDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
-      <p className="map-muted mt-2 text-xs">{t("พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม")}</p>
-      {rainAccumOn && rainAccumStatus === "none" && <p className="mt-1 text-xs">{t(waterDay > 0 ? "แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม. ในช่วงที่เลือก" : "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.")}</p>}
-      {rainAccumOn && rainAccumStatus === "unavailable" && <p className="map-muted mt-1 text-xs">{t("ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน")}</p>}
-    </section>
     {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
     {watched.length > 0 && <section aria-labelledby="map-watched-dams">
       <h2 id="map-watched-dams" className="font-semibold">{t("เขื่อนที่ติดตาม")}</h2>
@@ -158,27 +131,16 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   </section>;
 }
 
-const FILTERS: { filter: DamFilter; label: string }[] = [
-  { filter: "all", label: "ทั้งหมด" }, { filter: "full", label: "น้ำมาก >80%" },
-  { filter: "release", label: "ระบายมาก" }, { filter: "watched", label: "ติดตาม" },
-];
-
-/** Water-mode dam filter chips and a name search over dams and river points. */
-function WaterFinder({ dams, watch, damFilter, onDamFilter, riverPoints, onSelectDam, onSelectRiver }: {
-  dams: Dam[]; watch: WaterWatch; damFilter: DamFilter; onDamFilter: (filter: DamFilter) => void;
+/** Name search over dams and river points. */
+function WaterFinder({ dams, riverPoints, onSelectDam, onSelectRiver }: {
+  dams: Dam[];
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
   onSelectDam: (id: string) => void; onSelectRiver: (id: string) => void;
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
   const hits = findWater(query, dams, riverPoints, t.locale);
-  return <section className="space-y-2" aria-label={t("ค้นหาและกรองเขื่อน")}>
-    <div role="radiogroup" aria-label={t("แสดงเขื่อน")} className="flex flex-wrap gap-1.5">
-      {FILTERS.map(({ filter, label }) => <button key={filter} type="button" role="radio" aria-checked={damFilter === filter}
-        className="map-chip text-xs" onClick={() => onDamFilter(filter)}>
-        {t(label)} ({filterDams(dams, filter, watch).length})
-      </button>)}
-    </div>
+  return <section className="space-y-2" aria-label={t("ค้นหาเขื่อนหรือแม่น้ำ")}>
     <input type="search" value={query} onChange={(event) => setQuery(event.target.value)}
       placeholder={t("ค้นหาเขื่อนหรือแม่น้ำ")} aria-label={t("ค้นหาเขื่อนหรือแม่น้ำ")}
       className="map-chip w-full text-sm" style={{ textAlign: "left" }} />

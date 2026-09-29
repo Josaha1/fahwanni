@@ -607,8 +607,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     legendTrigger.current = layersButton.current;
     legendDialog.current?.showModal();
   };
-  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay} rainStartDate={waterDate(nowMs, waterDay)}
-    allRoutes={allRoutes} onToggleAllRoutes={() => dispatch({ type: "toggleAllRoutes" })} rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
+  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
     onSelectDam={(id) => {
@@ -616,9 +615,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       const dam = dams?.dams.find((item) => item.id === id);
       if (dam) mapInstance?.easeTo({ center: [dam.lon, dam.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
     }} onSelectRain={(id) => select({ kind: "rain", id })}
-    radar={{ on: waterRadar, available: frames.length > 0, ageKey: ageLabel.key, age: radarAge, warn: ageLabel.warn }}
-    onToggleRadar={() => setWaterRadar((on) => !on)}
-    damFilter={damFilter} onDamFilter={setDamFilter} riverPoints={rivers?.points ?? []}
+    riverPoints={rivers?.points ?? []}
     onSelectRiver={(id) => {
       select({ kind: "river", id });
       const point = rivers?.points.find((item) => item.id === id);
@@ -688,6 +685,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendTrigger} />
     <LayersDialog mode={mode} primaryPicker={primaryPicker} overlays={layerOverlays}
+      waterLayers={{
+        dams: damsStatus === "ready" ? dams?.dams ?? null : null, watch, damFilter, onDamFilter: setDamFilter,
+        routes: { label: "เส้นทางน้ำทุกเขื่อน", checked: allRoutes, onChange: () => dispatch({ type: "toggleAllRoutes" }) },
+        radar: { label: "ฝนตอนนี้ (เรดาร์)", checked: waterRadar, available: frames.length > 0, ageKey: ageLabel.key,
+          age: radarAge, warn: ageLabel.warn, onChange: () => setWaterRadar((on) => !on) },
+        rainAccum: { label: "ฝนสะสม 3 วัน", checked: rainAccumOn, status: rainAccumStatus, day: waterDay,
+          startDate: waterDate(nowMs, waterDay), onChange: () => setRainAccumOn((on) => !on) },
+      }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
       fullscreen={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
