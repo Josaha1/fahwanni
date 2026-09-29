@@ -6,9 +6,10 @@ import type { WindGrid } from "@/lib/wind/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
+import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
-type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams";
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk";
 type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
@@ -17,11 +18,16 @@ export function useMapData() {
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windSettled, setWindSettled] = useState(false);
   const [dams, setDams] = useState<DamsPayload | null>(null);
+  const [rainRisk, setRainRisk] = useState<RainRisk | null>(null);
+  const [rainRiskStatus, setRainRiskStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const rainRiskRequest = useRef<Promise<void> | null>(null);
+  const rainRiskController = useRef<AbortController | null>(null);
+  const rainRiskLoaded = useRef(false);
   const [damsStatus, setDamsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const damsRequest = useRef<Promise<void> | null>(null);
   const damsController = useRef<AbortController | null>(null);
   const damsLoaded = useRef(false);
-  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null });
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null, rainRisk: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
 
@@ -52,9 +58,36 @@ export function useMapData() {
     return request;
   }, []);
 
+  const loadRainRisk = useCallback((refresh = false): Promise<void> => {
+    if (!refresh && rainRiskLoaded.current) return Promise.resolve();
+    if (!refresh && rainRiskRequest.current) return rainRiskRequest.current;
+    rainRiskController.current?.abort();
+    const controller = new AbortController();
+    rainRiskController.current = controller;
+    if (!rainRiskLoaded.current) setRainRiskStatus("loading");
+    const request = fetch("/api/rain-risk", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("rain risk unavailable"); return response.json() as Promise<RainRisk>; })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        lastFetched.current.rainRisk = Date.now();
+        rainRiskLoaded.current = true;
+        setRainRisk(data);
+        setRainRiskStatus("ready");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted && !rainRiskLoaded.current) setRainRiskStatus("error"); throw error; })
+      .finally(() => {
+        if (rainRiskController.current === controller) {
+          rainRiskRequest.current = null;
+          rainRiskController.current = null;
+        }
+      });
+    rainRiskRequest.current = request;
+    return request;
+  }, []);
+
   useEffect(() => {
-    const controllers: Partial<Record<Exclude<DataKey, "dams">, AbortController>> = {};
-    const replaceController = (key: Exclude<DataKey, "dams">) => {
+    const controllers: Partial<Record<Exclude<DataKey, "dams" | "rainRisk">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "dams" | "rainRisk">) => {
       controllers[key]?.abort();
       const controller = new AbortController();
       controllers[key] = controller;
@@ -114,6 +147,7 @@ export function useMapData() {
       if (lastFetched.current.storms !== null && shouldRefresh(lastFetched.current.storms, now, REFRESH.slow)) loadStorms();
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
       if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
+      if (lastFetched.current.rainRisk !== null && shouldRefresh(lastFetched.current.rainRisk, now, 30 * 60_000)) loadRainRisk(true).catch(() => {});
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
     loadRadar();
@@ -129,8 +163,9 @@ export function useMapData() {
       window.removeEventListener("online", refreshOnReturn);
       Object.values(controllers).forEach((controller) => controller.abort());
       damsController.current?.abort();
+      rainRiskController.current?.abort();
     };
-  }, [loadDams]);
+  }, [loadDams, loadRainRisk]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, storms, quakes };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, storms, quakes };
 }

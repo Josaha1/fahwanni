@@ -279,7 +279,7 @@ scripts/verify-deploy.mjs (add `/api/rain-risk`), src/i18n/en/*.ts.
 3. use-map-data: `rainRisk`, `rainRiskStatus`, `loadRainRisk()` exactly like `dams`/`loadDams`. map-view loads it
    when water mode is on (same effect style as dams; on failure a toast `ข้อมูลฝนหนักไม่พร้อมใช้งาน`, water mode stays).
 4. Layer `use-rain-risk-layer.ts` (water mode only): geojson source `rain-risk`, circle layer `rain-risk-circle`
-   (heavy `#f97316` radius 8, veryHeavy `#b91c1c` radius 11, white/dark stroke 2 like dams) drawn BELOW `dam-circle`
+   (heavy `#a855f7` radius 8, veryHeavy `#6b21a8` radius 11 — purples, so they never read as dam bands, white/dark stroke 2 like dams) drawn BELOW `dam-circle`
    if it exists; symbol `rain-risk-label` at minzoom 7 with text `{rainMm} มม.` offset below.
 5. Probe: new kind `{ kind: "rain"; id }`; use-probe queries `rain-risk-circle` after dams (8 px box like dams).
    PointCard for rain: title = station nameTh (en: nameEn), line `จ.{province}`, big `{mm} มม. ใน 24 ชม.`, category

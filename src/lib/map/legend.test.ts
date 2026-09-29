@@ -85,6 +85,15 @@ describe("overlayLegend", () => {
     ]);
   });
 
+  it("shows TMD 24-hour rainfall categories only when rain risk is ready", () => {
+    const base = { wind: false, storms: false, quakes: false, dams: false };
+    expect(overlayLegend({ ...base, rainRisk: false })).toHaveLength(1);
+    expect(overlayLegend({ ...base, rainRisk: true }).at(-1)).toEqual({ title: "ฝน 24 ชม. (กรมอุตุฯ)", rows: [
+      { swatch: { kind: "circle", color: "#a855f7", size: 12 }, label: "ฝนหนัก 35.1–90 มม." },
+      { swatch: { kind: "circle", color: "#6b21a8", size: 14 }, label: "ฝนหนักมาก มากกว่า 90 มม." },
+    ] });
+  });
+
   it("has English translations for every Thai row and section", () => {
     const en = translator("en");
     for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true })) {

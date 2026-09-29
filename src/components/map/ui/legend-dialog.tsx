@@ -19,7 +19,7 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
 export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primary: PrimaryLayer;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {

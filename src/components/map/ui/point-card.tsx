@@ -21,6 +21,7 @@ import type { WindField } from "@/lib/wind/field";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
+import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
@@ -35,7 +36,7 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams,
+export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, rainRisk,
   downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
@@ -53,6 +54,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   storms: Storm[];
   quakes: Quake[];
   dams: DamsPayload | null;
+  rainRisk: RainRisk | null;
   downstream: Downstream | null;
   pathActive: boolean;
   pathLoading: boolean;
@@ -71,6 +73,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   const storm = probe.kind === "storm" ? storms.find((item) => item.id === probe.id) : undefined;
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
   const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
+  const rainStation = probe.kind === "rain" ? rainRisk?.stations.find((item) => item.id === probe.id) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
   const geo = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
@@ -102,7 +105,9 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   else if (storm) title = t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name });
   else if (quake) title = t("แผ่นดินไหว M{mag}", { mag: quake.mag });
   else if (selectedDam) title = t.locale === "en" ? selectedDam.nameEn || selectedDam.nameTh : selectedDam.nameTh;
+  else if (rainStation) title = t.locale === "en" ? rainStation.nameEn || rainStation.nameTh : rainStation.nameTh;
   else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
+  else if (probe.kind === "rain") title = t("ไม่พบข้อมูลฝนของสถานีนี้");
 
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">
@@ -178,6 +183,15 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       </button>
       {pathActive && downstream && <DownstreamDetails downstream={downstream} />}
       <p className="map-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })} · {t("ที่มา: กรมชลประทาน")}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
+    </div>}
+    {rainStation && <div className="mt-2 space-y-2 text-sm">
+      <p className="map-muted">{rainStation.provinceTh === "กรุงเทพมหานคร" ? t.locale === "en" ? "Bangkok" : rainStation.provinceTh : t("จ.{province}", { province: t.locale === "en" ? provinces.find((item) => item.th === rainStation.provinceTh)?.en ?? rainStation.provinceTh : rainStation.provinceTh })}</p>
+      <p className="text-xl font-semibold">{t("{mm} มม. ใน 24 ชม.", { mm: number.format(rainStation.rainMm) })}</p>
+      <p className="font-semibold" style={{ color: rainStation.category === "veryHeavy" ? "#6b21a8" : "#a855f7" }}>{t(rainStation.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก")}</p>
+      <span className="map-water-badge">{t("สังเกต")}</span>
+      {rainRisk?.observedAt && <p className="map-muted">{t("ถึง {time} น. {date}", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale), date: formatFullDate(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
+      <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
+      <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
   </section>;
 }

@@ -13,7 +13,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -44,6 +44,10 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
       { swatch: { kind: "line", color: "#2563eb" }, label: "แนวลำน้ำท้ายเขื่อน — ไม่ใช่พื้นที่น้ำท่วม" },
     ] });
   }
+  if (active.rainRisk) sections.push({ title: "ฝน 24 ชม. (กรมอุตุฯ)", rows: [
+    { swatch: { kind: "circle", color: "#a855f7", size: 12 }, label: "ฝนหนัก 35.1–90 มม." },
+    { swatch: { kind: "circle", color: "#6b21a8", size: 14 }, label: "ฝนหนักมาก มากกว่า 90 มม." },
+  ] });
   return sections;
 }
 

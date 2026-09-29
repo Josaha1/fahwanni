@@ -34,6 +34,8 @@ import { useTimeImageLayer } from "./layers/use-time-image-layer";
 import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
+import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
+import { provinces } from "@/lib/provinces";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
@@ -86,7 +88,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
-  const { manifest, wind, dams, damsStatus, loadDams, storms, quakes } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, storms, quakes } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
   const { mode, timeMs, playing, primary, rainOn, overlays } = mapState;
@@ -97,6 +99,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const rainVisible = !water && primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
+  const [showAllRainProvinces, setShowAllRainProvinces] = useState(false);
   const focusLayers = useRef(false);
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
@@ -162,6 +165,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
   useDamsLayer(mapInstance, dams, damsOn);
+  useRainRiskLayer(mapInstance, rainRisk, water);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
   const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
@@ -213,6 +217,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setOverlay", key: "dams", enabled: false });
     });
   }, [damsOn, damsStatus, loadDams, t]);
+
+  useEffect(() => {
+    if (!water || rainRiskStatus !== "idle") return;
+    loadRainRisk().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error(t("ข้อมูลฝนหนักไม่พร้อมใช้งาน"));
+    });
+  }, [water, rainRiskStatus, loadRainRisk, t]);
 
   // A newly opened card expands the sheet once; after that the user can collapse it (the card title
   // stays visible at the top of the collapsed sheet).
@@ -437,7 +449,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} onClose={close} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} rainRisk={rainRisk}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
@@ -445,6 +457,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: next });
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
+  const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
+    .sort((a, b) => b.rainMm - a.rainMm);
   const waterPanel = water && <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
     <DamLegendStrip buttonRef={legendButton} onOpen={openLegend} />
     {damsStatus === "ready" && dams ? <>
@@ -456,12 +470,27 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       </p>
       {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
+    <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-rain-risk">
+      <h2 id="map-rain-risk" className="font-semibold">{t("ฝนหนัก 24 ชม. (กรมอุตุฯ)")} <span className="map-water-badge">{t("สังเกต")}</span></h2>
+      {rainRiskStatus === "ready" && rainRisk ? <>
+        {rainProvinces.length ? <>
+          <ul className="mt-2 space-y-1">{(showAllRainProvinces ? rainProvinces : rainProvinces.slice(0, 8)).map((station) => <li key={station.provinceTh}>
+            <button type="button" className="map-chip flex w-full justify-between gap-2 text-left" onClick={() => select({ kind: "rain", id: station.id })}>
+              <span>{station.provinceTh === "กรุงเทพมหานคร" ? t.locale === "en" ? "Bangkok" : station.provinceTh : t("จ.{province}", { province: t.locale === "en" ? provinces.find((item) => item.th === station.provinceTh)?.en ?? station.provinceTh : station.provinceTh })}</span>
+              <span>{t("{mm} มม. · {category}", { mm: station.rainMm, category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span>
+            </button>
+          </li>)}</ul>
+          {!showAllRainProvinces && rainProvinces.length > 8 && <button type="button" className="map-chip mt-2 w-full" onClick={() => setShowAllRainProvinces(true)}>{t("แสดงทั้งหมด ({n})", { n: rainProvinces.length })}</button>}
+        </> : <p className="map-muted mt-2">{t("ไม่มีสถานีที่ฝน 24 ชม. เข้าเกณฑ์ฝนหนัก ({n} สถานี)", { n: rainRisk.reporting })}</p>}
+        {rainRisk.observedAt && <p className="map-muted mt-2 text-xs">{t("ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
+      </> : <p className="map-muted mt-2" role="status">{t(rainRiskStatus === "error" ? "ข้อมูลฝนหนักไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลฝนหนัก…")}</p>}
+    </section>
     <p className="map-muted text-xs">{t("แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ")}</p>
   </section>;
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode and a dam card does not belong in weather mode.
-    if (probe && (next === "water") !== (probe.kind === "dam")) close();
+    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain")) close();
     dispatch({ type: "setMode", mode: next });
   };
   const showLegend = mapState.primary !== "rain" || rainOn;
@@ -485,7 +514,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams) }}
+    <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk) }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}

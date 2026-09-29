@@ -24,6 +24,7 @@ const paths = [
   "/api/wind",
   "/api/pm25",
   "/api/dams",
+  "/api/rain-risk",
   "/api/storms",
   "/api/quakes",
   "/sw.js",
