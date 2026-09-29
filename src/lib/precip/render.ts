@@ -5,7 +5,7 @@ import { RAIN_RAMP } from "../map/palette";
  * paints most of the map pale blue and reads as "rain everywhere".
  */
 export const MIN_MM = 0.3;
-/** The rain strip and current renderer retain their existing probability threshold. */
+/** The rain strip retains its existing probability threshold. */
 export const MIN_PROB = 30;
 /** Forecast rain on the map needs a stronger signal than the rain strip. */
 export const MAP_MIN_PROB = 40;
@@ -19,11 +19,6 @@ export function precipLevel(mm: number): number {
   if (mm < 4) return 2;
   if (mm < 10) return 3;
   return 4;
-}
-
-/** Kept for the existing renderer until the later renderer task switches to rainRgba. */
-export function precipAlpha(probPct: number): number {
-  return Math.round(Math.min(0.8, Math.max(0.25, probPct / 100)) * 255);
 }
 
 export function rainModeAt(leadMs: number): RainMode {

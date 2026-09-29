@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RAIN_RAMP } from "../map/palette";
-import { MAP_MIN_PROB, MIN_PROB, precipAlpha, precipLevel, probabilityRgba, radarFilteredColor, rainModeAt, rainRgba } from "./render";
+import { MAP_MIN_PROB, MIN_PROB, precipLevel, probabilityRgba, radarFilteredColor, rainModeAt, rainRgba } from "./render";
 
 describe("rain mode", () => {
   it.each([
@@ -50,11 +50,6 @@ describe("map rain alpha", () => {
   });
 });
 
-describe("existing strip bins and alpha", () => {
+describe("existing strip bins", () => {
   it.each([[0.05, 0], [0.29, 0], [0.5, 1], [2, 2], [6, 3], [15, 4]])("%s mm → level %s", (mm, level) => expect(precipLevel(mm)).toBe(level));
-  it("clamps probability alpha to 25–80 %", () => {
-    expect(precipAlpha(5)).toBe(Math.round(0.25 * 255));
-    expect(precipAlpha(100)).toBe(Math.round(0.8 * 255));
-    expect(precipAlpha(50)).toBe(Math.round(0.5 * 255));
-  });
 });
