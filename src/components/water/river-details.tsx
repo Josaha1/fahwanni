@@ -28,9 +28,9 @@ export function riverRowValueLabel(value: number, locale: "th" | "en") {
   return locale === "en" ? `${number} m³/s` : `${number} ลบ.ม./วินาที`;
 }
 
-export function RiverRowHeader({ point, km, waterDay = 0, watched = false, onToggleWatch, expanded, onToggle }: {
+export function RiverRowHeader({ point, km, waterDay = 0, watched = false, onToggleWatch, expanded, onToggle, detailsId }: {
   point: RiverRow; km?: number; waterDay?: number; watched?: boolean;
-  onToggleWatch?: () => void; expanded: boolean; onToggle: () => void;
+  onToggleWatch?: () => void; expanded: boolean; onToggle: () => void; detailsId?: string;
 }) {
   const t = useT();
   const selected = riverAtDay(point.summary, waterDay);
@@ -40,13 +40,18 @@ export function RiverRowHeader({ point, km, waterDay = 0, watched = false, onTog
   const trend = waterDay === 0 ? point.summary?.trend : selected && next && next.value > selected.value * 1.1 ? "rising" : selected && next && next.value < selected.value * 0.9 ? "falling" : "steady";
   return <div className="flex min-h-11 items-center gap-1 text-sm">
     <button type="button" className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left" onClick={onToggle}
-      aria-expanded={expanded} aria-controls={riverDetailsId(point.id)}>
+      aria-expanded={expanded} aria-controls={detailsId ?? riverDetailsId(point.id)}>
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: selected ? riverColors[selected.status] : "var(--border)" }} aria-hidden="true" />
-      <span className="min-w-0 flex-1 truncate font-semibold">{name}</span>
-      {km !== undefined && <span className="shrink-0 text-muted text-xs">{t("{km} กม.", { km: number.format(km) })}</span>}
-      {selected && <span className="shrink-0" style={{ color: riverColors[selected.status] }}>{t(statusWord(selected.status))} <span aria-hidden="true">{trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}</span><span className="sr-only"> {t(trend === "rising" ? "กำลังเพิ่ม" : trend === "falling" ? "กำลังลด" : "คงที่")}</span></span>}
-      <span className="shrink-0 tabular-nums" aria-label={selected ? riverRowValueLabel(selected.value, t.locale) : t("ไม่มีข้อมูล")}>
-        {selected ? number.format(selected.value) : "—"}
+      {/* Two lines so a long river name is never cut to a few letters at 390 px. */}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold">{name}</span>
+        <span className="flex flex-wrap items-center gap-x-2 text-xs">
+          {selected && <span style={{ color: riverColors[selected.status] }}>{t(statusWord(selected.status))} <span aria-hidden="true">{trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}</span><span className="sr-only"> {t(trend === "rising" ? "กำลังเพิ่ม" : trend === "falling" ? "กำลังลด" : "คงที่")}</span></span>}
+          <span className="tabular-nums" aria-label={selected ? riverRowValueLabel(selected.value, t.locale) : t("ไม่มีข้อมูล")}>
+            {selected ? t("{value} ลบ.ม./วินาที", { value: number.format(selected.value) }) : "—"}
+          </span>
+          {km !== undefined && <span className="text-muted">{t("{km} กม.", { km: number.format(km) })}</span>}
+        </span>
       </span>
       <span className="shrink-0" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
       <span className="sr-only">{t(expanded ? "ย่อรายละเอียด" : "ขยายรายละเอียด")}</span>
@@ -57,22 +62,24 @@ export function RiverRowHeader({ point, km, waterDay = 0, watched = false, onTog
 }
 
 /** `dams` resolves upstream dam ids; `onSelectDam` (map) or `damHref` (pages) makes each row open that dam. */
-export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, expanded = true, showDisclaimers = false, dams = [], onSelectDam, damHref }: {
-  point: RiverRow; upstream?: Dam; mapCard?: boolean; waterDay?: number; expanded?: boolean; showDisclaimers?: boolean;
+export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, expanded = true, showDisclaimers = false, showDate = true, showSummary = true, detailsId, dams = [], onSelectDam, damHref }: {
+  point: RiverRow; upstream?: Dam; mapCard?: boolean; waterDay?: number; expanded?: boolean; showDisclaimers?: boolean; showDate?: boolean;
+  /** false when a row header above already shows status and value. */
+  showSummary?: boolean; detailsId?: string;
   dams?: Dam[]; onSelectDam?: (id: string) => void; damHref?: (id: string) => string;
 }) {
   const t = useT();
   const detail = point.summary;
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
-  if (!detail) return <div id={riverDetailsId(point.id)} hidden={!expanded}><p className={mapCard ? "map-muted text-sm" : "text-muted text-sm"}>{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p></div>;
+  if (!detail) return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded}><p className={mapCard ? "map-muted text-sm" : "text-muted text-sm"}>{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p></div>;
   const selected = riverAtDay(detail, waterDay);
-  if (!selected) return <div id={riverDetailsId(point.id)} hidden={!expanded}><p className={mapCard ? "map-muted text-sm" : "text-muted text-sm"}>{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p></div>;
+  if (!selected) return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded}><p className={mapCard ? "map-muted text-sm" : "text-muted text-sm"}>{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p></div>;
   const muted = mapCard ? "map-muted" : "text-muted";
   const next = riverAtDay(detail, Math.min(7, waterDay + 1));
   const trend = waterDay === 0 ? detail.trend : next && next.value > selected.value * 1.1 ? "rising" : next && next.value < selected.value * 0.9 ? "falling" : "steady";
-  return <div id={riverDetailsId(point.id)} hidden={!expanded} className="mt-1 space-y-1 text-sm">
-    <p><span className="font-semibold" style={{ color: riverColors[selected.status] }}>{t(statusWord(selected.status))}</span> · {t("{value} ลบ.ม./วินาที (แบบจำลอง)", { value: number.format(selected.value) })} <span aria-label={t(trend === "rising" ? "กำลังเพิ่ม" : trend === "falling" ? "กำลังลด" : "คงที่")}>{trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}</span></p>
-    <p className={`${muted} text-xs`}>{waterDay > 0 ? t("{date} (พยากรณ์)", { date: riverDateLabel(selected.date, t.locale) }) : t("ข้อมูลวันที่ {date}", { date: riverDateLabel(selected.date, t.locale) })}</p>
+  return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded} className="mt-1 space-y-1 text-sm">
+    {showSummary && <p><span className="font-semibold" style={{ color: riverColors[selected.status] }}>{t(statusWord(selected.status))}</span> · {t("{value} ลบ.ม./วินาที (แบบจำลอง)", { value: number.format(selected.value) })} <span aria-label={t(trend === "rising" ? "กำลังเพิ่ม" : trend === "falling" ? "กำลังลด" : "คงที่")}>{trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}</span></p>}
+    {showDate && <p className={`${muted} text-xs`}>{waterDay > 0 ? t("{date} (พยากรณ์)", { date: riverDateLabel(selected.date, t.locale) }) : t("ข้อมูลวันที่ {date}", { date: riverDateLabel(selected.date, t.locale) })}</p>}
     <RiverChart days={detail.days} color={riverColors[selected.status]} selectedIndex={waterDay > 0 ? waterDay - 1 : undefined} />
     <p className={`${muted} text-xs`}>{t("เส้น: ปริมาณน้ำไหลผ่านแบบจำลอง · แถบ: ช่วงปกติ p25–p75")}</p>
     {detail.peak && <p>{t("สูงสุดใน 7 วัน {value} วันที่ {date}", { value: number.format(detail.peak.value), date: riverDateLabel(detail.peak.date, t.locale) })}</p>}

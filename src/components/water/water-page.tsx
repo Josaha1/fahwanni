@@ -6,7 +6,6 @@ import { useT } from "@/i18n/client";
 import { useLastPlace } from "@/hooks/use-favourites";
 import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, waterSummary } from "@/lib/dams/summary";
-import { damBandColor } from "@/lib/dams/bands";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate } from "@/lib/format";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
@@ -16,7 +15,8 @@ import type { TmdWarnings } from "@/lib/tmd";
 import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/lib/water/whats-new";
 import { readWatch, refreshWatch, toggleWatch, watchRows, writeWatch, type WaterWatch, type WatchItem } from "@/lib/water/watchlist";
 import { TmdWarningList } from "./tmd-warnings";
-import { RiverDetails, riverDateLabel, type RiversPayload } from "./river-details";
+import { DamRowHeader } from "./dam-row";
+import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
 type Load<T> = { status: "loading" | "ready" | "error"; data: T | null };
 
 function useWaterSource<T>(url: string, valid: (value: T) => boolean): Load<T> {
@@ -58,10 +58,16 @@ export function WaterPage() {
   const seen: Seen | null = useMemo(() => seenRaw ? readSeen() : null, [seenRaw]);
   const watch: WaterWatch = useMemo(() => watchRaw ? readWatch() : {}, [watchRaw]);
   const [showAll, setShowAll] = useState(false);
-  const number = useMemo(() => new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 }), [t.intl]);
+  const [expandedRivers, setExpandedRivers] = useState<Set<string>>(new Set());
+  const [collapsedNearest, setCollapsedNearest] = useState<Set<string>>(new Set());
+  const [expandedDams, setExpandedDams] = useState<Set<string>>(new Set());
+  const [expandedWatchedRivers, setExpandedWatchedRivers] = useState<Set<string>>(new Set());
+  const [expandedWatchedDams, setExpandedWatchedDams] = useState<Set<string>>(new Set());
   const oneDecimal = useMemo(() => new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 }), [t.intl]);
   const nearbyRivers = useMemo(() => (rivers.data?.points ?? []).map((point) => ({ point, km: distanceKm(place, point) }))
     .sort((a, b) => a.km - b.km || a.point.id.localeCompare(b.point.id)), [rivers.data, place]);
+  const nearestRiverId = nearbyRivers[0]?.point.id;
+  const isRiverExpanded = (id: string) => expandedRivers.has(id) || (id === nearestRiverId && !collapsedNearest.has(id));
   const nearbyDams = dams.data ? nearestDams(dams.data.dams, place) : [];
   const currentWatch: WatchItem[] = useMemo(() => [
     ...(dams.data?.dams ?? []).map((dam) => ({ kind: "dam" as const, id: dam.id, value: dam.storagePct, unit: "pct" as const, date: dam.date })),
@@ -101,6 +107,17 @@ export function WaterPage() {
     writeWatch(next);
     window.dispatchEvent(new Event("fah-water-watch-change"));
   }
+  function toggleExpanded(setExpanded: React.Dispatch<React.SetStateAction<Set<string>>>, id: string) {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleRiver(id: string) {
+    if (id === nearestRiverId && !expandedRivers.has(id)) toggleExpanded(setCollapsedNearest, id);
+    else toggleExpanded(setExpandedRivers, id);
+  }
   const news = diffSinceSeen(seen, newsItems);
   const watched = watchRows(watch, currentWatch);
   const rainNear = (rain.data?.stations ?? []).filter((station) => distanceKm(place, station) <= 150);
@@ -109,81 +126,79 @@ export function WaterPage() {
     : <p className="text-muted text-sm" role="status">{t(status === "loading" ? loading : error)}</p>;
 
   return <main className="app-shell space-y-4" style={{ paddingBottom: "calc(var(--nav-h, 88px) + 2rem)" }}>
-    <section className="placeholder-card">
-      <h1 className="text-2xl font-semibold">{t("สถานการณ์น้ำ")}</h1>
-      <p className="text-muted mt-1">{place.name}</p>
-      <Link className="mt-3 inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2" href="/map?mode=water">{t("ดูบนแผนที่")}</Link>
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
+    <header className="flex flex-wrap items-center justify-between gap-x-3">
+      <h1 className="text-2xl font-semibold">{t("สถานการณ์น้ำ · {place}", { place: place.name })}</h1>
+      <Link className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2" href="/map?mode=water">{t("ดูบนแผนที่")}</Link>
+    </header>
+    {warnings.data && warnings.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
       <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
-      {sourceLine(warnings.status, "กำลังโหลดประกาศเตือน…", "ประกาศเตือนไม่พร้อมใช้งาน")}
-      {warnings.data && (warnings.data.items.length ? <TmdWarningList items={warnings.data.items} limit={3} /> : <p className="text-muted text-sm">{t("ไม่มีประกาศเตือนในขณะนี้")}</p>)}
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("มีอะไรใหม่ตั้งแต่ครั้งก่อน")}>
-      <h2 className="text-lg font-semibold">{t("มีอะไรใหม่ตั้งแต่ครั้งก่อน")}</h2>
-      {!seen
-        ? <p className="text-muted text-sm">{t("ครั้งแรกที่เปิด — ครั้งหน้าจะบอกว่ามีอะไรเปลี่ยน")}</p>
-        : rivers.status === "loading" || dams.status === "loading" ? <p className="text-muted text-sm">{t("กำลังโหลดการเปลี่ยนแปลง…")}</p>
-        : rivers.status === "error" || dams.status === "error" ? <p className="text-muted text-sm">{t("ข้อมูลการเปลี่ยนแปลงไม่พร้อมใช้งาน")}</p>
-        : news.length ? <ul className="space-y-1 text-sm">{news.map((item) => <li key={item.key}>{t(item.text, {
+      <TmdWarningList items={warnings.data.items} limit={3} />
+    </section>}
+    {news.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("มีอะไรใหม่")}>
+      <h2 className="text-lg font-semibold">{t("มีอะไรใหม่")}</h2>
+      <ul className="space-y-1 text-sm">{news.slice(0, 3).map((item) => <li key={item.key}>{t(item.text, {
           ...item.params, from: t(String(item.params.from ?? "—")), to: t(String(item.params.to ?? "—")),
         })}</li>)}</ul>
-        : <p className="text-muted text-sm">{t("ยังไม่มีข้อมูลเปลี่ยนแปลง")}</p>}
-    </section>
+    </section>}
+    {watched.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("ที่ติดตาม")}>
+      <h2 className="text-lg font-semibold">{t("ที่ติดตาม")}</h2>
+      <ul className="divide-y divide-[var(--border)]">{watched.map(({ item }) => {
+        const dam = item.kind === "dam" ? dams.data?.dams.find((entry) => entry.id === item.id) : null;
+        const river = item.kind === "river" ? nearbyRivers.find(({ point }) => point.id === item.id) : null;
+        if (dam) return <li key={`dam:${dam.id}`} className="py-1"><DamRowHeader dam={dam} expanded={expandedWatchedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedWatchedDams, dam.id)} detailsId={`watched-dam-details-${dam.id}`} showDate={false} /></li>;
+        if (river) return <li key={`river:${river.point.id}`} className="py-1">
+          <RiverRowHeader point={river.point} expanded={expandedWatchedRivers.has(river.point.id)} onToggle={() => toggleExpanded(setExpandedWatchedRivers, river.point.id)} detailsId={`watched-river-details-${river.point.id}`} />
+          {expandedWatchedRivers.has(river.point.id) ? <RiverDetails point={river.point} expanded showDisclaimers={false} showDate={false} showSummary={false} detailsId={`watched-river-details-${river.point.id}`} />
+            : <div id={`watched-river-details-${river.point.id}`} hidden />}
+        </li>;
+        return null;
+      })}</ul>
+    </section>}
     <section className="placeholder-card space-y-3" aria-label={t("แม่น้ำใกล้คุณ")}>
-      <h2 className="text-lg font-semibold">{t("แม่น้ำใกล้คุณ")}</h2>
+      <div><h2 className="text-lg font-semibold">{t("แม่น้ำใกล้คุณ")}</h2>
+        {rivers.data?.today && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date} · แบบจำลอง GloFAS", { date: riverDateLabel(rivers.data.today, t.locale) })}</p>}
+      </div>
       {sourceLine(rivers.status, "กำลังโหลดข้อมูลแม่น้ำ…", "ข้อมูลแม่น้ำไม่พร้อมใช้งาน")}
       {rivers.data && <>
         <ul className="divide-y divide-[var(--border)]">{(showAll ? nearbyRivers : nearbyRivers.slice(0, 3)).map(({ point, km }) => {
-          const detail = point.summary;
           const upstream = dams.data?.dams.find((dam) => dam.id === point.downstreamOfDam);
           const watchedNow = Boolean(watch[`river:${point.id}`]);
-          return <li key={point.id} className="py-4 first:pt-0 last:pb-0">
-            <div className="flex items-start justify-between gap-2">
-              <div><h3 className="font-semibold">{t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh}</h3><p className="text-muted text-xs">{t("{km} กม.", { km: number.format(km) })}</p></div>
-              {detail && <button type="button" className="min-h-11 min-w-11 text-xl" aria-label={t(watchedNow ? "เลิกติดตามแม่น้ำนี้" : "ติดตามแม่น้ำนี้")} aria-pressed={watchedNow} onClick={() => changeWatch({ kind: "river", id: point.id, value: detail.today.value, unit: "cms", date: detail.today.date })}>{watchedNow ? "★" : "☆"}</button>}
-            </div>
-            <RiverDetails point={point} upstream={upstream} dams={dams.data?.dams ?? []}
+          const expanded = isRiverExpanded(point.id);
+          return <li key={point.id} className="py-1 first:pt-0 last:pb-0">
+            <RiverRowHeader point={point} km={km} watched={watchedNow} expanded={expanded}
+              onToggle={() => toggleRiver(point.id)}
+              onToggleWatch={point.summary ? () => changeWatch({ kind: "river", id: point.id, value: point.summary!.today.value, unit: "cms", date: point.summary!.today.date }) : undefined} />
+            {expanded ? <><RiverDetails point={point} upstream={upstream} dams={dams.data?.dams ?? []} expanded showDisclaimers={false} showDate={false} showSummary={false}
               damHref={(id) => `/map?mode=water&dam=${encodeURIComponent(id)}`} />
-            <Link className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-given underline underline-offset-2" href={`/map?mode=water&river=${encodeURIComponent(point.id)}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t("ดูบนแผนที่")}</Link>
+              <Link className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-given underline underline-offset-2" href={`/map?mode=water&river=${encodeURIComponent(point.id)}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t("ดูบนแผนที่")}</Link></>
+              : <div id={`river-details-${point.id}`} hidden />}
           </li>;
         })}</ul>
         {!showAll && nearbyRivers.length > 3 && <button type="button" className="min-h-11 font-semibold text-given underline" onClick={() => setShowAll(true)}>{t("ดูทุกจุด ({n})", { n: nearbyRivers.length })}</button>}
       </>}
     </section>
-    <section className="placeholder-card space-y-2" aria-label={t("ที่ติดตาม")}>
-      <h2 className="text-lg font-semibold">{t("ที่ติดตาม")}</h2>
-      {(rivers.status === "error" || dams.status === "error") && <p className="text-muted text-sm" role="status">{t("รายการติดตามบางส่วนไม่พร้อมใช้งาน")}</p>}
-      {rivers.status === "loading" || dams.status === "loading" ? <p className="text-muted text-sm">{t("กำลังโหลดรายการติดตาม…")}</p>
-        : watched.length ? <ul className="divide-y divide-[var(--border)]">{watched.map(({ item, change, since }) => {
-          const dam = item.kind === "dam" ? dams.data?.dams.find((entry) => entry.id === item.id) : null;
-          const river = item.kind === "river" ? rivers.data?.points.find((entry) => entry.id === item.id) : null;
-          return <li key={`${item.kind}:${item.id}`} className="flex flex-wrap justify-between gap-1 py-2 text-sm">
-            <span>{dam ? t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh : river ? t.locale === "en" ? river.nameEn || river.nameTh : river.nameTh : item.id}</span>
-            <span>{oneDecimal.format(item.value)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{change !== null && <span className="text-muted"> · {change > 0 ? "+" : ""}{oneDecimal.format(change)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{since && ` (${riverDateLabel(since, t.locale)})`}</span>}</span>
-          </li>;
-        })}</ul> : <p className="text-muted text-sm">{t("ยังไม่มีรายการติดตาม")}</p>}
-    </section>
     <section className="placeholder-card space-y-2" aria-label={t("เขื่อนใกล้คุณ")}>
-      <h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
+      <div><h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
+        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}</p>}
+      </div>
       {sourceLine(dams.status, "กำลังโหลดข้อมูลเขื่อน…", "ข้อมูลเขื่อนไม่พร้อมใช้งาน")}
       {summary && <>
-        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}</p>}
         <p className="text-muted text-sm">{t("เขื่อนน้ำมาก (เกิน 80%)")} {summary.over80} · {t("เกินความจุ")} {summary.over100} · {t("ระบายน้ำมาก")} {summary.highRelease}{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} {summary.heavyRain}</>}</p>
-        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span>{t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh} · {t("{km} กม.", { km: number.format(km) })}</span><span className="font-semibold" style={{ color: damBandColor(dam.band) }}>● {oneDecimal.format(dam.storagePct)}%</span><span className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: riverDateLabel(dam.date, t.locale) })}</span></li>)}</ul>
+        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="py-1"><DamRowHeader dam={dam} km={km} expanded={expandedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedDams, dam.id)} showDate={false} /></li>)}</ul>
       </>}
     </section>
-    <section className="placeholder-card space-y-2" aria-label={t("ฝนหนัก 24 ชม. ใกล้คุณ")}>
+    <section className={rainNear.length ? "placeholder-card space-y-2" : "space-y-2"} aria-label={t("ฝนหนัก 24 ชม. ใกล้คุณ")}>
       <h2 className="text-lg font-semibold">{t("ฝนหนัก 24 ชม. ใกล้คุณ")}</h2>
       {sourceLine(rain.status, "กำลังโหลดข้อมูลฝนหนัก…", "ข้อมูลฝนหนักไม่พร้อมใช้งาน")}
       {rain.data && (rainNear.length ? <ul className="space-y-2 text-sm">{rainNear.map((station) => <li key={station.id} className="flex justify-between gap-2"><span>{t.locale === "en" ? station.nameEn || station.nameTh : station.nameTh}</span><span>{t("{mm} มม. · {category}", { mm: oneDecimal.format(station.rainMm), category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span></li>)}</ul> : <p className="text-muted text-sm">{t("ไม่มีสถานีฝนหนักภายใน 150 กม.")}</p>)}
       {rain.data?.observedAt && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: formatFullDate(rain.data.observedAt, "Asia/Bangkok", t.locale) })}</p>}
     </section>
-    <section className="placeholder-card space-y-3 text-sm" aria-label={t("เบอร์ฉุกเฉิน")}>
+    <footer className="space-y-2 border-t border-[var(--border)] pt-4 text-sm" aria-label={t("เบอร์ฉุกเฉิน")}>
       <h2 className="text-lg font-semibold">{t("เบอร์ฉุกเฉิน")}</h2>
       <div className="flex flex-wrap gap-3">{EMERGENCY_NUMBERS.map(({ label, number: phone, href }) => <a key={phone} className="font-semibold text-given underline" href={href}>{t(label)}</a>)}</div>
       <p className="text-muted">{t("ปริมาณน้ำไหลผ่าน: แบบจำลอง GloFAS ผ่าน Open-Meteo (CC BY 4.0) · เขื่อน: กรมชลประทาน · ฝน/ประกาศ: กรมอุตุนิยมวิทยา")}</p>
       <p className="text-muted">{t("ประมาณการจากแบบจำลอง GloFAS ความละเอียด 5 กม. · ไม่ใช่ค่าที่วัดจริงจากสถานี · ไม่ใช่แผนที่น้ำท่วม")}</p>
-    </section>
+      <p className="text-muted">{t("ตัวเลขปี 2554 อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน")}</p>
+    </footer>
   </main>;
 }

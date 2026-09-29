@@ -12,8 +12,8 @@ export function damRowPercentLabel(pct: number, locale: "th" | "en") {
   return `${new Intl.NumberFormat(locale === "en" ? "en-GB" : "th-TH", { maximumFractionDigits: 1 }).format(pct)}%`;
 }
 
-export function DamRowHeader({ dam, km, expanded, onToggle }: {
-  dam: Dam; km?: number; expanded: boolean; onToggle: () => void;
+export function DamRowHeader({ dam, km, expanded, onToggle, detailsId, showDate = true }: {
+  dam: Dam; km?: number; expanded: boolean; onToggle: () => void; detailsId?: string; showDate?: boolean;
 }) {
   const t = useT();
   const name = t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh;
@@ -21,7 +21,7 @@ export function DamRowHeader({ dam, km, expanded, onToggle }: {
   const flow = (value: number | null) => value === null ? "—" : t("{value} ลบ.ม./วินาที", { value: number.format(value) });
   return <div className="text-sm">
     <button type="button" className="flex min-h-11 w-full min-w-0 items-center gap-2 text-left" onClick={onToggle}
-      aria-expanded={expanded} aria-controls={damDetailsId(dam.id)}>
+      aria-expanded={expanded} aria-controls={detailsId ?? damDetailsId(dam.id)}>
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: damBandColor(dam.band) }} aria-hidden="true" />
       <span className="min-w-0 flex-1 truncate font-semibold">{name}</span>
       {km !== undefined && <span className="shrink-0 text-muted text-xs">{t("{km} กม.", { km: number.format(km) })}</span>}
@@ -30,10 +30,10 @@ export function DamRowHeader({ dam, km, expanded, onToggle }: {
       <span className="shrink-0" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
       <span className="sr-only">{t(expanded ? "ย่อรายละเอียด" : "ขยายรายละเอียด")}</span>
     </button>
-    <div id={damDetailsId(dam.id)} hidden={!expanded} className="space-y-1 pb-2">
+    <div id={detailsId ?? damDetailsId(dam.id)} hidden={!expanded} className="space-y-1 pb-2">
       <p>{t("น้ำไหลผ่านเขื่อน (ระบาย)")}: {flow(dam.releaseCms)}</p>
       <p>{t("น้ำไหลเข้า")}: {flow(dam.inflowCms)}</p>
-      <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: formatFullDate(`${dam.date}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>
+      {showDate && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: formatFullDate(`${dam.date}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
       <Link className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2"
         href={`/map?mode=water&dam=${encodeURIComponent(dam.id)}`}>{t("ดูบนแผนที่")}</Link>
     </div>
