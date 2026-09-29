@@ -5,7 +5,8 @@ import { Marker, type Map, type MapMouseEvent } from "maplibre-gl";
 
 export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string };
 
-export function useProbe(map: Map | null) {
+/** `points: false` (water mode): a tap on empty map opens nothing; dam, storm and quake taps still work. */
+export function useProbe(map: Map | null, { points }: { points: boolean } = { points: true }) {
   const [probe, setProbe] = useState<Probe | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const select = useCallback((next: Probe, trigger?: HTMLElement | null) => {
@@ -39,11 +40,11 @@ export function useProbe(map: Map | null) {
       if (dam) select({ kind: "dam", id: dam.properties!.id as string });
       else if (quake) select({ kind: "quake", id: quake.properties!.id as string });
       else if (storm) select({ kind: "storm", id: storm.properties!.id as string });
-      else select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });
+      else if (points) select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });
     };
     map.on("click", onClick);
     return () => { map.off("click", onClick); };
-  }, [map, select]);
+  }, [map, select, points]);
 
   useEffect(() => {
     if (!map || probe?.kind !== "point") return;

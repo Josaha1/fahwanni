@@ -9,6 +9,7 @@ export type UrlView = {
   t?: number;
   ov?: MapState["overlays"];
   dam?: string;
+  mode?: MapState["mode"];
 };
 
 function boundedNumber(value: string | null, min: number, max: number): number | undefined {
@@ -38,18 +39,22 @@ export function parseUrlView(search: string): UrlView {
     const names = new Set(params.get("ov")?.split(","));
     view.ov = { wind: names.has("wind"), storms: names.has("storms"), quakes: names.has("quakes"), dams: names.has("dams"), terrain: names.has("3d") };
   }
+  // Older links turned dams on through `ov=dams` or `dam=`; both now mean water mode.
+  if (params.get("mode") === "water" || view.dam || view.ov?.dams) view.mode = "water";
   return view;
 }
 
-export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t" | "dam"> & { ov: MapState["overlays"] }): string {
+export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t" | "dam" | "mode"> & { ov: MapState["overlays"] }): string {
+  const water = view.mode === "water";
   const params = new URLSearchParams();
   params.set("lat", view.lat.toFixed(2));
   params.set("lon", view.lon.toFixed(2));
   params.set("z", view.z.toFixed(1));
   params.set("layer", view.layer);
   if (view.t !== undefined) params.set("t", String(Math.round(view.t / 60_000)));
-  if (view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
-  const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.dams && "dams", view.ov.terrain && "3d"].filter(Boolean).join(",");
+  if (water) params.set("mode", "water");
+  if (water && view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
+  const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.terrain && "3d"].filter(Boolean).join(",");
   params.set("ov", overlays);
   return `?${params.toString().replace(/%2C/g, ",")}`;
 }

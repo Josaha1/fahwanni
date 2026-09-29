@@ -4,7 +4,7 @@ import { initialMapState, mapReducer } from "./map-state";
 describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
     expect(initialMapState()).toEqual({
-      primary: "rain", rainOn: true,
+      mode: "weather", primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
       timeMs: null, playing: false, focus: null,
     });
@@ -16,7 +16,7 @@ describe("map state", () => {
 
   it("uses URL layer and overlay overrides without changing other defaults", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
-      primary: "temp", rainOn: true,
+      mode: "weather", primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
       timeMs: null, playing: false, focus: null,
     });
@@ -88,5 +88,14 @@ describe("map state", () => {
     expect(state).toEqual(snapshot);
     expect(changed).not.toBe(state);
     expect(changed.overlays).not.toBe(state.overlays);
+  });
+
+  it("water mode turns dams on and stops playback; weather mode drops dams and the route", () => {
+    const water = mapReducer({ ...initialMapState(), playing: true }, { type: "setMode", mode: "water" });
+    expect(water).toMatchObject({ mode: "water", playing: false, overlays: { dams: true } });
+    const focused = mapReducer(water, { type: "setFocus", focus: { kind: "damRoute", damId: "200101" } });
+    expect(mapReducer(focused, { type: "setMode", mode: "weather" })).toMatchObject({ mode: "weather", focus: null, overlays: { dams: false } });
+    expect(initialMapState({ mode: "water" }).overlays.dams).toBe(true);
+    expect(initialMapState({ mode: "water", overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false } }).overlays.dams).toBe(true);
   });
 });

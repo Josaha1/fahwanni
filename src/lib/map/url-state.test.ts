@@ -4,8 +4,8 @@ import { formatUrlView, parseUrlView } from "./url-state";
 describe("map URL view", () => {
   it("round trips the view and keeps overlay order", () => {
     const view = { lat: 13.7, lon: 100.5, z: 8, layer: "temp" as const, t: Date.parse("2026-09-28T08:37:00.000Z"),
-      ov: { wind: true, storms: true, quakes: true, dams: true, terrain: true } };
-    expect(formatUrlView(view)).toBe("?lat=13.70&lon=100.50&z=8.0&layer=temp&t=29843077&ov=wind,storms,quakes,dams,3d");
+      ov: { wind: true, storms: true, quakes: true, dams: false, terrain: true } };
+    expect(formatUrlView(view)).toBe("?lat=13.70&lon=100.50&z=8.0&layer=temp&t=29843077&ov=wind,storms,quakes,3d");
     expect(parseUrlView(formatUrlView(view))).toEqual(view);
   });
 
@@ -37,11 +37,23 @@ describe("map URL view", () => {
 
   it("round trips a downstream dam and rejects invalid IDs", () => {
     const view = { lat: 16.6, lon: 99, z: 8, layer: "rain" as const,
-      ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false }, dam: "chao-phraya" };
+      ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false }, dam: "chao-phraya", mode: "water" as const };
     expect(parseUrlView(formatUrlView(view)).dam).toBe("chao-phraya");
     expect(parseUrlView("?dam=1").dam).toBe("1");
     for (const invalid of ["", "A", "a_b", "a.b", "น้ำ", "a/b"]) {
       expect(parseUrlView(`?dam=${encodeURIComponent(invalid)}`).dam).toBeUndefined();
     }
+  });
+
+  it("writes water mode and its dam only in water mode, and reads old dam links as water mode", () => {
+    const base = { lat: 16.6, lon: 99, z: 8, layer: "rain" as const,
+      ov: { wind: true, storms: false, quakes: false, dams: true, terrain: false }, dam: "200101" };
+    expect(formatUrlView({ ...base, mode: "water" })).toBe("?lat=16.60&lon=99.00&z=8.0&layer=rain&mode=water&dam=200101&ov=wind");
+    expect(formatUrlView({ ...base, mode: "weather" })).toBe("?lat=16.60&lon=99.00&z=8.0&layer=rain&ov=wind");
+    expect(parseUrlView("?mode=water").mode).toBe("water");
+    expect(parseUrlView("?mode=other").mode).toBeUndefined();
+    expect(parseUrlView("?ov=wind,dams").mode).toBe("water");
+    expect(parseUrlView("?dam=200101").mode).toBe("water");
+    expect(parseUrlView("?ov=wind").mode).toBeUndefined();
   });
 });

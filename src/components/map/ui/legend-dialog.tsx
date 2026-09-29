@@ -16,7 +16,8 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
   }
 }
 
-export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
+export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
+  mode: "weather" | "water";
   primary: PrimaryLayer;
   active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
@@ -30,7 +31,7 @@ export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
       <h2 id="map-legend-title" className="text-lg font-semibold">{t("อ่านแผนที่")}</h2>
       <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิด")} onClick={() => dialogRef.current?.close()}>✕</button>
     </div>
-    <section className="mt-4">
+    {mode === "weather" && <section className="mt-4">
       <h3 className="text-sm font-semibold">{t(legend.title)} · {t(legend.unit)}</h3>
       {legend.note && <p className="map-muted mt-1 text-xs">{t(legend.note)}</p>}
       <ul className="mt-2 space-y-2 text-sm">
@@ -40,7 +41,7 @@ export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
           <span className="shrink-0">{step.value} {t(legend.unit)}</span>
         </li>)}
       </ul>
-    </section>
+    </section>}
     {overlayLegend(active).map((section) => <section key={section.title} className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }}>
       <h3 className="text-sm font-semibold">{t(section.title)}</h3>
       <ul className="mt-2 space-y-2 text-sm">
@@ -50,7 +51,7 @@ export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
         </li>)}
       </ul>
     </section>)}
-    <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>
+    {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>}
     {active.dams && <p className="map-muted mt-1 text-xs">{t("ข้อมูลเขื่อน: กรมชลประทาน · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
   </dialog>;
 }

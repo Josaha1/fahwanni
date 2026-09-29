@@ -1,4 +1,6 @@
 export type MapState = {
+  /** "weather": forecast layers + time bar; "water": dams and their downstream routes (observed daily data). */
+  mode: "weather" | "water";
   primary: "rain" | "temp" | "pm25";
   rainOn: boolean;
   overlays: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; terrain: boolean };
@@ -17,13 +19,17 @@ export type MapAction =
   | { type: "setTime"; t: number | null }
   | { type: "togglePlay" }
   | { type: "stop" }
-  | { type: "setFocus"; focus: MapState["focus"] };
+  | { type: "setFocus"; focus: MapState["focus"] }
+  | { type: "setMode"; mode: MapState["mode"] };
 
-export function initialMapState(override?: Partial<Pick<MapState, "primary" | "overlays" | "timeMs" | "focus">>): MapState {
+export function initialMapState(override?: Partial<Pick<MapState, "mode" | "primary" | "overlays" | "timeMs" | "focus">>): MapState {
+  const mode = override?.mode ?? "weather";
   return {
+    mode,
     primary: override?.primary ?? "rain",
     rainOn: true,
-    overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false, ...override?.overlays },
+    overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false, ...override?.overlays,
+      ...(mode === "water" ? { dams: true } : {}) },
     timeMs: override?.timeMs ?? null,
     playing: false,
     focus: override?.focus ?? null,
@@ -43,5 +49,9 @@ export function mapReducer(state: MapState, action: MapAction): MapState {
     case "togglePlay": return { ...state, playing: !state.playing };
     case "stop": return { ...state, playing: false };
     case "setFocus": return { ...state, focus: action.focus };
+    // Dams belong to water mode; leaving it drops the route too.
+    case "setMode": return action.mode === "water"
+      ? { ...state, mode: "water", overlays: { ...state.overlays, dams: true }, playing: false }
+      : { ...state, mode: "weather", overlays: { ...state.overlays, dams: false }, focus: null };
   }
 }

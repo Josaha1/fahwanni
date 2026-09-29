@@ -338,4 +338,13 @@ export const common: Record<string, string> = {
   "ออฟไลน์อยู่ · แสดงข้อมูลล่าสุดที่โหลดไว้": "Offline · Showing the latest saved data",
   "ติดตั้งแล้ว": "Installed",
   "ยังติดตั้งไม่ได้ ลองอีกครั้งผ่านเมนูของเบราว์เซอร์นะ": "Could not install yet. Try again from the browser menu",
+  "โหมดแผนที่": "Map mode",
+  "สถานการณ์น้ำ": "Water situation",
+  "สังเกต": "Observed",
+  "ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}": "Royal Irrigation Department data · {date}",
+  "ข้อมูลกรมชลประทาน": "Royal Irrigation Department data",
+  "กำลังโหลดข้อมูลเขื่อน…": "Loading dam data…",
+  "แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ": "Tap a dam on the map for details and where its water flows",
+  "อากาศ": "Weather",
+  "น้ำ": "Water",
 };
