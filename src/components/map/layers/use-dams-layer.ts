@@ -3,7 +3,8 @@
 import { useEffect, useMemo } from "react";
 import { Marker, type Map } from "maplibre-gl";
 import type { DamsPayload } from "@/lib/dams/client";
-import { damBandColor, stationSituationColor } from "@/lib/dams/thaiwater";
+import { damBandColor } from "@/lib/dams/bands";
+import { stationSituationColor } from "@/lib/dams/thaiwater";
 import { useT } from "@/i18n/client";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";

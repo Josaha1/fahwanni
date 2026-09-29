@@ -23,7 +23,8 @@ import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
-import { damBandColor, damBandWord, stationSituationColor, situationWord } from "@/lib/dams/thaiwater";
+import { damBandColor, damBandWord } from "@/lib/dams/bands";
+import { stationSituationColor, situationWord } from "@/lib/dams/thaiwater";
 import { readRadarLevel } from "../radar-tile";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
