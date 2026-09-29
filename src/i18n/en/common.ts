@@ -1,4 +1,6 @@
 export const common: Record<string, string> = {
+  "ย่อแผง": "Collapse panel",
+  "ขยายแผง": "Expand panel",
   "ลำน้ำจากเขื่อน{name}": "River from {name} Dam",
   "เปิดข้อมูลเขื่อน{name}": "Open {name} Dam details",
   "ข้อมูล ณ {time}": "Data for {time}",

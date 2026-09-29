@@ -217,7 +217,16 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     });
   }, [damsOn, damsStatus, loadDams, t]);
 
-  const visibleSheetPosition = probe && !isDesktop ? "half" : sheetPosition;
+  // A newly opened card expands the sheet once; after that the user can collapse it (the card title
+  // stays visible at the top of the collapsed sheet).
+  const visibleSheetPosition = sheetPosition;
+  const probeKey = probe ? (probe.kind === "point" ? `${probe.lat},${probe.lon}` : `${probe.kind}:${probe.id}`) : null;
+  const [expandedFor, setExpandedFor] = useState<string | null>(null);
+  if (probeKey !== expandedFor) {
+    // Adjusting state while rendering (React's documented pattern) instead of in an effect.
+    setExpandedFor(probeKey);
+    if (probeKey && !isDesktop && sheetPosition !== "half") setSheetPosition("half");
+  }
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -462,7 +471,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {(mapState.primary !== "rain" || rainOn) && <LegendChip primary={mapState.primary} buttonRef={legendButton} onOpen={() => legendDialog.current?.showModal()} />}
     <LegendDialog primary={mapState.primary} active={{ wind: windOn && Boolean(wind), storms: stormsOn && storms.length > 0, quakes: quakesOn && quakes.length > 0, dams: damsOn && damsStatus === "ready" && Boolean(dams) }}
       dialogRef={legendDialog} triggerRef={legendButton} />
-    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
+    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && <div className="map-panel map-time-floating">{timeline}</div>}
     {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
