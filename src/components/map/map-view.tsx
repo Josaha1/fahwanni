@@ -35,6 +35,7 @@ import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
+import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
@@ -99,6 +100,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { mode, timeMs, playing, primary, rainOn, overlays } = mapState;
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
+  const [rainAccumOn, setRainAccumOn] = useState(true);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water });
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = !water && primary === "rain" && rainOn;
@@ -171,6 +173,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   useDamsLayer(mapInstance, dams, damsOn);
   useRainRiskLayer(mapInstance, rainRisk, water);
+  const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
   const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
@@ -481,6 +484,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
   const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings}
+    rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
     onSelectDam={(id) => {
@@ -515,7 +519,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk) }}
+    <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}

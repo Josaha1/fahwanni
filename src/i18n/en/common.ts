@@ -379,4 +379,13 @@ export const common: Record<string, string> = {
   "ฝน 24 ชม. (กรมอุตุฯ)": "24-hour rain (TMD)",
   "ฝนหนัก 35.1–90 มม.": "Heavy rain 35.1–90 mm",
   "ฝนหนักมาก มากกว่า 90 มม.": "Very heavy rain over 90 mm",
+  "ฝนสะสม 3 วัน": "3-day accumulated rain",
+  "พยากรณ์ (แบบจำลอง)": "Forecast (model)",
+  "พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม": "Areas where the model predicts 3-day rain reaching 90 mm (orange) or 150 mm (red) — not a flood map",
+  "ฝนสะสม 3 วัน (แบบจำลอง)": "3-day accumulated rain (model)",
+  "90–149 มม.": "90–149 mm",
+  "150 มม. ขึ้นไป": "150 mm or more",
+  "ข้อมูลพยากรณ์ฝน: Open-Meteo (CC BY 4.0)": "Rain forecast: Open-Meteo (CC BY 4.0)",
+  "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.": "The model has no area reaching 90 mm over the next 3 days",
+  "ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน": "Rain forecast data unavailable",
 };

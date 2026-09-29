@@ -22,7 +22,7 @@ function readDismissed(): string[] {
 }
 
 export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
-  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces }: {
+  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, rainAccumOn, rainAccumStatus, onToggleRainAccum }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: DamWatch;
@@ -37,6 +37,9 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onOpenLegend: () => void;
   showAllRainProvinces: boolean;
   onShowAllRainProvinces: () => void;
+  rainAccumOn: boolean;
+  rainAccumStatus: "loading" | "shown" | "none" | "unavailable";
+  onToggleRainAccum: () => void;
 }) {
   const t = useT();
   const [dismissed, setDismissed] = useState<string[]>(readDismissed);
@@ -78,6 +81,15 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
       {warnings.length > 2 && <p className="map-muted text-xs">{t("+{n} ประกาศ", { n: warnings.length - 2 })}</p>}
     </section>}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
+    <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-label={t("ฝนสะสม 3 วัน")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="map-chip text-sm" aria-pressed={rainAccumOn} onClick={onToggleRainAccum}>{t("ฝนสะสม 3 วัน")}</button>
+        <span className="map-water-badge">{t("พยากรณ์ (แบบจำลอง)")}</span>
+      </div>
+      <p className="map-muted mt-2 text-xs">{t("พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม")}</p>
+      {rainAccumOn && rainAccumStatus === "none" && <p className="mt-1 text-xs">{t("ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.")}</p>}
+      {rainAccumOn && rainAccumStatus === "unavailable" && <p className="map-muted mt-1 text-xs">{t("ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน")}</p>}
+    </section>
     {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
     {watched.length > 0 && <section aria-labelledby="map-watched-dams">
       <h2 id="map-watched-dams" className="font-semibold">{t("เขื่อนที่ติดตาม")}</h2>

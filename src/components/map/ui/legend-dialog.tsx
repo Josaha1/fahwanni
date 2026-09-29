@@ -19,7 +19,7 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
 export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primary: PrimaryLayer;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk: boolean; rainAccum: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
@@ -53,5 +53,6 @@ export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
     </section>)}
     {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>}
     {active.dams && <p className="map-muted mt-1 text-xs">{t("ข้อมูลเขื่อน: กรมชลประทาน · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
+    {active.rainAccum && <p className="map-muted mt-1 text-xs">{t("ข้อมูลพยากรณ์ฝน: Open-Meteo (CC BY 4.0)")}</p>}
   </dialog>;
 }
