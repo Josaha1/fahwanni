@@ -20,6 +20,8 @@ import type { WindGrid } from "@/lib/wind/grid";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
+import type { Downstream } from "@/lib/dams/paths";
+import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord, stationSituationColor, situationWord } from "@/lib/dams/thaiwater";
 import { readRadarLevel } from "../radar-tile";
 
@@ -32,7 +34,8 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes, dams }: {
+export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes, dams,
+  downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
@@ -45,6 +48,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   storms: Storm[];
   quakes: Quake[];
   dams: DamsPayload | null;
+  downstream: Downstream | null;
+  pathActive: boolean;
+  pathLoading: boolean;
+  onTogglePath: () => void;
 }) {
   const t = useT();
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
@@ -155,7 +162,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
       <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
       <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
       <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
-      <button type="button" className="map-chip w-full" disabled>{t("ดูทิศทางน้ำท้ายเขื่อน")}</button>
+      <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
+        {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
+      </button>
+      {pathActive && downstream && <DownstreamDetails downstream={downstream} dams={dams} />}
     </div>}
     {barrage && <div className="mt-2 space-y-3 text-sm">
       <p className="map-muted">{t("ลำน้ำเจ้าพระยา · จ.ชัยนาท")}</p>
@@ -171,7 +181,65 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
       <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(barrage.time, t.locale) })} · {formatTime(barrage.time, "Asia/Bangkok", t.locale)}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
       <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
       <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
-      <button type="button" className="map-chip w-full" disabled>{t("ดูทิศทางน้ำท้ายเขื่อน")}</button>
+      <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
+        {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
+      </button>
+      {pathActive && downstream && <DownstreamDetails downstream={downstream} dams={dams} />}
     </div>}
   </section>;
+}
+
+function DownstreamDetails({ downstream, dams }: { downstream: Downstream; dams: DamsPayload | null }) {
+  const t = useT();
+  const [showAll, setShowAll] = useState(false);
+  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
+  const stationByCode = new Map(dams?.stations.map((station) => [station.code, station]) ?? []);
+  const provinceById = new Map(provinces.map((province) => [province.id, province]));
+  const items = [
+    ...downstream.stations.map((station) => ({ kind: "station" as const, ...station })),
+    ...downstream.provinces.map((province) => ({ kind: "province" as const, ...province })),
+  ].sort((a, b) => a.km - b.km);
+  return <div className="space-y-3">
+    <p>{t("น้ำที่ระบายจะไหลไปตามลำน้ำนี้ ระดับน้ำท้ายเขื่อนอาจสูงขึ้นในช่วง 1–3 วัน ติดตามประกาศจากกรมชลประทาน/ปภ. ในพื้นที่")}</p>
+    <div>
+      <h3 className="font-semibold">{t("ลำน้ำท้ายเขื่อน ({km} กม.)", { km: number.format(downstream.km) })}</h3>
+      <ol className="mt-2 space-y-2">
+        {(showAll ? items : items.slice(0, 12)).map((item) => {
+          if (item.kind === "province") {
+            const province = provinceById.get(item.id);
+            if (!province) return null;
+            return <li key={`province-${item.id}`} className="flex justify-between gap-2">
+              <strong>{t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
+              <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
+            </li>;
+          }
+          const station = stationByCode.get(item.code);
+          return <li key={`station-${item.code}`} className="flex items-start justify-between gap-2">
+            <span className="min-w-0">
+              <span className="font-semibold">{station ? `${station.nameTh}${station.nameTh.includes("(") ? "" : ` (${item.code})`}` : item.code}</span>
+              {station ? <span className={`mt-0.5 flex items-center gap-1.5 text-xs${station.situation === null ? " map-muted" : ""}`}>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: stationSituationColor(station.situation) ?? "var(--map-muted)" }} aria-hidden="true" />
+                {station.situation === null ? t("ไม่มีข้อมูลล่าสุด") : t(situationWord(station.situation) ?? "ไม่ทราบ")}
+                {station.pctBank !== null && <> · {t("{pct}% ของตลิ่ง", { pct: number.format(station.pctBank) })}</>}
+              </span> : <span className="map-muted block text-xs">{t("ไม่มีข้อมูลล่าสุด")}</span>}
+            </span>
+            <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
+          </li>;
+        })}
+      </ol>
+      {!showAll && items.length > 12 && <button type="button" className="map-chip mt-2 w-full" onClick={() => setShowAll(true)}>
+        {t("แสดงทั้งหมด ({n})", { n: items.length })}
+      </button>}
+    </div>
+    <details className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+      <summary className="cursor-pointer font-semibold">{t("กรณีเขื่อนแตก (สมมติ)")}</summary>
+      <p className="mt-2">{t("แอปนี้ไม่มีข้อมูลจำลองเขื่อนแตก หากมีประกาศเตือน ให้ปฏิบัติตามคำสั่งอพยพของทางราชการทันที ขึ้นที่สูง ออกห่างจากลำน้ำ")}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <a className="map-chip inline-flex items-center" href="tel:1784">{t("โทร ปภ. 1784")}</a>
+        <a className="map-chip inline-flex items-center" href="tel:1460">{t("โทร กรมชลประทาน 1460")}</a>
+      </div>
+    </details>
+    <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")}</p>
+    <p className="map-muted text-xs">{t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
+  </div>;
 }

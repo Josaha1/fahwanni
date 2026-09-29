@@ -30,6 +30,9 @@ import { useScalarLayer, type ScalarImage } from "./layers/use-scalar-layer";
 import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
+import { useDamPathLayer } from "./layers/use-dam-path-layer";
+import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
+import type { RiverStation } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
@@ -57,6 +60,8 @@ function rememberSheetPosition(position: SheetPosition): void {
   try { localStorage.setItem("fah-map-sheet", position); } catch { /* Keep the sheet usable without storage. */ }
 }
 
+const emptyStations: RiverStation[] = [];
+
 export function MapView() {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
@@ -76,7 +81,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
   const { manifest, wind, windSettled, pm25, pm25Status, loadPm25, dams, damsStatus, loadDams, storms, quakes, initialIndex } = useMapData();
-  const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ primary: view.layer, overlays: view.ov }));
+  const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => {
+    const initial = initialMapState({ primary: view.layer, overlays: view.ov });
+    if (view.dam) initial.overlays.dams = true;
+    return initial;
+  });
   const { activeIndex, playing, primary, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = primary === "rain" && rainOn;
@@ -89,6 +98,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const previousTimeline = useRef<{ manifest: typeof manifest; stops: TimelineStop[]; defaultIdx: number; primary: typeof primary } | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [pathRequestedId, setPathRequestedId] = useState<string | null>(urlView.dam ?? null);
+  const [pathData, setPathData] = useState<{ id: string; path: DamPath; downstream: Downstream } | null>(null);
+  const [pathLoading, setPathLoading] = useState(Boolean(urlView.dam));
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const radarAge = minutesSinceNewest(frames, nowIso);
@@ -184,7 +196,33 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   const selectDam = useCallback((id: string, trigger: HTMLElement) => select({ kind: "dam", id }, trigger), [select]);
   useDamsLayer(mapInstance, dams, damsOn, selectDam);
+  const activePathId = damsOn && probe?.kind === "dam" && pathRequestedId === probe.id ? probe.id : null;
+  const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
+  useDamPathLayer(mapInstance, activePath?.path ?? null, activePath?.downstream ?? null, dams?.stations ?? emptyStations, isDesktop, reducedMotion);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
+
+  useEffect(() => {
+    if (urlView.dam) select({ kind: "dam", id: urlView.dam });
+  }, [urlView.dam, select]);
+
+  useEffect(() => {
+    if (!activePathId || pathData?.id === activePathId) return;
+    let active = true;
+    loadDamPaths().then(({ paths, downstream }) => {
+      const path = paths.get(activePathId);
+      const details = downstream[activePathId];
+      if (!path || !details) throw new Error("Dam path missing");
+      if (active) setPathData({ id: activePathId, path, downstream: details });
+    }).catch(() => {
+      if (active) { toast.error(t("โหลดเส้นทางน้ำไม่สำเร็จ")); setPathRequestedId(null); }
+    }).finally(() => { if (active) setPathLoading(false); });
+    return () => { active = false; };
+  }, [activePathId, pathData?.id, t]);
+
+  const togglePath = () => {
+    if (activePathId) { setPathRequestedId(null); setPathLoading(false); }
+    else if (probe?.kind === "dam") { setPathLoading(pathData?.id !== probe.id); setPathRequestedId(probe.id); }
+  };
 
   useEffect(() => {
     if (urlView.layer !== "pm25" || pm25Status !== "idle") return;
@@ -281,8 +319,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (!mapInstance) return null;
     const center = mapInstance.getCenter();
     return formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
-      t: activeStop?.time ?? pendingTime.current, ov: overlays });
-  }, [mapInstance, primary, activeStop?.time, overlays]);
+      t: activeStop?.time ?? pendingTime.current, ov: overlays, dam: activePathId ?? undefined });
+  }, [mapInstance, primary, activeStop?.time, overlays, activePathId]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -456,6 +494,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <button type="button" aria-pressed={damsOn} aria-busy={damsStatus === "loading"} className="map-chip text-sm"
       onClick={() => {
         dispatch({ type: "toggleOverlay", key: "dams" });
+        if (damsOn) { setPathRequestedId(null); setPathLoading(false); }
         if (!damsOn && damsStatus === "error") loadDams().catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return;
           toast.error(t("ข้อมูลเขื่อนไม่พร้อมใช้งาน"));
@@ -466,7 +505,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams} />;
+    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
+    downstream={activePath?.downstream ?? null} pathActive={Boolean(activePathId)} pathLoading={pathLoading && Boolean(activePathId)} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(wind?.tempHours?.length && wind.temp?.some((hour) => hour.length > 0))}
     pm25Loading={pm25Status === "loading"} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });

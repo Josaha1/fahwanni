@@ -88,6 +88,8 @@ export function MapProvider({ containerRef, initialCenter, initialZoom = 6, chil
         '<a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Air quality: Open-Meteo.com (CAMS, CC BY 4.0)</a>',
         TERRAIN_ATTRIBUTION,
         '<a href="https://earthquake.usgs.gov" target="_blank" rel="noopener noreferrer">Earthquakes: USGS</a>',
+        '<a href="https://www.hydrosheds.org" target="_blank" rel="noopener noreferrer">Rivers: HydroRIVERS (CC BY 4.0)</a>',
+        '<a href="https://www.thaiwater.net" target="_blank" rel="noopener noreferrer">Water: ThaiWater (HII)</a>',
       ] }), "bottom-right");
       // Start collapsed on every screen size: expanded credits cover the map.
       const attribution = live.getContainer().querySelector(".maplibregl-ctrl-attrib");

@@ -25,4 +25,14 @@ describe("map URL view", () => {
     expect(parseUrlView("?ov=").ov).toEqual({ wind: false, storms: false, quakes: false, dams: false, terrain: false });
     expect(parseUrlView("").ov).toBeUndefined();
   });
+
+  it("round trips a downstream dam and rejects invalid IDs", () => {
+    const view = { lat: 16.6, lon: 99, z: 8, layer: "rain" as const,
+      ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false }, dam: "chao-phraya" };
+    expect(parseUrlView(formatUrlView(view)).dam).toBe("chao-phraya");
+    expect(parseUrlView("?dam=1").dam).toBe("1");
+    for (const invalid of ["", "A", "a_b", "a.b", "น้ำ", "a/b"]) {
+      expect(parseUrlView(`?dam=${encodeURIComponent(invalid)}`).dam).toBeUndefined();
+    }
+  });
 });

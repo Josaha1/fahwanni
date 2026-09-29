@@ -7,6 +7,7 @@ export type UrlView = {
   layer?: MapState["primary"];
   t?: string;
   ov?: MapState["overlays"];
+  dam?: string;
 };
 
 function boundedNumber(value: string | null, min: number, max: number): number | undefined {
@@ -23,11 +24,13 @@ export function parseUrlView(search: string): UrlView {
   const z = boundedNumber(params.get("z"), 3, 12);
   const layer = params.get("layer");
   const time = params.get("t");
+  const dam = params.get("dam");
   if (lat !== undefined) view.lat = lat;
   if (lon !== undefined) view.lon = lon;
   if (z !== undefined) view.z = z;
   if (layer === "rain" || layer === "temp" || layer === "pm25") view.layer = layer;
   if (time && Number.isFinite(Date.parse(time))) view.t = time;
+  if (dam && /^[a-z0-9-]+$/.test(dam)) view.dam = dam;
   if (params.has("ov")) {
     const names = new Set(params.get("ov")?.split(","));
     view.ov = { wind: names.has("wind"), storms: names.has("storms"), quakes: names.has("quakes"), dams: names.has("dams"), terrain: names.has("3d") };
@@ -35,13 +38,14 @@ export function parseUrlView(search: string): UrlView {
   return view;
 }
 
-export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t"> & { ov: MapState["overlays"] }): string {
+export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t" | "dam"> & { ov: MapState["overlays"] }): string {
   const params = new URLSearchParams();
   params.set("lat", view.lat.toFixed(2));
   params.set("lon", view.lon.toFixed(2));
   params.set("z", view.z.toFixed(1));
   params.set("layer", view.layer);
   if (view.t) params.set("t", view.t);
+  if (view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
   const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.dams && "dams", view.ov.terrain && "3d"].filter(Boolean).join(",");
   params.set("ov", overlays);
   return `?${params.toString().replace(/%2C/g, ",")}`;
