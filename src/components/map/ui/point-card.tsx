@@ -24,6 +24,7 @@ import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { Dam } from "@/lib/dams/types";
 import { trendDelta, type DamTrend } from "@/lib/dams/trend";
+import type { DamHistory } from "@/lib/dams/history";
 import type { DamWatch } from "@/lib/dams/watchlist";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { Downstream } from "@/lib/dams/paths";
@@ -40,7 +41,7 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, rainRisk,
+export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
   watch, onToggleWatch, downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
@@ -59,6 +60,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   quakes: Quake[];
   dams: DamsPayload | null;
   damsTrend: DamTrend | null;
+  damsHistory: DamHistory | null;
   watch: DamWatch;
   onToggleWatch: (dam: Dam) => void;
   rainRisk: RainRisk | null;
@@ -81,6 +83,17 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
   const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
   const damTrend = dam && damsTrend?.dates.at(-1) === dam.date ? damsTrend?.pct[dam.id] : undefined;
+  const damHistory = dam && damsHistory?.dataDate === dam.date ? damsHistory : null;
+  const historyRows = dam && damHistory ? ([
+    { label: "ปีที่แล้ว ({date}) {pct}% · วันนี้ต่างไป {change}", entry: damHistory.lastYear },
+    { label: "ปี 2554 ({date}) {pct}% · วันนี้ต่างไป {change}", entry: damHistory.year2554 },
+  ] as const).flatMap(({ label, entry }) => {
+    const value = entry?.pct[dam.id];
+    if (!entry || value === undefined) return [];
+    const difference = dam.storagePct - value;
+    const change = `${difference >= 0 ? "+" : ""}${percent.format(difference)}`;
+    return [{ label, date: entry.date, value, change }];
+  }) : [];
   const rainStation = probe.kind === "rain" ? rainRisk?.stations.find((item) => item.id === probe.id) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
@@ -178,6 +191,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
         <p className="map-muted">{t("{storage} / {capacity} ล้าน ลบ.ม.", { storage: number.format(dam.storageMcm), capacity: number.format(dam.capacityMcm) })}</p>
         {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
         {damTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} color={damBandColor(dam.band)} />}
+        {historyRows.length > 0 && <div className="mt-2 space-y-1">
+          {historyRows.map((row) => <p key={row.label}>{t(row.label, { date: damDate(row.date, t.locale), pct: percent.format(row.value), change: row.change })}</p>)}
+          <p className="map-muted text-xs">{t("ปริมาณน้ำในเขื่อนอย่างเดียวไม่ได้บอกว่าจะท่วม")}</p>
+        </div>}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>

@@ -7,6 +7,7 @@ import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { DamTrend } from "@/lib/dams/trend";
+import type { DamHistory } from "@/lib/dams/history";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { TmdWarnings } from "@/lib/tmd";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
@@ -23,6 +24,9 @@ export function useMapData() {
   const [damsTrend, setDamsTrend] = useState<DamTrend | null>(null);
   const damsTrendRequest = useRef<Promise<void> | null>(null);
   const damsTrendLoaded = useRef(false);
+  const [damsHistory, setDamsHistory] = useState<DamHistory | null>(null);
+  const damsHistoryRequest = useRef<Promise<void> | null>(null);
+  const damsHistoryLoaded = useRef(false);
   const [rainRisk, setRainRisk] = useState<RainRisk | null>(null);
   const [tmdWarnings, setTmdWarnings] = useState<TmdWarnings | null>(null);
   const [tmdWarningsStatus, setTmdWarningsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -76,6 +80,17 @@ export function useMapData() {
       .then((data) => { damsTrendLoaded.current = true; setDamsTrend(data); })
       .finally(() => { damsTrendRequest.current = null; });
     damsTrendRequest.current = request;
+    return request;
+  }, []);
+
+  const loadDamsHistory = useCallback((): Promise<void> => {
+    if (damsHistoryLoaded.current) return Promise.resolve();
+    if (damsHistoryRequest.current) return damsHistoryRequest.current;
+    const request = fetch("/api/dams-history")
+      .then((response) => { if (!response.ok) throw new Error("dam history unavailable"); return response.json() as Promise<DamHistory>; })
+      .then((data) => { damsHistoryLoaded.current = true; setDamsHistory(data); })
+      .finally(() => { damsHistoryRequest.current = null; });
+    damsHistoryRequest.current = request;
     return request;
   }, []);
 
@@ -217,5 +232,5 @@ export function useMapData() {
     };
   }, [loadDams, loadRainRisk, loadTmdWarnings]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
 }

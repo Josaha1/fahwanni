@@ -92,7 +92,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
-  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
   const [watch, setWatch] = useState(readWatch);
   const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, dam));
   useEffect(() => { writeWatch(watch); }, [watch]);
@@ -233,8 +233,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [damsOn, damsStatus, loadDams, t]);
 
   useEffect(() => {
-    if (probe?.kind === "dam") loadDamsTrend().catch(() => {});
-  }, [probe, loadDamsTrend]);
+    if (probe?.kind === "dam") {
+      loadDamsTrend().catch(() => {});
+      loadDamsHistory().catch(() => {});
+    }
+  }, [probe, loadDamsTrend, loadDamsHistory]);
 
   useEffect(() => {
     if (!water || damsStatus !== "ready" || !dams) return;
@@ -480,7 +483,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} rainRisk={rainRisk}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk}
     watch={watch} onToggleWatch={toggleDamWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
