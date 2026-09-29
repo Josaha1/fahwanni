@@ -351,6 +351,8 @@ export const common: Record<string, string> = {
   "สถานการณ์น้ำ": "Water situation",
   "มีข้อมูลใหม่": "New information available",
   "ดูบนแผนที่": "View on map",
+  "ขยายรายละเอียด": "Expand details",
+  "ย่อรายละเอียด": "Collapse details",
   "กำลังโหลดประกาศเตือน…": "Loading warnings…",
   "ประกาศเตือนไม่พร้อมใช้งาน": "Warnings are unavailable",
   "ไม่มีประกาศเตือนในขณะนี้": "No current warnings",

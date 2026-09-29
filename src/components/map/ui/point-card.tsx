@@ -242,7 +242,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
       <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
-    {river && <RiverDetails point={river} upstream={upstream} mapCard waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
+    {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
     {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;
 }
