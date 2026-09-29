@@ -67,7 +67,7 @@ Verified facts:
    `Dam` / `RiverStation`, bands (official scale), unit conversion, barrage from C.13 (+ tests on a
    trimmed real fixture: missing fields, >100 %, no discharge). Verify: `npx vitest run src/lib/dams`
 3. `/api/dams` route + cache + stale-on-failure (+ route tests like /api/pm25), add to
-   verify-deploy. Verify: vitest + `curl -s localhost:3457/api/dams | node -e …` (35 dams, stations > 700, < 150 KB)
+   verify-deploy. Verify: vitest + `curl -s localhost:3457/api/dams | node -e …` (35 dams, stations > 700, < 60 KB gzip — raw ~230 KB is mostly 3-byte Thai text; measured 34 KB gzip on 2026-09-29)
 4. `scripts/dams/build-paths.mjs` (from task 1) → `public/data/dam-paths.geojson` (≤ 150 KB gz) +
    `public/data/dam-downstream.json` (station codes + provinces per dam, ordered by km). Verify:
    script run by Claude, sizes, every dam has a path, ภูมิพล list contains C.2 and C.13.
