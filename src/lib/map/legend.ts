@@ -42,6 +42,7 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
       { swatch: { kind: "circle", color: damBandColor(5), size: 12 }, label: `เกิน 100% ${damBandWord(5)}` },
       { swatch: { kind: "ring", color: "#e5484d" }, label: "ระบายน้ำมาก" },
       { swatch: { kind: "line", color: "#2563eb" }, label: "แนวลำน้ำท้ายเขื่อน — ไม่ใช่พื้นที่น้ำท่วม" },
+      { swatch: { kind: "line", color: "#2563eb", dashed: true }, label: "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)" },
     ] });
   }
   if (active.rainRisk) sections.push({ title: "ฝน 24 ชม. (กรมอุตุฯ)", rows: [

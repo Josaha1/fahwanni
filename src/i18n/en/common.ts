@@ -34,7 +34,6 @@ export const common: Record<string, string> = {
   "81–100% น้ำมาก": "81–100% high water",
   "เกิน 100% เกินความจุ": "Over 100% above capacity",
   "แนวลำน้ำท้ายเขื่อน — ไม่ใช่พื้นที่น้ำท่วม": "Downstream river path — not a flood area",
-  "ข้อมูลเขื่อน: กรมชลประทาน · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "Dam data: Royal Irrigation Department · River paths: HydroRIVERS (CC BY 4.0)",
   "ปริมาณน้ำในเขื่อน": "Reservoir storage",
   "{storage} / {capacity} ล้าน ลบ.ม.": "{storage} / {capacity} million m³",
   "ใช้การได้ {pct}%": "Usable storage {pct}%",
@@ -386,7 +385,9 @@ export const common: Record<string, string> = {
   "ฝนสะสม 3 วัน (แบบจำลอง)": "3-day accumulated rain (model)",
   "90–149 มม.": "90–149 mm",
   "150 มม. ขึ้นไป": "150 mm or more",
-  "ข้อมูลพยากรณ์ฝน: Open-Meteo (CC BY 4.0)": "Rain forecast: Open-Meteo (CC BY 4.0)",
   "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.": "The model has no area reaching 90 mm over the next 3 days",
   "ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน": "Rain forecast data unavailable",
+  "ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "Data: Royal Irrigation Department, Thai Meteorological Department, Open-Meteo · River paths: HydroRIVERS (CC BY 4.0)",
+  "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)": "Moving dashes = direction of flow (thicker = larger release)",
+  "{mm} มม.": "{mm} mm",
 };

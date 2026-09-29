@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useT } from "@/i18n/client";
 import type { Map } from "maplibre-gl";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { BASE } from "@/lib/map/base-style";
@@ -12,10 +13,11 @@ const LAYERS = ["rain-risk-circle", "rain-risk-label"] as const;
 
 export function useRainRiskLayer(map: Map | null, risk: RainRisk | null, enabled: boolean) {
   const { theme } = useMapContext();
+  const t = useT();
   const data = useMemo(() => ({ type: "FeatureCollection" as const, features: enabled ? (risk?.stations ?? []).map((item) => ({
-    type: "Feature" as const, properties: { id: item.id, rainMm: item.rainMm, category: item.category, label: `${item.rainMm} มม.` },
+    type: "Feature" as const, properties: { id: item.id, rainMm: item.rainMm, category: item.category, label: t("{mm} มม.", { mm: item.rainMm }) },
     geometry: { type: "Point" as const, coordinates: [item.lon, item.lat] },
-  })) : [] }), [risk, enabled]);
+  })) : [] }), [risk, enabled, t]);
   useStyleEffect(map, (live) => {
     if (!live.getSource(SOURCE) && data.features.length) live.addSource(SOURCE, { type: "geojson", data });
     if (!live.getSource(SOURCE)) return;

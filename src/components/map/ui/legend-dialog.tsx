@@ -52,7 +52,6 @@ export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
       </ul>
     </section>)}
     {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>}
-    {active.dams && <p className="map-muted mt-1 text-xs">{t("ข้อมูลเขื่อน: กรมชลประทาน · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
-    {active.rainAccum && <p className="map-muted mt-1 text-xs">{t("ข้อมูลพยากรณ์ฝน: Open-Meteo (CC BY 4.0)")}</p>}
+    {mode === "water" && <p className="map-muted mt-4 text-xs">{t("ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
   </dialog>;
 }
