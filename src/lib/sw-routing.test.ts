@@ -24,6 +24,7 @@ describe("service worker routing", () => {
 
   it("keeps page and static routing", () => {
     expect(sandbox.self.fahRoute!({ method: "GET", url: `${origin}/map`, mode: "navigate", headers: new Headers() } as Request, origin)).toBe("page");
+    expect(sandbox.self.fahRoute!({ method: "GET", url: `${origin}/water`, mode: "navigate", headers: new Headers() } as Request, origin)).toBe("page");
     expect(route("/_next/static/chunk.js")).toBe("static");
     expect(route("/icon.png")).toBe("static");
     expect(sandbox.self.fahWarmable!("/_next/static/chunk.js", origin)).toBe(true);

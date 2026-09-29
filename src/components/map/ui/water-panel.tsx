@@ -9,8 +9,9 @@ import { formatFullDate, formatTime } from "@/lib/format";
 import type { Place } from "@/lib/place";
 import { provinces } from "@/lib/provinces";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
-import { visibleWarnings, warningKey, type TmdWarnings } from "@/lib/tmd";
+import { visibleWarnings, type TmdWarnings } from "@/lib/tmd";
 import { DamLegendStrip } from "./legend-chip";
+import { TmdWarningList } from "@/components/water/tmd-warnings";
 
 const DISMISSED_KEY = "fah-tmd-dismissed";
 
@@ -75,29 +76,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
       </p>
       {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
-    {warnings.length > 0 && <section className="space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
-      {warnings.slice(0, 2).map((item) => {
-        const key = warningKey(item);
-        const announcedAt = item.announcedAt?.replace(/^([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}:[0-9]{2})$/, "$1T$2+07:00");
-        const time = announcedAt && !Number.isNaN(Date.parse(announcedAt)) ? formatTime(announcedAt, "Asia/Bangkok", t.locale) : null;
-        return <article key={key} className="rounded-lg border p-3" style={{ borderColor: "var(--map-panel-border)" }}>
-          <div className="flex items-start gap-2">
-            <span className="map-warning" aria-hidden="true">⚠</span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold">{item.title}</p>
-              {time && <p className="map-muted text-xs">{t("ประกาศเมื่อ {time} น.", { time })}</p>}
-            </div>
-            <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิดประกาศ {title}", { title: item.title })} onClick={() => dismissWarning(key)}>✕</button>
-          </div>
-          <details className="mt-1">
-            <summary className="cursor-pointer font-semibold">{t("ดูเพิ่มเติม")}</summary>
-            <p className="mt-1 whitespace-pre-line">{item.description}</p>
-            {item.url && /^https:\/\//i.test(item.url) && <a className="mt-1 inline-block underline" href={item.url} target="_blank" rel="noopener noreferrer">{t("อ่านประกาศ")}</a>}
-          </details>
-        </article>;
-      })}
-      {warnings.length > 2 && <p className="map-muted text-xs">{t("+{n} ประกาศ", { n: warnings.length - 2 })}</p>}
-    </section>}
+    {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
     <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-label={t("ฝนสะสม 3 วัน")}>
       <div className="flex flex-wrap items-center gap-2">
