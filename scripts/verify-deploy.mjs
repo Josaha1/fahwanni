@@ -25,6 +25,7 @@ const paths = [
   "/api/pm25",
   "/api/dams",
   "/api/dams-trend",
+  "/api/rivers",
   "/api/rain-risk",
   "/api/storms",
   "/api/quakes",

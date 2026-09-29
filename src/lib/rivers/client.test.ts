@@ -8,7 +8,7 @@ const points = pointsData.points as RiverPoint[];
 
 it("parses all real Flood API locations in point order", () => {
   const forecasts = parseFlood(fixture, points);
-  expect(forecasts).toHaveLength(16);
+  expect(forecasts).toHaveLength(points.length);
   for (const [index, forecast] of forecasts.entries()) {
     expect(forecast.id).toBe(points[index].id);
     expect(forecast.days).toHaveLength(23);
@@ -53,7 +53,7 @@ it("uses snapped coordinates and requested daily fields in one request", async (
 
   const fetchImpl = vi.fn(async () => new Response(JSON.stringify(fixture)));
   const forecasts = await fetchRiverForecasts(fetchImpl as typeof fetch);
-  expect(forecasts).toHaveLength(16);
+  expect(forecasts).toHaveLength(points.length);
   expect(fetchImpl).toHaveBeenCalledOnce();
   expect(fetchImpl).toHaveBeenCalledWith(url.toString(), {
     next: { revalidate: 21600 }, signal: expect.any(AbortSignal),

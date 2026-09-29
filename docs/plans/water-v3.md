@@ -44,6 +44,13 @@ Verified by Claude today (live requests):
 - Each curated point is checked by eye (snapped cell discharge ≫ tributary, plausible seasonal max) before it goes in;
   points that fail are dropped, not tuned.
 
+## Changes during execution (Claude)
+- Task 1: history limited to 2011–2025 (Open-Meteo counts long ranges as many calls); snapping uses Sept 2020 only.
+- Eye check dropped 5 points right below big reservoirs — GloFAS applies generic reservoir rules, not real gate
+  operations (Mae Klong 4,415 m³/s modelled while Srinagarind/Vajiralongkorn released ~23): ping-tak, nan-phitsanulok,
+  pasak-saraburi, maeklong-ratchaburi, bangpakong-prachinburi. 11 points remain; Chao Phraya points carry
+  downstreamOfDam = Bhumibol for the "ขึ้นกับการระบายของเขื่อน" note.
+
 ## Map page extras (added at the user's request "มีอะไรแนะนำเพิ่มเติมใส่มาได้เลย หน้าแผนที่")
 Water mode (8a–8e): forecast-day slider, all-routes overview, upstream dams per river point, filter chips + water
 search, "ฝนตอนนี้" radar toggle. Both modes (8f–8k): cloud + heat-index layers, tap-point 24 h chart, saved places

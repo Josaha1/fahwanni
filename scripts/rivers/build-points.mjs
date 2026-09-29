@@ -15,21 +15,20 @@ const provinceIds = new Set(provinces.map((province) => province.id));
 const damIds = new Set(DAM_REGISTRY.map((dam) => dam.id));
 
 // Province ids match src/lib/provinces.ts; dam ids match src/lib/dams/registry.ts.
+// Dropped after the 2026-09-29 eye check (GloFAS simulates generic reservoir rules, not real gate operations):
+// ping-tak (Bhumibol), nan-phitsanulok (Sirikit), pasak-saraburi (Pa Sak), maeklong-ratchaburi
+// (Srinagarind/Vajiralongkorn: model 4,415 m³/s while the dams released ~23) and bangpakong-prachinburi
+// (Khun Dan/Naruebodindra; model 2.4× its own 2011 value). Points right below big dams mislead.
 const points = [
   { id: "ping-chiangmai", river: "Ping", nameTh: "ปิง เชียงใหม่", nameEn: "Ping River at Chiang Mai", provinceId: "chiang-mai", lat: 18.79, lon: 99.00, downstreamOfDam: null },
-  { id: "ping-tak", river: "Ping", nameTh: "ปิง ตาก", nameEn: "Ping River at Tak", provinceId: "tak", lat: 16.87, lon: 99.13, downstreamOfDam: "200101" },
   { id: "wang-lampang", river: "Wang", nameTh: "วัง ลำปาง", nameEn: "Wang River at Lampang", provinceId: "lampang", lat: 18.29, lon: 99.49, downstreamOfDam: null },
   { id: "yom-sukhothai", river: "Yom", nameTh: "ยม สุโขทัย", nameEn: "Yom River at Sukhothai", provinceId: "sukhothai", lat: 17.01, lon: 99.82, downstreamOfDam: null },
-  { id: "nan-phitsanulok", river: "Nan", nameTh: "น่าน พิษณุโลก", nameEn: "Nan River at Phitsanulok", provinceId: "phitsanulok", lat: 16.82, lon: 100.26, downstreamOfDam: "200102" },
-  { id: "chaophraya-nakhonsawan", river: "Chao Phraya", nameTh: "เจ้าพระยา นครสวรรค์", nameEn: "Chao Phraya River at Nakhon Sawan", provinceId: "nakhon-sawan", lat: 15.70, lon: 100.12, downstreamOfDam: null },
-  { id: "chaophraya-chainat", river: "Chao Phraya", nameTh: "เจ้าพระยา ชัยนาท", nameEn: "Chao Phraya River at Chai Nat", provinceId: "chai-nat", lat: 15.16, lon: 100.18, downstreamOfDam: null },
-  { id: "chaophraya-ayutthaya", river: "Chao Phraya", nameTh: "เจ้าพระยา พระนครศรีอยุธยา", nameEn: "Chao Phraya River at Ayutthaya", provinceId: "phra-nakhon-si-ayutthaya", lat: 14.35, lon: 100.58, downstreamOfDam: null },
-  { id: "pasak-saraburi", river: "Pa Sak", nameTh: "ป่าสัก สระบุรี", nameEn: "Pa Sak River at Saraburi", provinceId: "saraburi", lat: 14.53, lon: 100.91, downstreamOfDam: "100301" },
+  { id: "chaophraya-nakhonsawan", river: "Chao Phraya", nameTh: "เจ้าพระยา นครสวรรค์", nameEn: "Chao Phraya River at Nakhon Sawan", provinceId: "nakhon-sawan", lat: 15.70, lon: 100.12, downstreamOfDam: "200101" },
+  { id: "chaophraya-chainat", river: "Chao Phraya", nameTh: "เจ้าพระยา ชัยนาท", nameEn: "Chao Phraya River at Chai Nat", provinceId: "chai-nat", lat: 15.16, lon: 100.18, downstreamOfDam: "200101" },
+  { id: "chaophraya-ayutthaya", river: "Chao Phraya", nameTh: "เจ้าพระยา พระนครศรีอยุธยา", nameEn: "Chao Phraya River at Ayutthaya", provinceId: "phra-nakhon-si-ayutthaya", lat: 14.35, lon: 100.58, downstreamOfDam: "200101" },
   { id: "mekong-nongkhai", river: "Mekong", nameTh: "โขง หนองคาย", nameEn: "Mekong River at Nong Khai", provinceId: "nong-khai", lat: 17.88, lon: 102.74, downstreamOfDam: null },
   { id: "chi-yasothon", river: "Chi", nameTh: "ชี ยโสธร", nameEn: "Chi River at Yasothon", provinceId: "yasothon", lat: 15.79, lon: 104.15, downstreamOfDam: null },
   { id: "mun-ubon", river: "Mun", nameTh: "มูล อุบลราชธานี", nameEn: "Mun River at Ubon Ratchathani", provinceId: "ubon-ratchathani", lat: 15.23, lon: 104.86, downstreamOfDam: null },
-  { id: "bangpakong-prachinburi", river: "Bang Pakong", nameTh: "บางปะกง ปราจีนบุรี", nameEn: "Bang Pakong River at Prachin Buri", provinceId: "prachin-buri", lat: 14.05, lon: 101.37, downstreamOfDam: null },
-  { id: "maeklong-ratchaburi", river: "Mae Klong", nameTh: "แม่กลอง ราชบุรี", nameEn: "Mae Klong River at Ratchaburi", provinceId: "ratchaburi", lat: 13.54, lon: 99.82, downstreamOfDam: null },
   { id: "tapi-suratthani", river: "Tapi", nameTh: "ตาปี สุราษฎร์ธานี", nameEn: "Tapi River at Surat Thani", provinceId: "surat-thani", lat: 9.13, lon: 99.33, downstreamOfDam: null },
   { id: "pattani-yala", river: "Pattani", nameTh: "ปัตตานี ยะลา", nameEn: "Pattani River at Yala", provinceId: "yala", lat: 6.55, lon: 101.28, downstreamOfDam: null },
 ];
