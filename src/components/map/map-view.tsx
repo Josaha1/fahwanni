@@ -61,6 +61,8 @@ import { PointCard } from "./ui/point-card";
 import { PrimaryPicker } from "./ui/primary-picker";
 import { LegendChip } from "./ui/legend-chip";
 import { WaterPanel } from "./ui/water-panel";
+import { DataFreshness } from "./ui/data-freshness";
+import { freshnessRows } from "@/lib/map/freshness";
 import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
@@ -142,7 +144,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const nowMs = Date.parse(nowIso);
   const domain = useMemo(() => makeDomain(nowMs), [nowMs]);
   const effectiveTime = timeMs ?? nowMs;
-  const { series: windSeries } = useForecastDays({ source: "wind", enabled: true, focusTime: effectiveTime, nowMs });
+  const { series: windSeries, fetchedAt: modelFetchedAt } = useForecastDays({ source: "wind", enabled: true, focusTime: effectiveTime, nowMs });
   const { series: pm25Series, loadedDays: pm25LoadedDays, lastAvailable: pm25LastAvailable, loading: pm25Loading, error: pm25Error } = useForecastDays({ source: "pm25", enabled: !water && primary === "pm25", focusTime: effectiveTime, nowMs });
   // Rain can be shown when there is radar for the past or model rain for the future.
   const radarAvailable = frames.length > 0 || Boolean(windSeries?.grids.precip);
@@ -594,6 +596,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} waterStepper={!isDesktop && water ? waterStepper : null}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} primaryPicker={primaryPicker} layers={layers} card={card} water={waterPanel || null} more={isDesktop ? null : more}
+    freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
+      rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
   return <main className={`map-shell${immersive ? " map-shell--immersive" : ""}`} style={{

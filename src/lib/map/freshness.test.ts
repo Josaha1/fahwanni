@@ -1,0 +1,26 @@
+import { describe, expect, it } from "vitest";
+import { ageMinutes, freshnessRows } from "./freshness";
+
+describe("data freshness", () => {
+  it("lists every source with a parsed time, unknown as null", () => {
+    const rows = freshnessRows({ radarTime: "2026-09-29T10:00:00.000Z", damsDate: "2026-09-29",
+      rainObservedAt: "2026-09-29T07:00:00+07:00", warningAt: "2026-09-29 05:00:00" });
+    expect(rows.map((row) => row.key)).toEqual(["radar", "model", "dams", "rain", "rivers", "warnings"]);
+    expect(rows[0].time).toBe(Date.parse("2026-09-29T10:00:00.000Z"));
+    expect(rows[1].time).toBeNull();
+    expect(rows[2].time).toBe(Date.parse("2026-09-29T07:00:00+07:00"));
+    expect(rows[5].time).toBe(Date.parse("2026-09-29T05:00:00+07:00"));
+    expect(rows.filter((row) => row.daily).map((row) => row.key)).toEqual(["dams", "rain", "rivers"]);
+  });
+
+  it("gives ages in minutes", () => {
+    expect(ageMinutes(null, 0)).toBeNull();
+    expect(ageMinutes(0, 90 * 60_000)).toBe(90);
+    expect(ageMinutes(120_000, 60_000)).toBe(0);
+  });
+
+  it("tells an empty warning list apart from one not loaded", () => {
+    expect(freshnessRows({ warningAt: null })[5].none).toBe(true);
+    expect(freshnessRows({})[5].none).toBe(false);
+  });
+});

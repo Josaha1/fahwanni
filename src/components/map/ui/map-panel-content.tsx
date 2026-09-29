@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, desktop, timeline, waterStepper, legend, details, primaryPicker, layers, card, water, more, onProbeCenter }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, waterStepper, legend, details, primaryPicker, layers, card, water, more, freshness, onProbeCenter }: {
   placeName: string;
   compact: boolean;
   desktop: boolean;
@@ -18,6 +18,8 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, waterSt
   water: ReactNode;
   /** Phone-only 3D / fullscreen / share row (the desktop rail keeps those buttons). */
   more: ReactNode;
+  /** "ข้อมูลล่าสุด" panel, shown in both modes when the panel is open. */
+  freshness: ReactNode;
   onProbeCenter: (trigger: HTMLButtonElement) => void;
 }) {
   const t = useT();
@@ -44,6 +46,7 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, waterSt
         <h2 id="map-more" className="mb-2 text-sm font-semibold">{t("เพิ่มเติม")}</h2>
         <div className="flex flex-wrap gap-2">{more}</div>
       </section>}
+      {!compact && freshness}
     </>
   );
 }

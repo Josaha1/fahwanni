@@ -481,4 +481,13 @@ export const common: Record<string, string> = {
   "ค่าประมาณจากแบบจำลอง Open-Meteo ความละเอียดราว 100 กม.": "Open-Meteo model estimate at about 100 km resolution",
   "24 ชม. ข้างหน้า: {low}–{high}° · ฝนโอกาส 50% ขึ้นไป {n} ชม.": "Next 24 h: {low}–{high}° · {n} h with a 50% or higher chance of rain",
   "เส้น: อุณหภูมิ · แท่ง: โอกาสฝน (แบบจำลอง)": "Line: temperature · bars: chance of rain (model)",
+  "ข้อมูลล่าสุด": "Data freshness",
+  "แบบจำลองพยากรณ์ (ลม ฝน อุณหภูมิ เมฆ)": "Forecast model (wind, rain, temperature, clouds)",
+  "ฝน 24 ชม. จากสถานี": "24 h station rain",
+  "ประกาศเตือนภัยล่าสุด": "Latest warning",
+  "ยังไม่ได้โหลด": "Not loaded yet",
+  "ออกวันละครั้ง": "daily",
+  "{h} ชม. ที่แล้ว": "{h} h ago",
+  "{n} นาทีที่แล้ว": "{n} min ago",
+  "ไม่มีประกาศในขณะนี้": "No warnings right now",
 };
