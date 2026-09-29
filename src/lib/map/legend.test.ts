@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translator } from "../../i18n/core";
+import { damBandColor, stationSituationColor } from "../dams/thaiwater";
 import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 import { legendFor, legendGradient, overlayLegend } from "./legend";
 
@@ -51,11 +52,11 @@ describe("legendFor", () => {
 
 describe("overlayLegend", () => {
   it("always includes the location symbols and only requested overlay sections", () => {
-    expect(overlayLegend({ wind: false, storms: false, quakes: false })).toEqual([{ title: "สัญลักษณ์", rows: [
+    expect(overlayLegend({ wind: false, storms: false, quakes: false, dams: false })).toEqual([{ title: "สัญลักษณ์", rows: [
       { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
       { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
     ] }]);
-    const all = overlayLegend({ wind: true, storms: true, quakes: true });
+    const all = overlayLegend({ wind: true, storms: true, quakes: true, dams: false });
     expect(all.map((section) => section.title)).toEqual(["สัญลักษณ์", "ลม", "พายุ", "แผ่นดินไหว"]);
     expect(all[1].rows.map((row) => row.swatch)).toEqual([1, 5, 10, 16].map((speed) => ({ kind: "line", color: windColor(speed) })));
     expect(all[2].rows.map((row) => row.swatch)).toEqual([
@@ -67,12 +68,34 @@ describe("overlayLegend", () => {
       { kind: "circle", color: DATA.quake, size: 10 },
       { kind: "circle", color: DATA.quake, size: 20 },
     ]);
-    expect(overlayLegend({ wind: false, storms: true, quakes: false }).map((section) => section.title)).toEqual(["สัญลักษณ์", "พายุ"]);
+    expect(overlayLegend({ wind: false, storms: true, quakes: false, dams: false }).map((section) => section.title)).toEqual(["สัญลักษณ์", "พายุ"]);
+  });
+
+  it("describes dam bands, release and barrage markers, downstream path, and river situations", () => {
+    const sections = overlayLegend({ wind: false, storms: false, quakes: false, dams: true });
+    expect(sections.map((section) => section.title)).toEqual(["สัญลักษณ์", "เขื่อน (% ความจุ)", "ระดับน้ำในลำน้ำ (% ของตลิ่ง)"]);
+    expect(sections[1].rows).toEqual([
+      { swatch: { kind: "circle", color: damBandColor(1), size: 12 }, label: "≤30% น้ำน้อยวิกฤต" },
+      { swatch: { kind: "circle", color: damBandColor(2), size: 12 }, label: "31–50% น้ำน้อย" },
+      { swatch: { kind: "circle", color: damBandColor(3), size: 12 }, label: "51–80% ปานกลาง" },
+      { swatch: { kind: "circle", color: damBandColor(4), size: 12 }, label: "81–100% น้ำมาก" },
+      { swatch: { kind: "circle", color: damBandColor(5), size: 12 }, label: "เกิน 100% เกินความจุ" },
+      { swatch: { kind: "ring", color: "#e5484d" }, label: "ระบายน้ำมาก" },
+      { swatch: { kind: "square", color: "#003CFA" }, label: "เขื่อนเจ้าพระยา (ระบายท้ายเขื่อน)" },
+      { swatch: { kind: "line", color: "#2563eb" }, label: "แนวลำน้ำท้ายเขื่อน — ไม่ใช่พื้นที่น้ำท่วม" },
+    ]);
+    expect(sections[2].rows).toEqual([
+      { swatch: { kind: "circle", color: stationSituationColor(1), size: 12 }, label: "≤10% น้ำน้อยวิกฤติ" },
+      { swatch: { kind: "circle", color: stationSituationColor(2), size: 12 }, label: ">10% น้ำน้อย" },
+      { swatch: { kind: "circle", color: stationSituationColor(3), size: 12 }, label: ">30% น้ำปกติ" },
+      { swatch: { kind: "circle", color: stationSituationColor(4), size: 12 }, label: ">70% น้ำมาก" },
+      { swatch: { kind: "circle", color: stationSituationColor(5), size: 12 }, label: ">100% น้ำล้นตลิ่ง" },
+    ]);
   });
 
   it("has English translations for every Thai row and section", () => {
     const en = translator("en");
-    for (const section of overlayLegend({ wind: true, storms: true, quakes: true })) {
+    for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true })) {
       expect(en(section.title)).not.toBe(section.title);
       for (const row of section.rows) expect(en(row.label)).not.toBe(row.label);
     }

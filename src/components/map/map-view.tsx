@@ -527,7 +527,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     {(mapState.primary !== "rain" || rainOn) && <LegendChip primary={mapState.primary} buttonRef={legendButton} onOpen={() => legendDialog.current?.showModal()} />}
-    <LegendDialog primary={mapState.primary} active={{ wind: windOn && Boolean(wind), storms: stormsOn && storms.length > 0, quakes: quakesOn && quakes.length > 0 }}
+    <LegendDialog primary={mapState.primary} active={{ wind: windOn && Boolean(wind), storms: stormsOn && storms.length > 0, quakes: quakesOn && quakes.length > 0, dams: damsOn && damsStatus === "ready" && Boolean(dams) }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}

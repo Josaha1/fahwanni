@@ -9,6 +9,8 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
     </svg>;
     case "fill": return <span className="block h-4 w-4 rounded-sm border" style={{ borderColor: swatch.color, backgroundColor: `color-mix(in srgb, ${swatch.color} ${swatch.opacity * 100}%, transparent)` }} aria-hidden="true" />;
     case "circle": return <span className="block rounded-full" style={{ width: swatch.size, height: swatch.size, backgroundColor: swatch.color }} aria-hidden="true" />;
+    case "ring": return <span className="block h-4 w-4 rounded-full border-[3px]" style={{ borderColor: swatch.color }} aria-hidden="true" />;
+    case "square": return <span className="block h-3 w-3 rounded-[2px] border border-white" style={{ backgroundColor: swatch.color }} aria-hidden="true" />;
     case "pin": return <span className="block h-3 w-3 rounded-full border-2 border-white" style={{ backgroundColor: "var(--map-accent)" }} aria-hidden="true" />;
     case "probe": return <span className="block h-3.5 w-3.5 rounded-full border-[3px] bg-white/80" style={{ borderColor: "var(--map-accent)" }} aria-hidden="true" />;
   }
@@ -16,7 +18,7 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
 
 export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
   primary: PrimaryLayer;
-  active: { wind: boolean; storms: boolean; quakes: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
@@ -49,5 +51,6 @@ export function LegendDialog({ primary, active, dialogRef, triggerRef }: {
       </ul>
     </section>)}
     <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>
+    {active.dams && <p className="map-muted mt-1 text-xs">{t("ข้อมูลน้ำ: คลังข้อมูลน้ำแห่งชาติ (สสน.) · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
   </dialog>;
 }
