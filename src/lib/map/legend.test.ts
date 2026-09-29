@@ -135,6 +135,17 @@ describe("overlayLegend", () => {
     ] });
   });
 
+  it("labels the satellite flood pixels and their observation limits", () => {
+    const section = overlayLegend({ wind: false, storms: false, quakes: false, dams: false, satFlood: true }).at(-1);
+    expect(section).toEqual({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
+      { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
+    ] });
+    const en = translator("en");
+    expect(en(section!.title)).not.toBe(section!.title);
+    expect(en(section!.note!)).not.toBe(section!.note);
+    expect(en(section!.rows[0].label)).not.toBe(section!.rows[0].label);
+  });
+
   it("has English translations for every Thai row and section", () => {
     const en = translator("en");
     for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true, favourites: true, rivers: true })) {

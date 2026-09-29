@@ -14,6 +14,7 @@ type WaterLayers = {
   routes: SwitchRow;
   radar: SwitchRow & { available: boolean; ageKey: string; age: number; warn: boolean };
   rainAccum: SwitchRow & { status: "loading" | "shown" | "none" | "unavailable"; day: number; startDate: string };
+  satFlood: SwitchRow;
 };
 
 const FILTERS: { filter: DamFilter; label: string }[] = [
@@ -78,6 +79,8 @@ export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terra
         <p className="map-muted mt-2 text-xs">{t("พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม")}</p>
         {waterLayers.rainAccum.checked && waterLayers.rainAccum.status === "none" && <p className="mt-1 text-xs">{t(waterLayers.rainAccum.day > 0 ? "แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม. ในช่วงที่เลือก" : "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.")}</p>}
         {waterLayers.rainAccum.checked && waterLayers.rainAccum.status === "unavailable" && <p className="map-muted mt-1 text-xs">{t("ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน")}</p>}
+        {switchButton(waterLayers.satFlood)}
+        <p className="map-water-badge inline-block">{t("สังเกตจากดาวเทียม · ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น")}</p>
       </section>
     </>}
     <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-controls-title">

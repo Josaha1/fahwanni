@@ -42,6 +42,8 @@ import { useRiverLayer } from "./layers/use-river-layer";
 import { filterDams, type DamFilter } from "@/lib/water/find";
 import { useAllRoutesLayer } from "./layers/use-all-routes-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
+import { useSatelliteFloodLayer } from "./layers/use-satellite-flood-layer";
+import { floodDate } from "@/lib/map/gibs";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
@@ -120,6 +122,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(true);
+  const [satFloodOn, setSatFloodOn] = useState(true);
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
@@ -209,6 +212,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
+  useSatelliteFloodLayer(mapInstance, water && satFloodOn, nowMs);
   const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
     ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);
@@ -668,6 +672,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
+      satFloodDate: water && satFloodOn ? floodDate(nowMs) : undefined,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
@@ -680,7 +685,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn }}
       dialogRef={legendDialog} triggerRef={legendTrigger} />
     <LayersDialog mode={mode} primaryPicker={primaryPicker} overlays={layerOverlays}
       waterLayers={{
@@ -690,6 +695,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
           age: radarAge, warn: ageLabel.warn, onChange: () => setWaterRadar((on) => !on) },
         rainAccum: { label: "ฝนสะสม 3 วัน", checked: rainAccumOn, status: rainAccumStatus, day: waterDay,
           startDate: waterDate(nowMs, waterDay), onChange: () => setRainAccumOn((on) => !on) },
+        satFlood: { label: "น้ำท่วมจากดาวเทียม", checked: satFloodOn, onChange: () => setSatFloodOn((on) => !on) },
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
       fullscreen={immersive} onFullscreen={toggleFullscreen}

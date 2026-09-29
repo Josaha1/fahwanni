@@ -22,7 +22,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
@@ -47,6 +47,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
     </section>}
     {overlayLegend(active).map((section) => <section key={section.title} className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }}>
       <h3 className="text-sm font-semibold">{t(section.title)}</h3>
+      {section.note && <p className="map-muted mt-1 text-xs">{t(section.note)}</p>}
       <ul className="mt-2 space-y-2 text-sm">
         {section.rows.map((row) => <li key={row.label} className="flex items-center gap-3">
           <span className="flex w-6 shrink-0 items-center justify-center"><SwatchView swatch={row.swatch} /></span>

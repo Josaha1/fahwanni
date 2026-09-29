@@ -16,9 +16,9 @@ export type Swatch =
   | { kind: "pin" }
   | { kind: "favourite" }
   | { kind: "probe" };
-export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
+export type OverlayLegend = { title: string; note?: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -61,6 +61,9 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
   if (active.rainAccum) sections.push({ title: "ฝนสะสม 3 วัน (แบบจำลอง)", rows: [
     { swatch: { kind: "fill", color: "#f97316", opacity: 110 / 255 }, label: "90–149 มม." },
     { swatch: { kind: "fill", color: "#b91c1c", opacity: 140 / 255 }, label: "150 มม. ขึ้นไป" },
+  ] });
+  if (active.satFlood) sections.push({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
+    { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
   ] });
   return sections;
 }

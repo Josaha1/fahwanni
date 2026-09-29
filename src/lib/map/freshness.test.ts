@@ -23,4 +23,10 @@ describe("data freshness", () => {
     expect(freshnessRows({ warningAt: null })[5].none).toBe(true);
     expect(freshnessRows({})[5].none).toBe(false);
   });
+
+  it("shows the UTC flood observation date as a daily NASA row", () => {
+    const row = freshnessRows({ satFloodDate: "2026-09-28" }).find((item) => item.key === "sat-flood");
+    expect(row).toEqual({ key: "sat-flood", label: "น้ำท่วมจากดาวเทียม", source: "NASA LANCE / GIBS",
+      time: Date.parse("2026-09-28T00:00:00Z"), daily: true });
+  });
 });
