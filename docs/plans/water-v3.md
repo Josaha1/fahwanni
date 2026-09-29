@@ -50,6 +50,8 @@ Verified by Claude today (live requests):
   operations (Mae Klong 4,415 m³/s modelled while Srinagarind/Vajiralongkorn released ~23): ping-tak, nan-phitsanulok,
   pasak-saraburi, maeklong-ratchaburi, bangpakong-prachinburi. 11 points remain; Chao Phraya points carry
   downstreamOfDam = Bhumibol for the "ขึ้นกับการระบายของเขื่อน" note.
+- Task 4: instead of freezing 365 RID days of 2011, `/api/dams-history` fetches only two dates per day (same day last
+  year and in 2011), cached 24 h — kinder to RID and nothing to regenerate.
 
 ## Map page extras (added at the user's request "มีอะไรแนะนำเพิ่มเติมใส่มาได้เลย หน้าแผนที่")
 Water mode (8a–8e): forecast-day slider, all-routes overview, upstream dams per river point, filter chips + water
