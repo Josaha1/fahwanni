@@ -87,8 +87,8 @@ export function WeatherApp() {
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
         {showStormBanner && <StormBanner place={place} />}
-        {showStormBanner && <WaterNearYou place={place} />}
         <CurrentCard weather={weather} />
+        {showStormBanner && <WaterNearYou place={place} />}
         <SeasonChip lat={place.lat} lon={place.lon} />
         {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>

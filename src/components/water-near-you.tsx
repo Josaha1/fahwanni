@@ -12,8 +12,6 @@ import { statusWord } from "@/lib/rivers/status";
 import type { RiverStatus, RiverTrend } from "@/lib/rivers/types";
 import { distanceKm } from "@/lib/storms/normalize";
 import type { TmdWarnings } from "@/lib/tmd";
-import { diffSinceSeen, readSeen, type NewsItem } from "@/lib/water/whats-new";
-import { readWatch } from "@/lib/water/watchlist";
 
 type DamPathsFile = { type: "FeatureCollection"; features: DamPath[] };
 type RiverRow = { id: string; nameTh: string; nameEn: string; lat: number; lon: number;
@@ -71,56 +69,38 @@ export function WaterNearYou({ place }: { place: Place }) {
   }, [place, inThailand]);
 
   const data = inThailand && result?.lat === place.lat && result.lon === place.lon ? result : null;
-  if (!data || (!data.dams && !data.rivers && !data.warnings)) return null;
+  if (!data) return null;
 
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
   const nearbyRivers = (data.rivers?.points ?? []).map((point) => ({ point, km: distanceKm(place, point) }))
     .sort((a, b) => a.km - b.km || a.point.id.localeCompare(b.point.id));
   const nearest = nearbyRivers.find(({ point, km }) => km <= NEAR_RIVER_KM && point.summary)?.point ?? null;
-  const watch = readWatch();
-  const riverIds = new Set(nearbyRivers.slice(0, 3).map(({ point }) => point.id));
-  const newsItems: NewsItem[] = [
-    ...(data.rivers?.points ?? []).filter((point) => point.summary && (riverIds.has(point.id) || watch[`river:${point.id}`]))
-      .map((point) => ({ key: `river:${point.id}` as const, label: t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh,
-        value: point.summary!.today.value, unit: "cms" as const, status: statusWord(point.summary!.today.status), date: point.summary!.today.date })),
-    ...(data.dams?.dams ?? []).filter((dam) => watch[`dam:${dam.id}`])
-      .map((dam) => ({ key: `dam:${dam.id}` as const, label: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh,
-        value: dam.storagePct, unit: "pct" as const, date: dam.date })),
-  ];
-  const news = diffSinceSeen(readSeen(), newsItems)[0];
-  const borderColor = data.items.length || nearest?.summary?.today.status === "veryHigh"
+  const riverStatus = nearest?.summary?.today.status;
+  const riverSummary = nearest?.summary ? t("{name}: {status} {trend}", {
+    name: t.locale === "en" ? nearest.nameEn || nearest.nameTh : nearest.nameTh,
+    status: t(statusWord(nearest.summary.today.status)),
+    trend: nearest.summary.trend === "rising" ? "↗" : nearest.summary.trend === "falling" ? "↘" : "→",
+  }) : null;
+  const dam = data.items[0];
+  const detail = data.warnings?.items[0] ? `⚠ ${data.warnings.items[0].title}` : dam ? t("{name} กักเก็บ {pct}% · ระบาย {cms} ลบ.ม./วินาที · ~{km} กม.", {
+    name: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh,
+    pct: number.format(dam.storagePct),
+    cms: dam.releaseCms === null ? "—" : number.format(dam.releaseCms),
+    km: number.format(dam.kmToUser),
+  }) : null;
+  const borderColor = data.items.length || riverStatus === "veryHigh"
     ? "var(--zone-warn-ink)" : riverColors.normal;
 
-  return <section className="placeholder-card border-l-4" style={{ borderLeftColor: borderColor }} aria-label={t("น้ำใกล้คุณ")}>
-    <h2 className="text-lg">{t("น้ำใกล้คุณ")}</h2>
-    {nearest?.summary && <p className="mt-2 truncate text-sm">
-      <span style={{ color: riverColors[nearest.summary.today.status] }}>{t("{name}: {status} {trend}", {
-        name: t.locale === "en" ? nearest.nameEn || nearest.nameTh : nearest.nameTh,
-        status: t(statusWord(nearest.summary.today.status)),
-        trend: nearest.summary.trend === "rising" ? "↗" : nearest.summary.trend === "falling" ? "↘" : "→",
-      })}</span> <span className="text-muted">{t("(แบบจำลอง)")}</span>
-    </p>}
-    {data.items.length > 0 && <div className="mt-2 space-y-3">
-      {data.items.map((item) => {
-        const detail = [
-          t("กักเก็บ {n}%", { n: number.format(item.storagePct) }),
-          item.releaseCms === null ? null : t("ระบาย {n} ลบ.ม./วินาที", { n: number.format(item.releaseCms) }),
-        ].filter(Boolean).join(" · ");
-        return <div key={item.damId}>
-          <p className="font-semibold">{t("{name} · ห่างขึ้นไปตามลำน้ำ ~{km} กม.", {
-            name: t.locale === "en" ? item.nameEn || item.nameTh : item.nameTh,
-            km: number.format(item.kmToUser),
-          })}</p>
-          {detail && <p className="text-sm">{detail}</p>}
-          <a className="mt-1 inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given" href={`/map?ov=dams&dam=${encodeURIComponent(item.damId)}`}>{t("ดูทิศทางน้ำบนแผนที่")}</a>
-        </div>;
-      })}
-    </div>}
-    {news && <p className="mt-2 truncate text-sm"><span className="font-semibold">{t("มีอะไรใหม่")}: </span>{t(news.text, {
-      ...news.params, from: t(String(news.params.from ?? "—")), to: t(String(news.params.to ?? "—")),
-    })}</p>}
-    {data.warnings?.items[0] && <p className="mt-2 truncate text-sm">⚠ {data.warnings.items[0].title}</p>}
-    <Link className="mt-2 inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given" href="/water">{t("ดูสถานการณ์น้ำทั้งหมด")}</Link>
-    <p className="map-muted mt-2 text-xs text-muted">{t("ข้อมูล: กรมชลประทาน · แบบจำลอง GloFAS · ไม่ใช่การพยากรณ์น้ำท่วม")}</p>
-  </section>;
+  return <Link className="placeholder-card block min-h-11 border-l-4 px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given" style={{ borderLeftColor: borderColor }} href="/water"
+    aria-label={t("น้ำใกล้คุณ: {summary}", { summary: riverSummary ? `${riverSummary} ${t("(แบบจำลอง)")}` : detail ?? t("ดูสถานการณ์น้ำ") })}>
+    <span className="flex items-center justify-between gap-2 font-semibold">{t("น้ำใกล้คุณ")}<span aria-hidden="true">›</span></span>
+    {/* Each line clamps on its own, so the second line is never swallowed by a long first line. */}
+    <div className="mt-1 space-y-0.5 text-sm">
+      {riverSummary && riverStatus ? <p className="line-clamp-2">
+        <span className="mr-1 inline-block size-2 rounded-full" style={{ backgroundColor: riverColors[riverStatus] }} aria-hidden="true" />
+        {riverSummary} <span className="whitespace-nowrap text-muted">{t("(แบบจำลอง)")}</span>
+      </p> : !detail && <p>{t("ดูสถานการณ์น้ำ")}</p>}
+      {detail && <p className="line-clamp-1 text-muted">{detail}</p>}
+    </div>
+  </Link>;
 }
