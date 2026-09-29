@@ -76,7 +76,7 @@ export function MapProvider({ containerRef, initialCenter, initialZoom = 6, chil
         maxPitch: 60,
         maxBounds: [[80, -5], [130, 30]],
         pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
-        fadeDuration: 100,
+        fadeDuration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 100,
         attributionControl: false,
       });
       const live = created;

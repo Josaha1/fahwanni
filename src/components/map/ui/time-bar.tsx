@@ -1,16 +1,18 @@
 "use client";
 
 import { TZDate } from "@date-fns/tz";
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { useT } from "@/i18n/client";
-import { DAY, HOUR, dayLabel, handleLabel, snapStep, timeBadge, type TimeDomain } from "@/lib/timeline/time";
+import { nextTimeForKey } from "@/lib/timeline/keys";
+import { DAY, HOUR, MINUTE, dayLabel, handleLabel, snapStep, timeBadge, type TimeDomain } from "@/lib/timeline/time";
 
 const ZONE = "Asia/Bangkok";
 
-export function TimeBar({ domain, t: time, onChange, radarStart, radarTime, primary, lastAvailable, mode }: {
+export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, radarTime, primary, lastAvailable, mode }: {
   domain: TimeDomain;
   t: number;
   onChange: (t: number) => void;
+  onTogglePlay: () => void;
   radarStart?: number;
   radarTime?: number;
   primary: "rain" | "temp" | "pm25";
@@ -60,7 +62,7 @@ export function TimeBar({ domain, t: time, onChange, radarStart, radarTime, prim
     const target = Math.max(0, Math.min(1, (time - domain.start) / duration)) * trackWidth;
     if (Math.abs(viewport.current.scrollLeft - target) < 0.5) return;
     syncing.current = target;
-    viewport.current.scrollLeft = target;
+    viewport.current.scrollTo({ left: target, behavior: "auto" });
   }, [time, domain.start, duration, mode, trackWidth, width]);
 
   useEffect(() => () => { if (scheduled.current !== null) cancelAnimationFrame(scheduled.current); }, []);
@@ -83,8 +85,31 @@ export function TimeBar({ domain, t: time, onChange, radarStart, radarTime, prim
     if (!rect) return;
     onChange(snapStep(domain.start + (event.clientX - rect.left) / rect.width * duration, domain));
   };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === " " || event.key === "Spacebar") {
+      event.preventDefault();
+      onTogglePlay();
+      return;
+    }
+    const next = nextTimeForKey(event.key, event.shiftKey, time, domain);
+    if (next === null) return;
+    event.preventDefault();
+    if (next !== time) onChange(next);
+  };
   const badge = timeBadge(time, domain, { radarTime, onModelHour: time % HOUR === 0, primary });
   const unavailable = lastAvailable !== undefined && time > lastAvailable;
+  const label = handleLabel(time);
+  const valueText = `${t(label.key, label.params)} ${unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}`;
+  const slider = {
+    role: "slider" as const,
+    tabIndex: 0,
+    "aria-label": t("เวลาบนแผนที่"),
+    "aria-valuemin": 0,
+    "aria-valuemax": Math.round(duration / MINUTE),
+    "aria-valuenow": Math.round((time - domain.start) / MINUTE),
+    "aria-valuetext": valueText,
+    onKeyDown,
+  };
   const marks = <>
     {radarStart !== undefined && <span className="map-time-radar" style={{ left: percent(radarStart), width: `${Math.max(0, position(domain.now) - position(radarStart)) * 100}%` }} />}
     {lastAvailable !== undefined && lastAvailable < domain.end && <span className="map-time-unavailable" style={{ left: percent(lastAvailable), right: 0 }} />}
@@ -109,14 +134,14 @@ export function TimeBar({ domain, t: time, onChange, radarStart, radarTime, prim
 
   return <div className={`map-time-bar map-time-bar--${mode}`}>
     <div className="map-time-heading">
-      <strong>{t(handleLabel(time).key, handleLabel(time).params)}</strong>
+      <strong>{t(label.key, label.params)}</strong>
       <small>{unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}</small>
     </div>
-    {mode === "fit" ? <div ref={track} className="map-time-track" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); onPointer(event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) onPointer(event); }}>
+    {mode === "fit" ? <div {...slider} ref={track} className="map-time-track" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); onPointer(event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) onPointer(event); }}>
       {marks}
       <span className="map-time-handle" style={{ left: percent(time) }}><span /></span>
     </div> : <div className="map-time-scroll-wrap">
-      <div ref={viewport} className="map-time-viewport" onScroll={onScroll}>
+      <div {...slider} ref={viewport} className="map-time-viewport" onScroll={onScroll}>
         <div className="map-time-scroll-content" style={{ paddingInline: width / 2 }}>
           <div className="map-time-track" style={{ width: trackWidth }}>{marks}</div>
         </div>

@@ -381,15 +381,16 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   };
   const compact = !isDesktop && visibleSheetPosition === "peek";
   const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion}
-    aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} className="map-play shrink-0 disabled:opacity-50">
+    aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} aria-pressed={playing} className="map-play shrink-0 disabled:opacity-50">
     {playing ? "Ⅱ" : "▶"}
   </button>;
   const timeline = <div className="map-time-layout">
     <div className="map-time-actions">
       {playButton}
-      {timeMs !== null && Math.abs(effectiveTime - nowMs) >= MINUTE && <button type="button" className="map-chip map-time-now-button" onClick={() => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: null }); }}>{t("ตอนนี้")}</button>}
+      {timeMs !== null && Math.abs(effectiveTime - nowMs) >= MINUTE && <button type="button" className="map-chip map-time-now-button" aria-label={t("กลับไปเวลาปัจจุบัน")} onClick={() => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: null }); }}>{t("ตอนนี้")}</button>}
     </div>
     <TimeBar domain={domain} t={effectiveTime} onChange={(value) => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: value }); }}
+      onTogglePlay={() => { if (!reducedMotion) dispatch({ type: "togglePlay" }); }}
       radarStart={frames[0] ? Date.parse(frames[0].time) : undefined}
       radarTime={rainSource.kind === "radar" ? rainSource.frameTime : undefined} primary={primary}
       lastAvailable={primary === "pm25" && pm25LoadedDays.includes(4) ? pm25LastAvailable ?? undefined : undefined}

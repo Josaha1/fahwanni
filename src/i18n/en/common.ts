@@ -312,6 +312,8 @@ export const common: Record<string, string> = {
   "วันนี้": "Today",
   "พรุ่งนี้": "Tomorrow",
   "ตอนนี้": "Now",
+  "เวลาบนแผนที่": "Map time",
+  "กลับไปเวลาปัจจุบัน": "Return to current time",
   "ไม่มีข้อมูล": "No data",
   "{day} {time}": "{day} {time}",
   "{day} {date} {month}": "{day} {date} {month}",
