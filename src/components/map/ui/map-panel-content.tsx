@@ -2,12 +2,11 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, desktop, timeline, waterStepper, legend, details, card, water, freshness, onProbeCenter }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, legend, details, card, water, freshness, onProbeCenter }: {
   placeName: string;
   compact: boolean;
   desktop: boolean;
   timeline: ReactNode;
-  waterStepper: ReactNode;
   /** Phone-only colour key, shown right after the time bar so it stays visible in the peek. */
   legend: ReactNode;
   details: ReactNode;
@@ -23,7 +22,6 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, waterSt
     <>
       <h1 className="sr-only">{t("แผนที่")} · {placeName}</h1>
       {desktop && <div className="mb-3"><MapSearchPill placeName={placeName} /></div>}
-      {water && waterStepper}
       {card}
       {water ?? <>
         {timeline}

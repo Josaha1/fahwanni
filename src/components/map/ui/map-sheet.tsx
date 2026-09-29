@@ -8,8 +8,9 @@ export type SheetPosition = "peek" | "half";
 /** Pixels of vertical drag on the handle that switch between peek and half. */
 const DRAG_THRESHOLD = 32;
 
-export function MapSheet({ position, onPositionChange, children }: {
+export function MapSheet({ position, mode, onPositionChange, children }: {
   position: SheetPosition;
+  mode: "weather" | "water";
   onPositionChange: (position: SheetPosition) => void;
   children: ReactNode;
 }) {
@@ -48,7 +49,7 @@ export function MapSheet({ position, onPositionChange, children }: {
   };
 
   return (
-    <section ref={sheet} id="map-timeline-details" className="map-panel map-sheet" aria-label={t("แผนที่")} data-position={position}>
+    <section ref={sheet} id="map-timeline-details" className="map-panel map-sheet" aria-label={t("แผนที่")} data-position={position} data-mode={mode}>
       <button type="button" className="map-sheet-grip" aria-controls="map-timeline-details" aria-expanded={position === "half"}
         aria-label={position === "half" ? t("ย่อแผง") : t("ขยายแผง")}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}

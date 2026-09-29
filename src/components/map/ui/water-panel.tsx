@@ -1,14 +1,12 @@
-import { useState, useSyncExternalStore, type RefObject } from "react";
+import { useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useT } from "@/i18n/client";
 import { damBandColor } from "@/lib/dams/bands";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { Dam } from "@/lib/dams/types";
 import { nearestDams, waterSummary } from "@/lib/dams/summary";
 import { watchRows, type WaterWatch } from "@/lib/water/watchlist";
-import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate, formatTime } from "@/lib/format";
 import type { Place } from "@/lib/place";
-import { provinces } from "@/lib/provinces";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { visibleWarnings, type TmdWarnings } from "@/lib/tmd";
 import { DamLegendStrip } from "./legend-chip";
@@ -30,8 +28,8 @@ function subscribeOnline(onChange: () => void) {
   return () => { window.removeEventListener("online", onChange); window.removeEventListener("offline", onChange); };
 }
 
-export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay,
-  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, riverPoints, onSelectRiver }: {
+export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, waterDay,
+  stepper, legendButton, onOpenLegend, riverPoints, onSelectRiver }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
@@ -41,12 +39,10 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   place: Place;
   placeName: string;
   onSelectDam: (id: string) => void;
-  onSelectRain: (id: string) => void;
   waterDay: number;
+  stepper: ReactNode;
   legendButton: RefObject<HTMLButtonElement | null>;
   onOpenLegend: () => void;
-  showAllRainProvinces: boolean;
-  onShowAllRainProvinces: () => void;
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
   onSelectRiver: (id: string) => void;
 }) {
@@ -62,11 +58,12 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   const summary = damsStatus === "ready" && dams ? waterSummary(dams.dams, waterDay === 0 && rainRiskStatus === "ready" && rainRisk ? rainRisk.stations : null) : null;
   const nearby = damsStatus === "ready" && dams ? nearestDams(dams.dams, place) : [];
   const watched = damsStatus === "ready" && dams ? watchRows(watch, dams.dams.map((dam) => ({ kind: "dam" as const, id: dam.id, value: dam.storagePct, unit: "pct" as const, date: dam.date, dam }))) : [];
-  const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
-    .sort((a, b) => b.rainMm - a.rainMm);
   const percent = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
 
-  return <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
+  return <section className="map-water-panel flex flex-col gap-1 text-sm" aria-label={t("สถานการณ์น้ำ")}>
+    {stepper}
+    <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
+    {summary && <p className="text-xs leading-relaxed">{t("น้ำมาก")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
     {damsStatus === "ready" && dams ? <>
       <p className={`flex flex-wrap items-center gap-2${online ? "" : " map-warning"}`}>
         <span className="map-water-badge">{t("สังเกต")}</span>
@@ -80,10 +77,6 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
       {waterDay > 0 && dams.dataDate && <p className="map-muted text-xs">{t("เขื่อนแสดงข้อมูลวัดจริงวันที่ {date} — ไม่ใช่พยากรณ์", { date: formatFullDate(`${dams.dataDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
-    <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
-    {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams}
-      riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver} />}
-    {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
     {watched.length > 0 && <section aria-labelledby="map-watched-dams">
       <h2 id="map-watched-dams" className="font-semibold">{t("เขื่อนที่ติดตาม")}</h2>
       <ul className="mt-2 space-y-1">{watched.map(({ item: { dam }, change, since }) => <li key={dam.id}>
@@ -106,28 +99,8 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
         </button>
       </li>)}</ul>
     </section>}
-    {waterDay === 0 && <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-rain-risk">
-      <h2 id="map-rain-risk" className="font-semibold">{t("ฝนหนัก 24 ชม. (กรมอุตุฯ)")} <span className="map-water-badge">{t("สังเกต")}</span></h2>
-      {rainRiskStatus === "ready" && rainRisk ? <>
-        {rainProvinces.length ? <>
-          <ul className="mt-2 space-y-1">{(showAllRainProvinces ? rainProvinces : rainProvinces.slice(0, 8)).map((station) => <li key={station.provinceTh}>
-            <button type="button" className="map-chip flex w-full justify-between gap-2 text-left" onClick={() => onSelectRain(station.id)}>
-              <span>{station.provinceTh === "กรุงเทพมหานคร" ? t.locale === "en" ? "Bangkok" : station.provinceTh : t("จ.{province}", { province: t.locale === "en" ? provinces.find((item) => item.th === station.provinceTh)?.en ?? station.provinceTh : station.provinceTh })}</span>
-              <span>{t("{mm} มม. · {category}", { mm: station.rainMm, category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span>
-            </button>
-          </li>)}</ul>
-          {!showAllRainProvinces && rainProvinces.length > 8 && <button type="button" className="map-chip mt-2 w-full" onClick={onShowAllRainProvinces}>{t("แสดงทั้งหมด ({n})", { n: rainProvinces.length })}</button>}
-        </> : <p className="map-muted mt-2">{t("ไม่มีสถานีที่ฝน 24 ชม. เข้าเกณฑ์ฝนหนัก ({n} สถานี)", { n: rainRisk.reporting })}</p>}
-        {rainRisk.observedAt && <p className="map-muted mt-2 text-xs">{t("ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
-      </> : <p className="map-muted mt-2" role="status">{t(rainRiskStatus === "error" ? "ข้อมูลฝนหนักไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลฝนหนัก…")}</p>}
-    </section>}
-    <details className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }}>
-      <summary className="cursor-pointer font-semibold">{t("เบอร์ฉุกเฉิน")}</summary>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {EMERGENCY_NUMBERS.map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t(label)}</a>)}
-      </div>
-    </details>
-    <p className="map-muted text-xs">{t("แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ")}</p>
+    {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams}
+      riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver} />}
   </section>;
 }
 

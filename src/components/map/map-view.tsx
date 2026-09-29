@@ -126,7 +126,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const rainVisible = !water && primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
-  const [showAllRainProvinces, setShowAllRainProvinces] = useState(false);
   const layersDialog = useRef<HTMLDialogElement>(null);
   const layersButton = useRef<HTMLButtonElement>(null);
   const legendButton = useRef<HTMLButtonElement>(null);
@@ -608,13 +607,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     legendDialog.current?.showModal();
   };
   const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay}
-    place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
-    showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
+    place={place} placeName={placeName} stepper={isDesktop ? null : waterStepper} legendButton={legendButton} onOpenLegend={openLegend}
     onSelectDam={(id) => {
       select({ kind: "dam", id });
       const dam = dams?.dams.find((item) => item.id === id);
       if (dam) mapInstance?.easeTo({ center: [dam.lon, dam.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
-    }} onSelectRain={(id) => select({ kind: "rain", id })}
+    }}
     riverPoints={rivers?.points ?? []}
     onSelectRiver={(id) => {
       select({ kind: "river", id });
@@ -666,7 +664,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isDesktop, mode, water, waterDay, domain, effectiveTime, reducedMotion, changeMode]);
   const showLegend = mapState.primary !== "rain" || rainOn;
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} waterStepper={!isDesktop && water ? waterStepper : null}
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} card={card} water={waterPanel || null}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
@@ -697,7 +695,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       fullscreen={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
     <ShortcutsDialog dialogRef={shortcutsDialog} triggerRef={shortcutsTrigger} />
-    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
+    {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} mode={mode} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}
     {isDesktop && water && <div className="map-panel map-time-floating">{waterStepper}</div>}
     {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
