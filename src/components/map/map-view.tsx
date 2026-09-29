@@ -67,6 +67,7 @@ import { DataFreshness } from "./ui/data-freshness";
 import { freshnessRows } from "@/lib/map/freshness";
 import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
+import { LayersDialog } from "./ui/layers-dialog";
 import { ShortcutsDialog } from "./ui/shortcuts-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
@@ -126,8 +127,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
   const [showAllRainProvinces, setShowAllRainProvinces] = useState(false);
-  const focusLayers = useRef(false);
+  const layersDialog = useRef<HTMLDialogElement>(null);
+  const layersButton = useRef<HTMLButtonElement>(null);
   const legendButton = useRef<HTMLButtonElement>(null);
+  const legendTrigger = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
   const shortcutsDialog = useRef<HTMLDialogElement>(null);
   const shortcutsButton = useRef<HTMLButtonElement>(null);
@@ -417,7 +420,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       mapInstance?.resize();
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !immersive || probe || legendDialog.current?.open) return;
+      if (event.key !== "Escape" || !immersive || probe || legendDialog.current?.open || layersDialog.current?.open) return;
       setImmersive(false);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     };
@@ -500,31 +503,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     }
   };
 
-  useEffect(() => {
-    if (!focusLayers.current || (!isDesktop && visibleSheetPosition !== "half")) return;
-    const frame = window.requestAnimationFrame(() => {
-      const heading = document.getElementById("map-layers");
-      heading?.scrollIntoView({ block: "nearest" });
-      heading?.focus({ preventScroll: true });
-      focusLayers.current = false;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [isDesktop, visibleSheetPosition]);
-
   const setPosition = (position: SheetPosition) => {
     setSheetPosition(position);
     rememberSheetPosition(position);
   };
-  const openLayers = () => {
-    focusLayers.current = true;
-    if (!isDesktop && sheetPosition !== "half") setPosition("half");
-    else {
-      const heading = document.getElementById("map-layers");
-      heading?.scrollIntoView({ block: "nearest" });
-      heading?.focus({ preventScroll: true });
-      focusLayers.current = false;
-    }
-  };
+  const openLayers = () => layersDialog.current?.showModal();
   const compact = !isDesktop && visibleSheetPosition === "peek";
   const playButton = <button type="button" onClick={() => dispatch({ type: "togglePlay" })} disabled={reducedMotion}
     aria-label={playing ? t("หยุดภาพเรดาร์") : t("เล่นภาพเรดาร์")} aria-pressed={playing} className="map-play shrink-0 disabled:opacity-50">
@@ -596,16 +579,16 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       {ageLabel.warn && <span aria-hidden="true">⚠ </span>}{t(ageLabel.key, { n: radarAge })}
     </p>}
   </div>;
-  const layers = <>
-    {primary === "rain" && <button type="button" disabled={!radarAvailable} aria-pressed={radarAvailable && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
-      {radarAvailable ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
-    </button>}
-    <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn} onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })} className="map-chip text-sm disabled:opacity-60">
-      {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
-    </button>
-    {storms.length > 0 && <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })} className="map-chip text-sm">{t("พายุ")} ({storms.length})</button>}
-    {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
-  </>;
+  const layerOverlays = [
+    ...(primary === "rain" ? [{ label: "เรดาร์ฝน", checked: radarAvailable && rainVisible, disabled: !radarAvailable,
+      onChange: () => dispatch({ type: "toggleRain" }) }] : []),
+    { label: "ลม", checked: Boolean(wind) && windOn, disabled: !wind,
+      onChange: () => dispatch({ type: "toggleOverlay", key: "wind" }) },
+    ...(storms.length > 0 ? [{ label: "พายุ", count: storms.length, checked: stormsOn,
+      onChange: () => dispatch({ type: "toggleOverlay", key: "storms" }) }] : []),
+    ...(quakes.length > 0 ? [{ label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
+      onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),
+  ];
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} waterDay={waterDay}
@@ -613,12 +596,17 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
     onSelectDam={(id) => select({ kind: "dam", id })} />;
-  const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
+  const primaryPicker = <PrimaryPicker variant="grid" primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
     cloudAvailable={Boolean(windSeries?.grids.cloud?.some((row) => row.length > 0))}
     pm25Loading={pm25Loading} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });
     }} />;
-  const openLegend = () => legendDialog.current?.showModal();
+  const openLegend = () => { legendTrigger.current = legendButton.current; legendDialog.current?.showModal(); };
+  const openLegendFromLayers = () => {
+    layersDialog.current?.close();
+    legendTrigger.current = layersButton.current;
+    legendDialog.current?.showModal();
+  };
   const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay} rainStartDate={waterDate(nowMs, waterDay)}
     allRoutes={allRoutes} onToggleAllRoutes={() => dispatch({ type: "toggleAllRoutes" })} rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
@@ -650,7 +638,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useEffect(() => {
     if (!isDesktop) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || shortcutsDialog.current?.open) return;
+      if (event.defaultPrevented || shortcutsDialog.current?.open || legendDialog.current?.open || layersDialog.current?.open) return;
       // Keep Space's native button activation; arrow keys in picker/stepper handle their own focus.
       if (event.key === " " && event.target instanceof HTMLButtonElement) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
@@ -681,16 +669,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isDesktop, mode, water, waterDay, domain, effectiveTime, reducedMotion, changeMode]);
   const showLegend = mapState.primary !== "rain" || rainOn;
-  const more = <>
-    {terrainOk && <button type="button" className="map-chip text-sm" aria-pressed={terrainOn}
-      onClick={() => dispatch({ type: "toggleOverlay", key: "terrain" })}>{t("แผนที่ 3 มิติ")}</button>}
-    <button type="button" className="map-chip text-sm" aria-pressed={immersive} onClick={toggleFullscreen}>{immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ")}</button>
-    <button type="button" className="map-chip text-sm" onClick={shareView}>{t("แชร์มุมมองนี้")}</button>
-    <button type="button" className="map-chip text-sm disabled:opacity-60" onClick={shareMapImage} disabled={makingImage}>{t("แชร์ภาพแผนที่")}</button>
-  </>;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} waterStepper={!isDesktop && water ? waterStepper : null}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
-    details={details} primaryPicker={primaryPicker} layers={layers} card={card} water={waterPanel || null} more={isDesktop ? null : more}
+    details={details} card={card} water={waterPanel || null}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
@@ -705,14 +686,18 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
     <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
-      dialogRef={legendDialog} triggerRef={legendButton} />
+      dialogRef={legendDialog} triggerRef={legendTrigger} />
+    <LayersDialog mode={mode} primaryPicker={primaryPicker} overlays={layerOverlays}
+      terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
+      fullscreen={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
+      onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
     <ShortcutsDialog dialogRef={shortcutsDialog} triggerRef={shortcutsTrigger} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}
     {isDesktop && water && <div className="map-panel map-time-floating">{waterStepper}</div>}
     {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
-    <ActionRail compact={!isDesktop} onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
+    <ActionRail compact={!isDesktop} onLayers={openLayers} layersButton={(element) => { layersButton.current = element; }} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
       immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
       onShortcuts={openShortcuts} shortcutsButton={(element) => { shortcutsButton.current = element; }} />

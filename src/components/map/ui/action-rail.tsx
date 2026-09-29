@@ -1,9 +1,10 @@
 import { useT } from "@/i18n/client";
 
-export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage, onShortcuts, shortcutsButton }: {
-  /** Phones: only the layers button; 3D, fullscreen and share move to the sheet's "เพิ่มเติม" row. */
+export function ActionRail({ compact, onLayers, layersButton, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage, onShortcuts, shortcutsButton }: {
+  /** Phones: the layers dialog holds map and sharing controls. */
   compact: boolean;
   onLayers: () => void;
+  layersButton: (element: HTMLButtonElement | null) => void;
   terrainOk: boolean;
   terrainOn: boolean;
   onTerrain: () => void;
@@ -20,7 +21,7 @@ export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain,
   const fullscreenLabel = immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ");
   return (
     <div className="map-action-rail">
-      <button type="button" className="map-icon-btn" onClick={onLayers} aria-label={t("ชั้นข้อมูล")} title={t("ชั้นข้อมูล")}>
+      <button ref={layersButton} type="button" className="map-icon-btn" onClick={onLayers} aria-label={t("ชั้นข้อมูล")} title={t("ชั้นข้อมูล")} aria-haspopup="dialog" aria-controls="map-layers-dialog">
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
         </svg>
