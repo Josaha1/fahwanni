@@ -357,6 +357,7 @@ export const common: Record<string, string> = {
   "ยังไม่มีข้อมูลเปลี่ยนแปลง": "No changes yet",
   "ข้อมูลการเปลี่ยนแปลงไม่พร้อมใช้งาน": "Change data is unavailable",
   "แม่น้ำใกล้คุณ": "Rivers near you",
+  "ปริมาณน้ำไหลผ่าน (แบบจำลอง)": "River discharge (modelled)",
   "กราฟปริมาณน้ำไหลผ่าน 7 วัน": "7-day river discharge chart",
   "ต่ำกว่าปกติ": "Below normal",
   "ปกติ": "Normal",
@@ -444,4 +445,5 @@ export const common: Record<string, string> = {
   "ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "Data: Royal Irrigation Department, Thai Meteorological Department, Open-Meteo · River paths: HydroRIVERS (CC BY 4.0)",
   "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)": "Moving dashes = direction of flow (thicker = larger release)",
   "{mm} มม.": "{mm} mm",
+  "ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน": "This number alone does not tell whether flooding will occur; 2011 flooded through rain, full dams and timing together",
 };

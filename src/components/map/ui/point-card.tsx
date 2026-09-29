@@ -31,6 +31,7 @@ import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import { readRadarLevel } from "../radar-tile";
+import { RiverDetails, type RiversPayload } from "@/components/water/river-details";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
@@ -42,7 +43,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
-  watch, onToggleWatch, downstream, pathActive, pathLoading, onTogglePath }: {
+  rivers, riversStatus, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
@@ -61,8 +62,11 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   dams: DamsPayload | null;
   damsTrend: DamTrend | null;
   damsHistory: DamHistory | null;
+  rivers: RiversPayload | null;
+  riversStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
   onToggleWatch: (dam: Dam) => void;
+  onToggleRiverWatch: (id: string) => void;
   rainRisk: RainRisk | null;
   downstream: Downstream | null;
   pathActive: boolean;
@@ -95,6 +99,8 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
     return [{ label, date: entry.date, value, change }];
   }) : [];
   const rainStation = probe.kind === "rain" ? rainRisk?.stations.find((item) => item.id === probe.id) : undefined;
+  const river = probe.kind === "river" ? rivers?.points.find((item) => item.id === probe.id) : undefined;
+  const upstream = river?.downstreamOfDam ? dams?.dams.find((item) => item.id === river.downstreamOfDam) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
   const geo = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
@@ -127,8 +133,10 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   else if (quake) title = t("แผ่นดินไหว M{mag}", { mag: quake.mag });
   else if (selectedDam) title = t.locale === "en" ? selectedDam.nameEn || selectedDam.nameTh : selectedDam.nameTh;
   else if (rainStation) title = t.locale === "en" ? rainStation.nameEn || rainStation.nameTh : rainStation.nameTh;
+  else if (river) title = t.locale === "en" ? river.nameEn || river.nameTh : river.nameTh;
   else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
   else if (probe.kind === "rain") title = t("ไม่พบข้อมูลฝนของสถานีนี้");
+  else if (probe.kind === "river") title = t("แม่น้ำใกล้คุณ");
 
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">
@@ -137,6 +145,9 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
         {dam && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `dam:${dam.id}`)}
           aria-label={t(Object.hasOwn(watch, `dam:${dam.id}`) ? "เลิกติดตามเขื่อนนี้" : "ติดตามเขื่อนนี้")}
           onClick={() => onToggleWatch(dam)}>{Object.hasOwn(watch, `dam:${dam.id}`) ? "★" : "☆"}</button>}
+        {river?.summary && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `river:${river.id}`)}
+          aria-label={t(Object.hasOwn(watch, `river:${river.id}`) ? "เลิกติดตามแม่น้ำนี้" : "ติดตามแม่น้ำนี้")}
+          onClick={() => onToggleRiverWatch(river.id)}>{Object.hasOwn(watch, `river:${river.id}`) ? "★" : "☆"}</button>}
         <button type="button" className="map-icon-btn" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
       </div>
     </div>
@@ -224,6 +235,8 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
+    {river && <RiverDetails point={river} upstream={upstream} mapCard />}
+    {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;
 }
 

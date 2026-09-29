@@ -11,21 +11,12 @@ import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate } from "@/lib/format";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { distanceKm } from "@/lib/storms/normalize";
-import { rareLevelWord, statusWord } from "@/lib/rivers/status";
-import { riverColors } from "@/lib/rivers/colors";
-import type { RiverBand, RiverStatus, RiverTrend } from "@/lib/rivers/types";
+import { statusWord } from "@/lib/rivers/status";
 import type { TmdWarnings } from "@/lib/tmd";
 import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/lib/water/whats-new";
 import { readWatch, refreshWatch, toggleWatch, watchRows, writeWatch, type WaterWatch, type WatchItem } from "@/lib/water/watchlist";
 import { TmdWarningList } from "./tmd-warnings";
-
-type RiverRow = {
-  id: string; nameTh: string; nameEn: string; lat: number; lon: number; downstreamOfDam: string | null;
-  summary: null | { today: { date: string; value: number; status: RiverStatus }; trend: RiverTrend | null;
-    peak: { date: string; value: number } | null; rare: "about5y" | "yearly" | null;
-    value2554Today: number | null; days: { date: string; value: number; doyBand: RiverBand }[] };
-};
-type RiversPayload = { today: string; points: RiverRow[] };
+import { RiverDetails, riverDateLabel, type RiversPayload } from "./river-details";
 type Load<T> = { status: "loading" | "ready" | "error"; data: T | null };
 
 function useWaterSource<T>(url: string, valid: (value: T) => boolean): Load<T> {
@@ -53,36 +44,6 @@ function subscribeWater(onChange: () => void) {
   window.addEventListener("fah-water-seen-change", onChange);
   window.addEventListener("fah-water-watch-change", onChange);
   return () => { window.removeEventListener("storage", onChange); window.removeEventListener("fah-water-seen-change", onChange); window.removeEventListener("fah-water-watch-change", onChange); };
-}
-
-function dateLabel(date: string, locale: "th" | "en") {
-  return formatFullDate(`${date}T12:00:00+07:00`, "Asia/Bangkok", locale);
-}
-
-function RiverChart({ days, color }: { days: NonNullable<RiverRow["summary"]>["days"]; color: string }) {
-  const t = useT();
-  const shown = days.slice(0, 7);
-  if (!shown.length) return null;
-  // Scale to the data and the normal band (not from zero) so a week's change is visible.
-  const values = shown.flatMap((day) => [day.value, day.doyBand?.p25 ?? day.value, day.doyBand?.p75 ?? day.value]);
-  const low = Math.min(...values), high = Math.max(...values);
-  const pad = Math.max((high - low) * 0.15, high * 0.02, 1);
-  const floor = Math.max(0, low - pad), ceiling = high + pad;
-  const y = (value: number) => 6 + (1 - (value - floor) / (ceiling - floor)) * 44;
-  const x = (index: number) => 6 + index * (148 / Math.max(1, shown.length - 1));
-  const banded = shown.every((day) => day.doyBand);
-  const band = banded ? [
-    ...shown.map((day, index) => `${x(index)},${y(day.doyBand.p75)}`),
-    ...shown.map((day, index) => `${x(index)},${y(day.doyBand.p25)}`).reverse(),
-  ].join(" ") : null;
-  const weekday = (date: string) => new Intl.DateTimeFormat(t.intl, { weekday: "short", timeZone: "Asia/Bangkok" })
-    .format(new Date(`${date}T12:00:00+07:00`));
-  return <svg className="mt-2 w-full" viewBox="0 0 160 64" role="img" aria-label={t("กราฟปริมาณน้ำไหลผ่าน 7 วัน")}>
-    {band && <polygon points={band} fill="currentColor" opacity="0.12" />}
-    <polyline points={shown.map((day, index) => `${x(index)},${y(day.value)}`).join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    {shown.map((day, index) => <circle key={day.date} cx={x(index)} cy={y(day.value)} r="1.8" fill={color}><title>{day.date}: {day.value.toFixed(0)} m³/s; p25–p75 {day.doyBand?.p25.toFixed(0)}–{day.doyBand?.p75.toFixed(0)}</title></circle>)}
-    {shown.map((day, index) => <text key={`label-${day.date}`} x={x(index)} y="62" textAnchor="middle" fontSize="6" fill="currentColor" opacity="0.6">{weekday(day.date)}</text>)}
-  </svg>;
 }
 
 export function WaterPage() {
@@ -182,16 +143,8 @@ export function WaterPage() {
               <div><h3 className="font-semibold">{t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh}</h3><p className="text-muted text-xs">{t("{km} กม.", { km: number.format(km) })}</p></div>
               {detail && <button type="button" className="min-h-11 min-w-11 text-xl" aria-label={t(watchedNow ? "เลิกติดตามแม่น้ำนี้" : "ติดตามแม่น้ำนี้")} aria-pressed={watchedNow} onClick={() => changeWatch({ kind: "river", id: point.id, value: detail.today.value, unit: "cms", date: detail.today.date })}>{watchedNow ? "★" : "☆"}</button>}
             </div>
-            {detail ? <div className="mt-1 space-y-1 text-sm">
-              <p><span className="font-semibold" style={{ color: riverColors[detail.today.status] }}>{t(statusWord(detail.today.status))}</span> · {t("{value} ลบ.ม./วินาที (แบบจำลอง)", { value: number.format(detail.today.value) })} <span aria-label={t(detail.trend === "rising" ? "กำลังเพิ่ม" : detail.trend === "falling" ? "กำลังลด" : "คงที่")}>{detail.trend === "rising" ? "↗" : detail.trend === "falling" ? "↘" : "→"}</span></p>
-              <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: dateLabel(detail.today.date, t.locale) })}</p>
-              <RiverChart days={detail.days} color={riverColors[detail.today.status]} />
-              <p className="text-muted text-xs">{t("เส้น: ปริมาณน้ำไหลผ่านแบบจำลอง · แถบ: ช่วงปกติ p25–p75")}</p>
-              {detail.peak && <p>{t("สูงสุดใน 7 วัน {value} วันที่ {date}", { value: number.format(detail.peak.value), date: dateLabel(detail.peak.date, t.locale) })}</p>}
-              {detail.rare && <p>{t(rareLevelWord(detail.rare))}</p>}
-              {upstream && <p>{t("ปริมาณจริงขึ้นกับการระบายของเขื่อน{name} (ระบาย {release} ลบ.ม./วินาที)", { name: t.locale === "en" ? upstream.nameEn || upstream.nameTh : upstream.nameTh, release: upstream.releaseCms === null ? "—" : number.format(upstream.releaseCms) })}</p>}
-              {detail.value2554Today !== null && <p>{t("วันนี้ปี 2554: {value} ลบ.ม./วินาที", { value: number.format(detail.value2554Today) })}</p>}
-            </div> : <p className="text-muted text-sm">{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p>}
+            <RiverDetails point={point} upstream={upstream} />
+            <Link className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-given underline underline-offset-2" href={`/map?mode=water&river=${encodeURIComponent(point.id)}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t("ดูบนแผนที่")}</Link>
           </li>;
         })}</ul>
         {!showAll && nearbyRivers.length > 3 && <button type="button" className="min-h-11 font-semibold text-given underline" onClick={() => setShowAll(true)}>{t("ดูทุกจุด ({n})", { n: nearbyRivers.length })}</button>}
@@ -206,7 +159,7 @@ export function WaterPage() {
           const river = item.kind === "river" ? rivers.data?.points.find((entry) => entry.id === item.id) : null;
           return <li key={`${item.kind}:${item.id}`} className="flex flex-wrap justify-between gap-1 py-2 text-sm">
             <span>{dam ? t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh : river ? t.locale === "en" ? river.nameEn || river.nameTh : river.nameTh : item.id}</span>
-            <span>{oneDecimal.format(item.value)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{change !== null && <span className="text-muted"> · {change > 0 ? "+" : ""}{oneDecimal.format(change)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{since && ` (${dateLabel(since, t.locale)})`}</span>}</span>
+            <span>{oneDecimal.format(item.value)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{change !== null && <span className="text-muted"> · {change > 0 ? "+" : ""}{oneDecimal.format(change)} {item.unit === "pct" ? "%" : t("ลบ.ม./วินาที")}{since && ` (${riverDateLabel(since, t.locale)})`}</span>}</span>
           </li>;
         })}</ul> : <p className="text-muted text-sm">{t("ยังไม่มีรายการติดตาม")}</p>}
     </section>
@@ -214,9 +167,9 @@ export function WaterPage() {
       <h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
       {sourceLine(dams.status, "กำลังโหลดข้อมูลเขื่อน…", "ข้อมูลเขื่อนไม่พร้อมใช้งาน")}
       {summary && <>
-        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: dateLabel(dams.data.dataDate, t.locale) })}</p>}
+        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}</p>}
         <p className="text-muted text-sm">{t("เขื่อนน้ำมาก (เกิน 80%)")} {summary.over80} · {t("เกินความจุ")} {summary.over100} · {t("ระบายน้ำมาก")} {summary.highRelease}{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} {summary.heavyRain}</>}</p>
-        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span>{t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh} · {t("{km} กม.", { km: number.format(km) })}</span><span className="font-semibold" style={{ color: damBandColor(dam.band) }}>● {oneDecimal.format(dam.storagePct)}%</span><span className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: dateLabel(dam.date, t.locale) })}</span></li>)}</ul>
+        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"><span>{t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh} · {t("{km} กม.", { km: number.format(km) })}</span><span className="font-semibold" style={{ color: damBandColor(dam.band) }}>● {oneDecimal.format(dam.storagePct)}%</span><span className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: riverDateLabel(dam.date, t.locale) })}</span></li>)}</ul>
       </>}
     </section>
     <section className="placeholder-card space-y-2" aria-label={t("ฝนหนัก 24 ชม. ใกล้คุณ")}>

@@ -36,6 +36,7 @@ import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
+import { useRiverLayer } from "./layers/use-river-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
@@ -92,9 +93,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
-  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
   const [watch, setWatch] = useState(readWatch);
   const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, { kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }));
+  const toggleRiverWatch = (id: string) => {
+    const detail = rivers?.points.find((point) => point.id === id)?.summary;
+    if (detail) setWatch((current) => toggleWatch(current, { kind: "river", id, value: detail.today.value, unit: "cms", date: detail.today.date }));
+  };
   useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
@@ -179,6 +184,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   useDamsLayer(mapInstance, dams, damsOn);
   useRainRiskLayer(mapInstance, rainRisk, water);
+  useRiverLayer(mapInstance, rivers, water);
   const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
@@ -195,8 +201,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
   useEffect(() => {
-    if (urlView.dam) select({ kind: "dam", id: urlView.dam });
-  }, [urlView.dam, select]);
+    if (urlView.river) select({ kind: "river", id: urlView.river });
+    else if (urlView.dam) select({ kind: "dam", id: urlView.dam });
+  }, [urlView.dam, urlView.river, select]);
 
   useEffect(() => {
     if (!activePathId || pathData?.id === activePathId) return;
@@ -257,6 +264,24 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [water, rainRiskStatus, loadRainRisk, t]);
 
   useEffect(() => {
+    if (!water || riversStatus !== "idle") return;
+    loadRivers().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error(t("ข้อมูลแม่น้ำไม่พร้อมใช้งาน"));
+    });
+  }, [water, riversStatus, loadRivers, t]);
+
+  useEffect(() => {
+    if (!water || riversStatus !== "ready" || !rivers) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setWatch((current) => refreshWatch(current, rivers.points.flatMap((point) => point.summary ? [{ kind: "river" as const, id: point.id,
+        value: point.summary.today.value, unit: "cms" as const, date: point.summary.today.date }] : [])));
+    });
+    return () => { active = false; };
+  }, [water, riversStatus, rivers]);
+
+  useEffect(() => {
     if (water && tmdWarningsStatus === "idle") loadTmdWarnings().catch(() => {});
   }, [water, tmdWarningsStatus, loadTmdWarnings]);
 
@@ -315,9 +340,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (!mapInstance) return null;
     const center = mapInstance.getCenter();
     const query = formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
-      t: timeMs === null ? undefined : effectiveTime, ov: overlays, dam: activePathId ?? undefined, mode });
+      t: timeMs === null ? undefined : effectiveTime, ov: overlays, dam: activePathId ?? undefined,
+      river: probe?.kind === "river" ? probe.id : undefined, mode });
     return query;
-  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, mode]);
+  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -483,8 +509,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk}
-    watch={watch} onToggleWatch={toggleDamWatch}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus}
+    watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
@@ -503,8 +529,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     }} onSelectRain={(id) => select({ kind: "rain", id })} />;
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
-    // A weather card does not belong in water mode and a dam card does not belong in weather mode.
-    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain")) close();
+    // A weather card does not belong in water mode; water source cards close in weather mode.
+    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river")) close();
     dispatch({ type: "setMode", mode: next });
   };
   const showLegend = mapState.primary !== "rain" || rainOn;
@@ -528,7 +554,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}

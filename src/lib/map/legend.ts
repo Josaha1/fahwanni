@@ -1,6 +1,9 @@
 import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 import { damBandColor, damBandWord } from "../dams/bands";
 import { probabilityRgba, type RainMode } from "../precip/render";
+import { riverColors } from "../rivers/colors";
+import { statusWord } from "../rivers/status";
+import type { RiverStatus } from "../rivers/types";
 
 export type PrimaryLayer = "rain" | "temp" | "pm25";
 export type Legend = { title: string; unit: string; note?: string; steps: { color: string; label: string; value: string }[] };
@@ -14,7 +17,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -46,6 +49,8 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
       { swatch: { kind: "line", color: "#2563eb", dashed: true }, label: "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)" },
     ] });
   }
+  if (active.rivers) sections.push({ title: "ปริมาณน้ำไหลผ่าน (แบบจำลอง)", rows: (["low", "normal", "high", "veryHigh"] as RiverStatus[])
+    .map((status) => ({ swatch: { kind: "ring" as const, color: riverColors[status] }, label: statusWord(status) })) });
   if (active.rainRisk) sections.push({ title: "ฝน 24 ชม. (กรมอุตุฯ)", rows: [
     { swatch: { kind: "circle", color: "#a855f7", size: 12 }, label: "ฝนหนัก 35.1–90 มม." },
     { swatch: { kind: "circle", color: "#6b21a8", size: 14 }, label: "ฝนหนักมาก มากกว่า 90 มม." },

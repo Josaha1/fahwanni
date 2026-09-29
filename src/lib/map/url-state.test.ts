@@ -56,4 +56,15 @@ describe("map URL view", () => {
     expect(parseUrlView("?dam=200101").mode).toBe("water");
     expect(parseUrlView("?ov=wind").mode).toBeUndefined();
   });
+
+  it("round trips a river card in water mode and rejects malformed river IDs", () => {
+    const base = { lat: 13.7, lon: 100.5, z: 8, layer: "rain" as const,
+      ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false }, river: "chaophraya-ayutthaya" };
+    expect(formatUrlView({ ...base, mode: "water" })).toContain("river=chaophraya-ayutthaya");
+    expect(formatUrlView({ ...base, mode: "weather" })).not.toContain("river=");
+    expect(parseUrlView("?river=chaophraya-ayutthaya")).toEqual({ river: "chaophraya-ayutthaya", mode: "water" });
+    for (const invalid of ["", "A", "a_b", "a.b", "น้ำ", "a/b"]) {
+      expect(parseUrlView(`?river=${encodeURIComponent(invalid)}`).river).toBeUndefined();
+    }
+  });
 });

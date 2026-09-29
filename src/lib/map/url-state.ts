@@ -9,6 +9,7 @@ export type UrlView = {
   t?: number;
   ov?: MapState["overlays"];
   dam?: string;
+  river?: string;
   mode?: MapState["mode"];
 };
 
@@ -28,6 +29,7 @@ export function parseUrlView(search: string): UrlView {
   // `focus` was a temporary name for the same thing while the time bar was being built.
   const time = params.get("t") ?? params.get("focus");
   const dam = params.get("dam");
+  const river = params.get("river");
   if (lat !== undefined) view.lat = lat;
   if (lon !== undefined) view.lon = lon;
   if (z !== undefined) view.z = z;
@@ -35,16 +37,17 @@ export function parseUrlView(search: string): UrlView {
   if (time && /^\d{7,9}$/.test(time)) view.t = Number(time) * 60_000;
   else if (time && /^\d{4}-\d\d-\d\d/.test(time) && Number.isFinite(Date.parse(time))) view.t = Math.round(Date.parse(time) / 60_000) * 60_000;
   if (dam && /^[a-z0-9-]+$/.test(dam)) view.dam = dam;
+  if (river && /^[a-z0-9-]+$/.test(river)) view.river = river;
   if (params.has("ov")) {
     const names = new Set(params.get("ov")?.split(","));
     view.ov = { wind: names.has("wind"), storms: names.has("storms"), quakes: names.has("quakes"), dams: names.has("dams"), terrain: names.has("3d") };
   }
   // Older links turned dams on through `ov=dams` or `dam=`; both now mean water mode.
-  if (params.get("mode") === "water" || view.dam || view.ov?.dams) view.mode = "water";
+  if (params.get("mode") === "water" || view.dam || view.river || view.ov?.dams) view.mode = "water";
   return view;
 }
 
-export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t" | "dam" | "mode"> & { ov: MapState["overlays"] }): string {
+export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" | "layer">> & Pick<UrlView, "t" | "dam" | "river" | "mode"> & { ov: MapState["overlays"] }): string {
   const water = view.mode === "water";
   const params = new URLSearchParams();
   params.set("lat", view.lat.toFixed(2));
@@ -54,6 +57,7 @@ export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" |
   if (view.t !== undefined) params.set("t", String(Math.round(view.t / 60_000)));
   if (water) params.set("mode", "water");
   if (water && view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
+  if (water && view.river && /^[a-z0-9-]+$/.test(view.river)) params.set("river", view.river);
   const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.terrain && "3d"].filter(Boolean).join(",");
   params.set("ov", overlays);
   return `?${params.toString().replace(/%2C/g, ",")}`;

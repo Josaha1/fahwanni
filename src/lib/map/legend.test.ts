@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { riverColors } from "../rivers/colors";
 import { translator } from "../../i18n/core";
 import { damBandColor } from "../dams/bands";
 import { probabilityRgba } from "../precip/render";
@@ -120,9 +121,20 @@ describe("overlayLegend", () => {
     ] });
   });
 
+  it("shows the four modelled river discharge ring statuses only when rivers are ready", () => {
+    const base = { wind: false, storms: false, quakes: false, dams: false };
+    expect(overlayLegend({ ...base, rivers: false })).toHaveLength(1);
+    expect(overlayLegend({ ...base, rivers: true }).at(-1)).toEqual({ title: "ปริมาณน้ำไหลผ่าน (แบบจำลอง)", rows: [
+      { swatch: { kind: "ring", color: riverColors.low }, label: "ต่ำกว่าปกติ" },
+      { swatch: { kind: "ring", color: riverColors.normal }, label: "ปกติ" },
+      { swatch: { kind: "ring", color: riverColors.high }, label: "สูงกว่าปกติ" },
+      { swatch: { kind: "ring", color: riverColors.veryHigh }, label: "สูงมาก" },
+    ] });
+  });
+
   it("has English translations for every Thai row and section", () => {
     const en = translator("en");
-    for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true })) {
+    for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true, rivers: true })) {
       expect(en(section.title)).not.toBe(section.title);
       for (const row of section.rows) expect(en(row.label)).not.toBe(row.label);
     }

@@ -10,9 +10,10 @@ import type { DamTrend } from "@/lib/dams/trend";
 import type { DamHistory } from "@/lib/dams/history";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { TmdWarnings } from "@/lib/tmd";
+import type { RiversPayload } from "@/components/water/river-details";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
-type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk" | "tmdWarnings";
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk" | "rivers" | "tmdWarnings";
 type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
@@ -28,6 +29,11 @@ export function useMapData() {
   const damsHistoryRequest = useRef<Promise<void> | null>(null);
   const damsHistoryLoaded = useRef(false);
   const [rainRisk, setRainRisk] = useState<RainRisk | null>(null);
+  const [rivers, setRivers] = useState<RiversPayload | null>(null);
+  const [riversStatus, setRiversStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const riversRequest = useRef<Promise<void> | null>(null);
+  const riversController = useRef<AbortController | null>(null);
+  const riversLoaded = useRef(false);
   const [tmdWarnings, setTmdWarnings] = useState<TmdWarnings | null>(null);
   const [tmdWarningsStatus, setTmdWarningsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const tmdWarningsRequest = useRef<Promise<void> | null>(null);
@@ -41,7 +47,7 @@ export function useMapData() {
   const damsRequest = useRef<Promise<void> | null>(null);
   const damsController = useRef<AbortController | null>(null);
   const damsLoaded = useRef(false);
-  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null, rainRisk: null, tmdWarnings: null });
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null, rainRisk: null, rivers: null, tmdWarnings: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
 
@@ -121,6 +127,34 @@ export function useMapData() {
     return request;
   }, []);
 
+  const loadRivers = useCallback((refresh = false): Promise<void> => {
+    if (!refresh && riversLoaded.current) return Promise.resolve();
+    if (!refresh && riversRequest.current) return riversRequest.current;
+    riversController.current?.abort();
+    const controller = new AbortController();
+    riversController.current = controller;
+    if (!riversLoaded.current) setRiversStatus("loading");
+    const request = fetch("/api/rivers", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("rivers unavailable"); return response.json() as Promise<RiversPayload>; })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (!Array.isArray(data.points)) throw new Error("invalid rivers response");
+        lastFetched.current.rivers = Date.now();
+        riversLoaded.current = true;
+        setRivers(data);
+        setRiversStatus("ready");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted && !riversLoaded.current) setRiversStatus("error"); throw error; })
+      .finally(() => {
+        if (riversController.current === controller) {
+          riversRequest.current = null;
+          riversController.current = null;
+        }
+      });
+    riversRequest.current = request;
+    return request;
+  }, []);
+
   const loadTmdWarnings = useCallback((refresh = false): Promise<void> => {
     if (!refresh && tmdWarningsLoaded.current) return Promise.resolve();
     if (!refresh && tmdWarningsRequest.current) return tmdWarningsRequest.current;
@@ -149,8 +183,8 @@ export function useMapData() {
   }, []);
 
   useEffect(() => {
-    const controllers: Partial<Record<Exclude<DataKey, "dams" | "rainRisk" | "tmdWarnings">, AbortController>> = {};
-    const replaceController = (key: Exclude<DataKey, "dams" | "rainRisk" | "tmdWarnings">) => {
+    const controllers: Partial<Record<Exclude<DataKey, "dams" | "rainRisk" | "rivers" | "tmdWarnings">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "dams" | "rainRisk" | "rivers" | "tmdWarnings">) => {
       controllers[key]?.abort();
       const controller = new AbortController();
       controllers[key] = controller;
@@ -211,6 +245,7 @@ export function useMapData() {
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
       if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
       if (lastFetched.current.rainRisk !== null && shouldRefresh(lastFetched.current.rainRisk, now, 30 * 60_000)) loadRainRisk(true).catch(() => {});
+      if (lastFetched.current.rivers !== null && shouldRefresh(lastFetched.current.rivers, now, 6 * 60 * 60_000)) loadRivers(true).catch(() => {});
       if (lastFetched.current.tmdWarnings !== null && shouldRefresh(lastFetched.current.tmdWarnings, now, 15 * 60_000)) loadTmdWarnings(true).catch(() => {});
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
@@ -228,9 +263,10 @@ export function useMapData() {
       Object.values(controllers).forEach((controller) => controller.abort());
       damsController.current?.abort();
       rainRiskController.current?.abort();
+      riversController.current?.abort();
       tmdWarningsController.current?.abort();
     };
-  }, [loadDams, loadRainRisk, loadTmdWarnings]);
+  }, [loadDams, loadRainRisk, loadRivers, loadTmdWarnings]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
 }
