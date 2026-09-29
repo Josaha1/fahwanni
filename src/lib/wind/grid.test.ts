@@ -121,7 +121,7 @@ describe("buildGrid precipitation", () => {
   it("parses the real fixture with rain", () => {
     const [first] = fixture;
     const grid = buildGrid(gridPoints().map(() => first), 1)!;
-    expect(grid.precipHours).toHaveLength(first.hourly.time.length);
+    expect(grid.precipHours).toHaveLength(12);
   });
 
   it("stays under 60 KB with 8 wind steps and 12 rain steps", () => {
@@ -175,7 +175,7 @@ describe("buildGrid temperature", () => {
   it("parses all fixture locations with temperature data", () => {
     for (const first of fixture) {
       const grid = buildGrid(gridPoints().map(() => first), 1)!;
-      expect(grid.tempHours).toHaveLength(first.hourly.time.length);
+      expect(grid.tempHours).toHaveLength(24);
       expect(grid.temp![0][0]).toBe(Math.round(first.hourly.temperature_2m[0]));
       expect(grid.feels![0][0]).toBe(Math.round(first.hourly.apparent_temperature[0]));
     }
