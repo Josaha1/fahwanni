@@ -162,10 +162,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = terrainAvailable(device.deviceMemory);
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, rainSource.kind === "radar" ? rainSource.index : -1, rainVisible && rainSource.kind === "radar");
-  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainSource.kind === "model", series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
-  useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
-  useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
+  const rainImageSize = terrainOn || (device.deviceMemory !== undefined && device.deviceMemory < 4) ? 256 : 512;
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, rainSource.kind === "radar" ? rainSource.index : -1, rainVisible && rainSource.kind === "radar", 0.7);
+  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainSource.kind === "model", series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: rainImageSize });
+  useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
+  useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
