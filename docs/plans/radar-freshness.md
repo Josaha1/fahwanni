@@ -1,6 +1,6 @@
 # Plan: keep radar (and map data) fresh
 
-Status: APPROVED (2026-09-29)
+Status: DONE (2026-09-29) — live radar newest frame 03:00Z at 03:04Z
 
 ## Context
 User (2026-09-29): "แล้วทำไมแผนที่ อัปเดตเมื่อ 575 นาทีที่แล้ว".
