@@ -5,7 +5,8 @@ export type UrlView = {
   lon?: number;
   z?: number;
   layer?: MapState["primary"];
-  t?: string;
+  /** Selected time in epoch ms. In the URL it is epoch minutes (`t=29318400`); older links used ISO. */
+  t?: number;
   ov?: MapState["overlays"];
   dam?: string;
 };
@@ -23,13 +24,15 @@ export function parseUrlView(search: string): UrlView {
   const lon = boundedNumber(params.get("lon"), 80, 130);
   const z = boundedNumber(params.get("z"), 3, 12);
   const layer = params.get("layer");
-  const time = params.get("t");
+  // `focus` was a temporary name for the same thing while the time bar was being built.
+  const time = params.get("t") ?? params.get("focus");
   const dam = params.get("dam");
   if (lat !== undefined) view.lat = lat;
   if (lon !== undefined) view.lon = lon;
   if (z !== undefined) view.z = z;
   if (layer === "rain" || layer === "temp" || layer === "pm25") view.layer = layer;
-  if (time && Number.isFinite(Date.parse(time))) view.t = time;
+  if (time && /^\d{7,9}$/.test(time)) view.t = Number(time) * 60_000;
+  else if (time && /^\d{4}-\d\d-\d\d/.test(time) && Number.isFinite(Date.parse(time))) view.t = Math.round(Date.parse(time) / 60_000) * 60_000;
   if (dam && /^[a-z0-9-]+$/.test(dam)) view.dam = dam;
   if (params.has("ov")) {
     const names = new Set(params.get("ov")?.split(","));
@@ -44,7 +47,7 @@ export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" |
   params.set("lon", view.lon.toFixed(2));
   params.set("z", view.z.toFixed(1));
   params.set("layer", view.layer);
-  if (view.t) params.set("t", view.t);
+  if (view.t !== undefined) params.set("t", String(Math.round(view.t / 60_000)));
   if (view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
   const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.dams && "dams", view.ov.terrain && "3d"].filter(Boolean).join(",");
   params.set("ov", overlays);

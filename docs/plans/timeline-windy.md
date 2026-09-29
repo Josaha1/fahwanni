@@ -1,6 +1,6 @@
 # Plan: Windy-style continuous timeline, 7-day forecast
 
-Status: APPROVED (2026-09-29)
+Status: DONE (2026-09-29) — tasks 1–12; 10–12 written by Claude (Codex quota exhausted)
 
 ## Context
 User (2026-09-29): "ต้องการเลื่อนเวลา และพยากรณ์ เป็นนาทีต่อนาทีเหมือน windy เลยได้มั้ย".

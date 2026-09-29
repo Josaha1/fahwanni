@@ -3,10 +3,19 @@ import { formatUrlView, parseUrlView } from "./url-state";
 
 describe("map URL view", () => {
   it("round trips the view and keeps overlay order", () => {
-    const view = { lat: 13.7, lon: 100.5, z: 8, layer: "temp" as const, t: "2026-09-28T08:00:00.000Z",
+    const view = { lat: 13.7, lon: 100.5, z: 8, layer: "temp" as const, t: Date.parse("2026-09-28T08:37:00.000Z"),
       ov: { wind: true, storms: true, quakes: true, dams: true, terrain: true } };
-    expect(formatUrlView(view)).toBe("?lat=13.70&lon=100.50&z=8.0&layer=temp&t=2026-09-28T08%3A00%3A00.000Z&ov=wind,storms,quakes,dams,3d");
+    expect(formatUrlView(view)).toBe("?lat=13.70&lon=100.50&z=8.0&layer=temp&t=29843077&ov=wind,storms,quakes,dams,3d");
     expect(parseUrlView(formatUrlView(view))).toEqual(view);
+  });
+
+  it("reads t as epoch minutes, still accepts old ISO links and the temporary focus name", () => {
+    const minute = Date.parse("2026-09-28T08:37:00.000Z");
+    expect(parseUrlView("?t=29843077").t).toBe(minute);
+    expect(parseUrlView("?t=2026-09-28T08:37:20.000Z").t).toBe(minute);
+    expect(parseUrlView("?focus=2026-09-28T08:37:00.000Z").t).toBe(minute);
+    expect(parseUrlView("?t=29843077&focus=2020-01-01T00:00:00Z").t).toBe(minute);
+    for (const invalid of ["12", "1e9", "-29843077", "2026-99-99", "now"]) expect(parseUrlView(`?t=${invalid}`).t).toBeUndefined();
   });
 
   it("accepts inclusive bounds and rejects each invalid field independently", () => {

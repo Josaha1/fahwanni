@@ -1,27 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { initialMapState, mapReducer } from "./map-state";
-import type { TimelineStop } from "@/lib/timeline/frames";
-
-const stops: TimelineStop[] = [
-  { kind: "radar", time: "2026-09-28T07:00:00.000Z", index: 0 },
-  { kind: "radar", time: "2026-09-28T07:10:00.000Z", index: 1 },
-  { kind: "model", time: "2026-09-28T08:00:00.000Z", index: 0 },
-];
 
 describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
     expect(initialMapState()).toEqual({
       primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
-      activeIndex: 0, timeMs: null, playing: false,
+      timeMs: null, playing: false,
     });
+  });
+
+  it("starts at a time from the URL", () => {
+    expect(initialMapState({ timeMs: 1_800_000 }).timeMs).toBe(1_800_000);
   });
 
   it("uses URL layer and overlay overrides without changing other defaults", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
       primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
-      activeIndex: 0, timeMs: null, playing: false,
+      timeMs: null, playing: false,
     });
   });
 
@@ -54,11 +51,6 @@ describe("map state", () => {
     expect(mapReducer(state, { type: "setOverlay", key: "dams", enabled: false }).overlays.dams).toBe(false);
   });
 
-  it("sets an index and stops playback", () => {
-    const state = { ...initialMapState(), playing: true };
-    expect(mapReducer(state, { type: "setIndex", index: 2 })).toEqual({ ...state, activeIndex: 2, playing: false });
-  });
-
   it("selects a time and returns to automatic now", () => {
     const state = initialMapState();
     const selected = mapReducer(state, { type: "setTime", t: 1_800_000 });
@@ -67,26 +59,12 @@ describe("map state", () => {
     expect(state.timeMs).toBeNull();
   });
 
-  it("ticks through radar and model stops before looping", () => {
-    const state = { ...initialMapState(), playing: true };
-    expect(mapReducer(state, { type: "tick", stops }).activeIndex).toBe(1);
-    expect(mapReducer({ ...state, activeIndex: 1 }, { type: "tick", stops }).activeIndex).toBe(2);
-    expect(mapReducer({ ...state, activeIndex: 2 }, { type: "tick", stops }).activeIndex).toBe(0);
-    expect(mapReducer(state, { type: "tick", stops: [] }).activeIndex).toBe(0);
-    expect(mapReducer(state, { type: "tick", stops }).playing).toBe(true);
-  });
-
   it("toggles and stops playback", () => {
     const state = initialMapState();
     const playing = mapReducer(state, { type: "togglePlay" });
     expect(playing.playing).toBe(true);
     expect(mapReducer(playing, { type: "togglePlay" }).playing).toBe(false);
     expect(mapReducer(playing, { type: "stop" }).playing).toBe(false);
-  });
-
-  it("resets the index without changing playback", () => {
-    const state = { ...initialMapState(), playing: true };
-    expect(mapReducer(state, { type: "resetIndex", index: 3 })).toEqual({ ...state, activeIndex: 3 });
   });
 
   it("does not mutate the current state or overlays", () => {

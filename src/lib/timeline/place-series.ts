@@ -1,10 +1,12 @@
 import { MIN_PROB, precipLevel } from "../precip/render";
 import type { WindGrid } from "../wind/grid";
-import type { TimelineStop } from "./frames";
+import type { HourlySeries } from "./store";
+import { HOUR } from "./time";
+import { seriesValueAt } from "./values";
 
 export interface PlaceSeriesItem {
   time: string;
-  kind: TimelineStop["kind"];
+  kind: "radar" | "model";
   level: number;
   prob?: number;
 }
@@ -22,23 +24,27 @@ export function sampleScalar(values: number[], nx: number, ny: number, bbox: Win
     values[y1 * nx + x0] * (1 - fx) * fy + values[y1 * nx + x1] * fx * fy;
 }
 
-export function placeSeries(grid: WindGrid, stops: TimelineStop[], place: { lat: number; lon: number }, radarNow?: { overhead: boolean; heavyNearby: boolean }): PlaceSeriesItem[] {
-  const [west, south, east, north] = grid.bbox;
+/**
+ * Rain at one place: "now" from the radar summary, then each of the next `hours` model hours
+ * (starting at the next full hour) from the hourly forecast store.
+ */
+export function placeSeries(series: HourlySeries | null, nowMs: number, place: { lat: number; lon: number },
+  geo: Pick<WindGrid, "bbox" | "nx" | "ny">, radarNow?: { overhead: boolean; heavyNearby: boolean }, hours = 12): PlaceSeriesItem[] {
+  const [west, south, east, north] = geo.bbox;
   if (place.lon < west || place.lon > east || place.lat < south || place.lat > north) return [];
-  const newestRadar = stops.findLast((stop) => stop.kind === "radar");
-  return stops.flatMap((stop): PlaceSeriesItem[] => {
-    if (stop.kind === "radar") {
-      if (stop !== newestRadar) return [];
-      return [{ time: stop.time, kind: "radar", level: !radarNow?.overhead ? 0 : radarNow.heavyNearby ? 4 : 2 }];
-    }
-    const mm = grid.precip?.[stop.index];
-    const probabilities = grid.prob?.[stop.index];
-    if (!mm || !probabilities) return [];
-    const rain = sampleScalar(mm, grid.nx, grid.ny, grid.bbox, place.lon, place.lat);
-    const prob = sampleScalar(probabilities, grid.nx, grid.ny, grid.bbox, place.lon, place.lat);
-    if (rain === undefined || prob === undefined) return [];
-    return [{ time: stop.time, kind: "model", level: prob < MIN_PROB ? 0 : precipLevel(rain), prob }];
-  });
+  const items: PlaceSeriesItem[] = [{ time: new Date(nowMs).toISOString(), kind: "radar", level: !radarNow?.overhead ? 0 : radarNow.heavyNearby ? 4 : 2 }];
+  const firstHour = Math.floor(nowMs / HOUR) * HOUR + HOUR;
+  const lastHour = series?.times.at(-1) ?? -Infinity;
+  for (let h = 0; h < hours; h++) {
+    const time = firstHour + h * HOUR;
+    // Only hours the model actually covers (sampleSeries tolerates an hour beyond the data).
+    if (time > lastHour) break;
+    const mm = seriesValueAt(series, "precip", time, place.lon, place.lat, geo);
+    const prob = seriesValueAt(series, "prob", time, place.lon, place.lat, geo);
+    if (mm === null || prob === null) continue;
+    items.push({ time: new Date(time).toISOString(), kind: "model", level: prob < MIN_PROB ? 0 : precipLevel(mm), prob });
+  }
+  return items;
 }
 
 export function firstRainHour(series: PlaceSeriesItem[], nowIso: string): number | null {

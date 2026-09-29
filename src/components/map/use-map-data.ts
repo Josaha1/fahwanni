@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { lastRadarFrames } from "@/lib/radar/frames";
 import type { RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
-import { buildTimeline, defaultIndex } from "@/lib/timeline/frames";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
 type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams";
@@ -16,7 +14,6 @@ type FetchTimes = Record<DataKey, number | null>;
 export function useMapData() {
   const [manifest, setManifest] = useState<RadarManifest | null>(null);
   const [radarFetchedAt, setRadarFetchedAt] = useState<number | null>(null);
-  const [initialIndex, setInitialIndex] = useState(0);
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windSettled, setWindSettled] = useState(false);
   const [dams, setDams] = useState<DamsPayload | null>(null);
@@ -70,10 +67,6 @@ export function useMapData() {
         .then((data) => {
           if (controller.signal.aborted) return;
           const fetchedAt = Date.now();
-          if (lastFetched.current.radar === null) {
-            const radarTimes = lastRadarFrames(data.provider === "rainviewer" ? data.frames : []).map((frame) => frame.time);
-            setInitialIndex(defaultIndex(buildTimeline(radarTimes, [], new Date(fetchedAt).toISOString())));
-          }
           lastFetched.current.radar = fetchedAt;
           setRadarFetchedAt(fetchedAt);
           setManifest((previous) => previous && previous.provider === data.provider && previous.frames.at(-1)?.time === data.frames.at(-1)?.time ? previous : data);
@@ -139,5 +132,5 @@ export function useMapData() {
     };
   }, [loadDams]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, storms, quakes, initialIndex };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, storms, quakes };
 }

@@ -14,7 +14,6 @@ import { advance, DEFAULT_PLAY_SPEED, isPlaySpeed, nextPlaySpeed, PLAY_SPEEDS, t
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
-import { buildLayerTimeline, defaultIndexFor, type TimelineStop } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { windMotion } from "@/lib/wind/particles";
@@ -74,33 +73,27 @@ export function MapView() {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
   const [urlView] = useState(() => parseUrlView(window.location.search));
-  const [initialFocus] = useState(() => {
-    const value = new URLSearchParams(window.location.search).get("focus");
-    return value && Number.isFinite(Date.parse(value)) ? new Date(value).toISOString() : null;
-  });
   return (
     <MapProvider containerRef={container} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
       ? [urlView.lon, urlView.lat] : [place.lon, place.lat]} initialZoom={urlView.z}>
-      <MapScreen container={container} urlView={urlView} initialFocus={initialFocus} />
+      <MapScreen container={container} urlView={urlView} />
     </MapProvider>
   );
 }
 
-function MapScreen({ container, urlView, initialFocus }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView; initialFocus: string | null }) {
+function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView }) {
   const { place } = useLastPlace();
   const t = useT();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
-  const { manifest, wind, windSettled, dams, damsStatus, loadDams, storms, quakes, initialIndex } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, storms, quakes } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => {
-    const initial = initialMapState({ primary: view.layer, overlays: view.ov });
+    const initial = initialMapState({ primary: view.layer, overlays: view.ov, timeMs: view.t });
     if (view.dam) initial.overlays.dams = true;
-    const focus = initialFocus ?? view.t;
-    if (focus) initial.timeMs = Date.parse(focus);
     return initial;
   });
-  const { activeIndex, timeMs, playing, primary, rainOn, overlays } = mapState;
+  const { timeMs, playing, primary, rainOn, overlays } = mapState;
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
@@ -108,8 +101,6 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const focusLayers = useRef(false);
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
-  const pendingTime = useRef(urlView.t);
-  const previousTimeline = useRef<{ manifest: typeof manifest; stops: TimelineStop[]; defaultIdx: number; primary: typeof primary } | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
@@ -135,20 +126,15 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const effectiveTime = timeMs ?? nowMs;
   const { series: windSeries } = useForecastDays({ source: "wind", enabled: true, focusTime: effectiveTime, nowMs });
   const { series: pm25Series, loadedDays: pm25LoadedDays, lastAvailable: pm25LastAvailable, loading: pm25Loading, error: pm25Error } = useForecastDays({ source: "pm25", enabled: primary === "pm25", focusTime: effectiveTime, nowMs });
-  const modelHours = useMemo(() => windSeries?.times.map((time) => new Date(time).toISOString()) ?? [], [windSeries]);
-  const stops = useMemo(() => buildLayerTimeline(primary, {
-    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? modelHours : primary === "pm25" ? pm25Series?.times.map((time) => new Date(time).toISOString()) : undefined,
-  }, nowIso), [primary, frames, modelHours, pm25Series, nowIso]);
-  const defaultIdx = defaultIndexFor(primary, stops, nowIso);
-  const available = stops.length > 0;
-  const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
+  // Rain can be shown when there is radar for the past or model rain for the future.
+  const radarAvailable = frames.length > 0 || Boolean(windSeries?.grids.precip);
   const rainSource = rainSourceAt(effectiveTime, frames.map((frame) => Date.parse(frame.time)), nowMs);
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
-  const series = useMemo(() => wind ? placeSeries(wind, stops.map((stop) => stop.kind === "model"
-    ? { ...stop, index: wind.precipHours?.indexOf(stop.time) ?? -1 } : stop), place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
+  const series = useMemo(() => placeSeries(windSeries, nowMs, place, scalarGrid, radarSummary ?? undefined),
+    [windSeries, nowMs, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
-  const legacyTempHour = activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : -1;
+  const legacyTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= effectiveTime) ?? -1;
   const locationTemp = primary === "temp"
     ? windSeries?.grids.temp
       ? { temp: seriesValueAt(windSeries, "temp", effectiveTime, place.lon, place.lat, scalarGrid), feels: seriesValueAt(windSeries, "feels", effectiveTime, place.lon, place.lat, scalarGrid) }
@@ -210,7 +196,6 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
 
   useEffect(() => {
     if (primary !== "pm25" || !pm25Error) return;
-    pendingTime.current = undefined;
     toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
     dispatch({ type: "setPrimary", primary: "rain" });
   }, [primary, pm25Error, t]);
@@ -224,55 +209,7 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     });
   }, [damsOn, damsStatus, loadDams, t]);
 
-  useEffect(() => {
-    const previous = previousTimeline.current;
-    if (!manifest || previous?.manifest === manifest || pendingTime.current || primary !== "rain") return;
-    if (!previous?.manifest || previous.primary !== primary) {
-      dispatch({ type: "resetIndex", index: initialIndex });
-      return;
-    }
-    const oldStop = previous.stops[Math.min(activeIndex, previous.stops.length - 1)];
-    if (!oldStop) return;
-    if (!playing && activeIndex === previous.defaultIdx) {
-      dispatch({ type: "resetIndex", index: defaultIdx });
-      return;
-    }
-    let nearest = stops.findIndex((stop) => stop.time === oldStop.time && stop.kind === oldStop.kind);
-    if (nearest < 0) nearest = stops.findIndex((stop) => stop.time === oldStop.time);
-    if (nearest < 0) {
-      nearest = 0;
-      stops.forEach((stop, index) => {
-        if (Math.abs(Date.parse(stop.time) - Date.parse(oldStop.time)) < Math.abs(Date.parse(stops[nearest].time) - Date.parse(oldStop.time))) nearest = index;
-      });
-    }
-    if (stops.length && nearest !== activeIndex) dispatch({ type: "resetIndex", index: nearest });
-  }, [manifest, initialIndex, primary, activeIndex, playing, defaultIdx, stops]);
-
-  useEffect(() => {
-    previousTimeline.current = { manifest, stops, defaultIdx, primary };
-  });
-
-  useEffect(() => {
-    if (!pendingTime.current || !stops.length || (primary === "rain" && !windSettled)) return;
-    const target = Date.parse(pendingTime.current);
-    let nearest = -1;
-    let distance = 90 * 60_000 + 1;
-    stops.forEach((stop, index) => {
-      const difference = Math.abs(Date.parse(stop.time) - target);
-      if (difference < distance) { nearest = index; distance = difference; }
-    });
-    pendingTime.current = undefined;
-    dispatch({ type: "resetIndex", index: distance <= 90 * 60_000 ? nearest : defaultIdx });
-  }, [stops, defaultIdx, primary, windSettled]);
-
   const visibleSheetPosition = probe && !isDesktop ? "half" : sheetPosition;
-
-  const previousPrimary = useRef(mapState.primary);
-  useEffect(() => {
-    if (previousPrimary.current === mapState.primary) return;
-    previousPrimary.current = mapState.primary;
-    dispatch({ type: "resetIndex", index: defaultIdx });
-  }, [mapState.primary, defaultIdx]);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -318,9 +255,9 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     if (!mapInstance) return null;
     const center = mapInstance.getCenter();
     const query = formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
-      t: timeMs === null ? undefined : new Date(effectiveTime).toISOString(), ov: overlays, dam: activePathId ?? undefined });
-    return initialFocus && timeMs === Date.parse(initialFocus) ? `${query}&focus=${encodeURIComponent(initialFocus)}` : query;
-  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, initialFocus]);
+      t: timeMs === null ? undefined : effectiveTime, ov: overlays, dam: activePathId ?? undefined });
+    return query;
+  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -475,8 +412,8 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     </p>}
   </div>;
   const layers = <>
-    {primary === "rain" && <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
-      {available ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
+    {primary === "rain" && <button type="button" disabled={!radarAvailable} aria-pressed={radarAvailable && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">
+      {radarAvailable ? t("เรดาร์ฝน") : t("เรดาร์ไม่พร้อมใช้งาน")}
     </button>}
     <button type="button" disabled={!wind} aria-pressed={Boolean(wind) && windOn} onClick={() => dispatch({ type: "toggleOverlay", key: "wind" })} className="map-chip text-sm disabled:opacity-60">
       {wind ? t("ลม") : t("ข้อมูลลมไม่พร้อมใช้งาน")}
