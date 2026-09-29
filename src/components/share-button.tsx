@@ -8,6 +8,7 @@ import type { Place } from "@/lib/place";
 import { buildShareText } from "@/lib/share";
 import type { WeatherSnapshot } from "@/lib/weather/types";
 import { renderShareImage } from "./share/render-share-image";
+import { Menu } from "./ui/menu";
 
 export function ShareButton({ snapshot, air, place }: { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place }) {
   const t = useT();
@@ -53,21 +54,20 @@ export function ShareButton({ snapshot, air, place }: { snapshot: WeatherSnapsho
     }
   }
 
+  function shareLine() {
+    const link = Object.assign(document.createElement("a"), {
+      href: `https://line.me/R/share?text=${encodeURIComponent(shareText())}`,
+      target: "_blank",
+      rel: "noopener noreferrer",
+    });
+    link.click();
+  }
+
   return (
-    <div className="flex flex-wrap gap-2">
-      <a href="https://line.me/R/share" target="_blank" rel="noopener noreferrer"
-        onClick={(event) => { event.currentTarget.href = `https://line.me/R/share?text=${encodeURIComponent(shareText())}`; }}
-        className="flex min-h-11 items-center rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">
-        {t("แชร์ทาง LINE")}
-      </a>
-      <button type="button" onClick={share}
-        className="min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">
-        {t("แชร์")}
-      </button>
-      <button type="button" onClick={shareImage} disabled={making}
-        className="min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given disabled:opacity-60">
-        {making ? t("กำลังสร้างรูป…") : t("แชร์เป็นรูปภาพ")}
-      </button>
-    </div>
+    <Menu label={t("แชร์")} items={[
+      { label: t("แชร์ทาง LINE"), onSelect: shareLine },
+      { label: t("แชร์ลิงก์"), onSelect: () => void share() },
+      { label: making ? t("กำลังสร้างรูป…") : t("แชร์เป็นรูปภาพ"), onSelect: () => void shareImage(), disabled: making },
+    ]} />
   );
 }

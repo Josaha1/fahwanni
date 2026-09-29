@@ -279,6 +279,7 @@ export const common: Record<string, string> = {
   "เบอร์ฉุกเฉิน": "Emergency numbers",
   "แชร์": "Share",
   "แชร์ทาง LINE": "Share on LINE",
+  "แชร์ลิงก์": "Share link",
   "ฟ้าวันนี้ · {place}": "Today's Sky · {place}",
   "{weather} (รู้สึกเหมือน {feels}°)": "{weather} (feels like {feels}°)",
   "วันนี้ {low}–{high}°": "Today {low}–{high}°",
