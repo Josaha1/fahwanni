@@ -50,7 +50,7 @@ import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 import { PointCard } from "./ui/point-card";
 import { PrimaryPicker } from "./ui/primary-picker";
-import { LegendChip } from "./ui/legend-chip";
+import { DamLegendStrip, LegendChip } from "./ui/legend-chip";
 import { LegendDialog } from "./ui/legend-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
@@ -443,7 +443,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     pm25Loading={pm25Loading} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });
     }} />;
+  const openLegend = () => legendDialog.current?.showModal();
   const waterPanel = water && <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
+    <DamLegendStrip buttonRef={legendButton} onOpen={openLegend} />
     {damsStatus === "ready" && dams ? <>
       <p className="flex flex-wrap items-center gap-2">
         <span className="map-water-badge">{t("สังเกต")}</span>
@@ -454,8 +456,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     <p className="map-muted text-xs">{t("แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ")}</p>
-    <button type="button" className="map-chip text-sm"
-      onClick={(event) => { legendButton.current = event.currentTarget; legendDialog.current?.showModal(); }}>{t("อ่านแผนที่")}</button>
   </section>;
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
@@ -463,8 +463,17 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (probe && (next === "water") !== (probe.kind === "dam")) close();
     dispatch({ type: "setMode", mode: next });
   };
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} details={details} primaryPicker={primaryPicker} layers={layers}
-    card={card} water={waterPanel || null} onProbeCenter={(trigger) => probeCenter(trigger)} />;
+  const showLegend = mapState.primary !== "rain" || rainOn;
+  const more = <>
+    {terrainOk && <button type="button" className="map-chip text-sm" aria-pressed={terrainOn}
+      onClick={() => dispatch({ type: "toggleOverlay", key: "terrain" })}>{t("แผนที่ 3 มิติ")}</button>}
+    <button type="button" className="map-chip text-sm" aria-pressed={immersive} onClick={toggleFullscreen}>{immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ")}</button>
+    <button type="button" className="map-chip text-sm" onClick={shareView}>{t("แชร์มุมมองนี้")}</button>
+  </>;
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
+    legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} /> : null}
+    details={details} primaryPicker={primaryPicker} layers={layers} card={card} water={waterPanel || null} more={isDesktop ? null : more}
+    onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
   return <main className={`map-shell${immersive ? " map-shell--immersive" : ""}`} style={{
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
@@ -474,14 +483,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {mapInstance && wind && windOn && !water && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
-    {!water && (mapState.primary !== "rain" || rainOn) && <LegendChip primary={mapState.primary} buttonRef={legendButton} onOpen={() => legendDialog.current?.showModal()} />}
+    {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} />}
     <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams) }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}
     {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
-    <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
+    <ActionRail compact={!isDesktop} onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
       immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} />
     {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">

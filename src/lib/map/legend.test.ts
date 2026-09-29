@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { translator } from "../../i18n/core";
 import { damBandColor } from "../dams/bands";
 import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
-import { legendFor, legendGradient, overlayLegend } from "./legend";
+import { damLegendStrip, legendFor, legendGradient, overlayLegend } from "./legend";
 
 describe("legendFor", () => {
   it("describes rain with radar colours, Thai keys, and numeric rates", () => {
@@ -91,5 +91,14 @@ describe("overlayLegend", () => {
       expect(en(section.title)).not.toBe(section.title);
       for (const row of section.rows) expect(en(row.label)).not.toBe(row.label);
     }
+  });
+
+  it("gives the water-mode strip the five dam band colours in order", () => {
+    const strip = damLegendStrip();
+    expect(strip.steps.map((step) => step.label)).toEqual(["≤30", "31–50", "51–80", "81–100", ">100"]);
+    expect(strip.steps.map((step) => step.color)).toEqual([1, 2, 3, 4, 5].map((band) => damBandColor(band as 1 | 2 | 3 | 4 | 5)));
+    const en = translator("en");
+    expect(en(strip.title)).not.toBe(strip.title);
+    expect(en(strip.unit)).not.toBe(strip.unit);
   });
 });

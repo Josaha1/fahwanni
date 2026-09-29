@@ -2,17 +2,21 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, desktop, timeline, details, primaryPicker, layers, card, water, onProbeCenter }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, legend, details, primaryPicker, layers, card, water, more, onProbeCenter }: {
   placeName: string;
   compact: boolean;
   desktop: boolean;
   timeline: ReactNode;
+  /** Phone-only colour key, shown right after the time bar so it stays visible in the peek. */
+  legend: ReactNode;
   details: ReactNode;
   primaryPicker: ReactNode;
   layers: ReactNode;
   card: ReactNode;
   /** Water-mode content; when set it replaces the weather timeline, details and layers. */
   water: ReactNode;
+  /** Phone-only 3D / fullscreen / share row (the desktop rail keeps those buttons). */
+  more: ReactNode;
   onProbeCenter: (trigger: HTMLButtonElement) => void;
 }) {
   const t = useT();
@@ -23,6 +27,7 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, details
       {card}
       {water ?? <>
         {timeline}
+        {legend}
         <button type="button" className="map-chip map-probe-center mt-2 w-full text-sm" onClick={(event) => onProbeCenter(event.currentTarget)}>{t("ดูอากาศตรงกลางแผนที่")}</button>
         {!compact && <>
           {details}
@@ -33,6 +38,10 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, details
           </section>
         </>}
       </>}
+      {!compact && more && <section className="mt-4" aria-labelledby="map-more">
+        <h2 id="map-more" className="mb-2 text-sm font-semibold">{t("เพิ่มเติม")}</h2>
+        <div className="flex flex-wrap gap-2">{more}</div>
+      </section>}
     </>
   );
 }

@@ -145,7 +145,7 @@ body:has(.map-shell) { background: #eef1f5; background-image: none; }
 body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-shell [hidden] { display: none; }
 .map-panel { background: var(--map-panel); color: var(--map-label); border: 1px solid var(--map-panel-border); border-radius: 20px; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgb(0 0 0 / .18); padding: 12px; }
-.map-legend-chip { position: absolute; z-index: 5; top: calc(120px + env(safe-area-inset-top)); left: 12px; min-width: 180px; max-width: 240px; padding: 8px 10px; border-radius: 14px; color: var(--map-label); }
+.map-legend-chip { position: absolute; z-index: 5; left: 12px; min-width: 180px; max-width: 240px; padding: 8px 10px; border-radius: 14px; color: var(--map-label); }
 .map-legend-dialog { width: min(420px, calc(100vw - 24px)); max-height: 80dvh; overflow: auto; color: var(--map-label); }
 .map-legend-dialog::backdrop { background: rgb(0 0 0 / .35); }
 @media (min-width: 1024px) { .map-legend-chip { top: auto; left: 392px; bottom: 112px; } }
@@ -158,7 +158,9 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-search-result { color: var(--map-label); }
 .map-search-result:is(:hover, [aria-selected="true"]) { background: rgb(37 99 235 / .12); }
 .map-sheet { position: absolute; z-index: 5; left: 12px; right: 12px; bottom: 12px; max-height: 60%; overflow-y: auto; overscroll-behavior: contain; }
-.map-sheet[data-position="peek"] { max-height: 112px; overflow: hidden; }
+.map-sheet[data-position="peek"] { max-height: 152px; overflow: hidden; }
+.map-legend-strip { display: flex; width: 100%; min-height: 32px; margin-top: 6px; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 8px; color: var(--map-label); text-align: left; }
+.map-legend-strip:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 2px; }
 .map-sheet[data-position="peek"] > .map-probe-center { display: none; }
 .map-sheet-grip { display: flex; width: 100%; height: 22px; margin: -6px 0 4px; align-items: center; justify-content: center; touch-action: none; cursor: grab; border-radius: 12px; }
 .map-sheet-grip:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 2px; }

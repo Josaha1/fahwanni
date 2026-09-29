@@ -347,4 +347,7 @@ export const common: Record<string, string> = {
   "แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ": "Tap a dam on the map for details and where its water flows",
   "อากาศ": "Weather",
   "น้ำ": "Water",
+  "แผนที่ 3 มิติ": "3D map",
+  "เพิ่มเติม": "More",
+  "% ความจุ": "% of capacity",
 };

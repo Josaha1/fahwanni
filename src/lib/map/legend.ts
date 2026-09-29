@@ -78,3 +78,9 @@ export function legendFor(primary: PrimaryLayer): Legend {
 export function legendGradient(primary: PrimaryLayer): string {
   return `linear-gradient(to right, ${legendFor(primary).steps.map((step) => step.color).join(", ")})`;
 }
+
+/** Compact dam-band key for the water-mode sheet strip (the full words live in the legend dialog). */
+export function damLegendStrip(): { title: string; unit: string; steps: { color: string; label: string }[] } {
+  return { title: "เขื่อน", unit: "% ความจุ", steps: (["≤30", "31–50", "51–80", "81–100", ">100"] as const)
+    .map((label, index) => ({ color: damBandColor((index + 1) as 1 | 2 | 3 | 4 | 5), label })) };
+}

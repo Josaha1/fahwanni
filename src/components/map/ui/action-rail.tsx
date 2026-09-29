@@ -1,6 +1,8 @@
 import { useT } from "@/i18n/client";
 
-export function ActionRail({ onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare }: {
+export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare }: {
+  /** Phones: only the layers button; 3D, fullscreen and share move to the sheet's "เพิ่มเติม" row. */
+  compact: boolean;
   onLayers: () => void;
   terrainOk: boolean;
   terrainOn: boolean;
@@ -19,18 +21,20 @@ export function ActionRail({ onLayers, terrainOk, terrainOn, onTerrain, immersiv
           <path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" />
         </svg>
       </button>
-      {terrainOk && <button type="button" className="map-icon-btn text-sm font-semibold" onClick={onTerrain}
+      {!compact && terrainOk && <button type="button" className="map-icon-btn text-sm font-semibold" onClick={onTerrain}
         aria-pressed={terrainOn} aria-label={terrainLabel} title={terrainLabel}>3D</button>}
-      <button type="button" className="map-icon-btn" onClick={onFullscreen} aria-pressed={immersive} aria-label={fullscreenLabel} title={fullscreenLabel}>
-        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          {immersive ? <><path d="M9 3v6H3M15 3v6h6M3 15h6v6M21 15h-6v6" /></> : <><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6" /></>}
-        </svg>
-      </button>
-      <button type="button" className="map-icon-btn" onClick={onShare} aria-label={t("แชร์มุมมองนี้")} title={t("แชร์มุมมองนี้")}>
-        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
-        </svg>
-      </button>
+      {!compact && <>
+        <button type="button" className="map-icon-btn" onClick={onFullscreen} aria-pressed={immersive} aria-label={fullscreenLabel} title={fullscreenLabel}>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {immersive ? <><path d="M9 3v6H3M15 3v6h6M3 15h6v6M21 15h-6v6" /></> : <><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6" /></>}
+          </svg>
+        </button>
+        <button type="button" className="map-icon-btn" onClick={onShare} aria-label={t("แชร์มุมมองนี้")} title={t("แชร์มุมมองนี้")}>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
+          </svg>
+        </button>
+      </>}
     </div>
   );
 }
