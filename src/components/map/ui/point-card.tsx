@@ -19,11 +19,12 @@ import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
 import type { WindGrid } from "@/lib/wind/grid";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
+import type { DamsPayload } from "@/lib/dams/client";
 import { readRadarLevel } from "../radar-tile";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
-export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes }: {
+export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes, dams }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
@@ -35,6 +36,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   nowIso: string;
   storms: Storm[];
   quakes: Quake[];
+  dams: DamsPayload | null;
 }) {
   const t = useT();
   const router = useRouter();
@@ -45,6 +47,9 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   const province = probe.kind === "point" ? nearestProvince(probe.lat, probe.lon) : null;
   const storm = probe.kind === "storm" ? storms.find((item) => item.id === probe.id) : undefined;
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
+  const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
+  const barrage = probe.kind === "dam" && probe.id === dams?.barrage?.id ? dams.barrage : null;
+  const selectedDam = dam ?? barrage;
   const rain = probe.kind === "point" && wind ? modelRainAt(wind, probe.lon, probe.lat) : null;
   const breeze = probe.kind === "point" && wind ? windAt(wind, windHour, probe.lon, probe.lat) : null;
   const currentTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
@@ -69,6 +74,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   if (point) title = t.locale === "en" ? point.admin ?? point.name : point.name;
   else if (storm) title = t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name });
   else if (quake) title = t("แผ่นดินไหว M{mag}", { mag: quake.mag });
+  else if (selectedDam) title = t.locale === "en" ? selectedDam.nameEn || selectedDam.nameTh : selectedDam.nameTh;
 
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">

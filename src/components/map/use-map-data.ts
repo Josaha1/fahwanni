@@ -7,10 +7,11 @@ import type { WindGrid } from "@/lib/wind/grid";
 import type { Pm25Grid } from "@/lib/pm25/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
+import type { DamsPayload } from "@/lib/dams/client";
 import { buildTimeline, defaultIndex } from "@/lib/timeline/frames";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
-type DataKey = "radar" | "wind" | "storms" | "quakes" | "pm25";
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "pm25" | "dams";
 type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
@@ -24,7 +25,12 @@ export function useMapData() {
   const pm25Request = useRef<Promise<void> | null>(null);
   const pm25Controller = useRef<AbortController | null>(null);
   const pm25Loaded = useRef(false);
-  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, pm25: null });
+  const [dams, setDams] = useState<DamsPayload | null>(null);
+  const [damsStatus, setDamsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const damsRequest = useRef<Promise<void> | null>(null);
+  const damsController = useRef<AbortController | null>(null);
+  const damsLoaded = useRef(false);
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, pm25: null, dams: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
 
@@ -55,9 +61,36 @@ export function useMapData() {
     return request;
   }, []);
 
+  const loadDams = useCallback((refresh = false): Promise<void> => {
+    if (!refresh && damsLoaded.current) return Promise.resolve();
+    if (!refresh && damsRequest.current) return damsRequest.current;
+    damsController.current?.abort();
+    const controller = new AbortController();
+    damsController.current = controller;
+    if (!damsLoaded.current) setDamsStatus("loading");
+    const request = fetch("/api/dams", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("dams unavailable"); return response.json() as Promise<DamsPayload>; })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        lastFetched.current.dams = Date.now();
+        damsLoaded.current = true;
+        setDams(data);
+        setDamsStatus("ready");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted && !damsLoaded.current) setDamsStatus("error"); throw error; })
+      .finally(() => {
+        if (damsController.current === controller) {
+          damsRequest.current = null;
+          damsController.current = null;
+        }
+      });
+    damsRequest.current = request;
+    return request;
+  }, []);
+
   useEffect(() => {
-    const controllers: Partial<Record<Exclude<DataKey, "pm25">, AbortController>> = {};
-    const replaceController = (key: Exclude<DataKey, "pm25">) => {
+    const controllers: Partial<Record<Exclude<DataKey, "pm25" | "dams">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "pm25" | "dams">) => {
       controllers[key]?.abort();
       const controller = new AbortController();
       controllers[key] = controller;
@@ -121,6 +154,7 @@ export function useMapData() {
       if (lastFetched.current.storms !== null && shouldRefresh(lastFetched.current.storms, now, REFRESH.slow)) loadStorms();
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
       if (lastFetched.current.pm25 !== null && shouldRefresh(lastFetched.current.pm25, now, REFRESH.slow)) loadPm25(true).catch(() => {});
+      if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
     loadRadar();
@@ -136,8 +170,9 @@ export function useMapData() {
       window.removeEventListener("online", refreshOnReturn);
       Object.values(controllers).forEach((controller) => controller.abort());
       pm25Controller.current?.abort();
+      damsController.current?.abort();
     };
-  }, [loadPm25]);
+  }, [loadPm25, loadDams]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex };
+  return { manifest, radarFetchedAt, wind, windSettled, pm25, pm25Status, loadPm25, dams, damsStatus, loadDams, storms, quakes, initialIndex };
 }

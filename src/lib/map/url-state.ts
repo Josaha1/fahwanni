@@ -30,7 +30,7 @@ export function parseUrlView(search: string): UrlView {
   if (time && Number.isFinite(Date.parse(time))) view.t = time;
   if (params.has("ov")) {
     const names = new Set(params.get("ov")?.split(","));
-    view.ov = { wind: names.has("wind"), storms: names.has("storms"), quakes: names.has("quakes"), terrain: names.has("3d") };
+    view.ov = { wind: names.has("wind"), storms: names.has("storms"), quakes: names.has("quakes"), dams: names.has("dams"), terrain: names.has("3d") };
   }
   return view;
 }
@@ -42,7 +42,7 @@ export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" |
   params.set("z", view.z.toFixed(1));
   params.set("layer", view.layer);
   if (view.t) params.set("t", view.t);
-  const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.terrain && "3d"].filter(Boolean).join(",");
+  const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.dams && "dams", view.ov.terrain && "3d"].filter(Boolean).join(",");
   params.set("ov", overlays);
   return `?${params.toString().replace(/%2C/g, ",")}`;
 }

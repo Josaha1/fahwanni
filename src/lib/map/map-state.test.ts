@@ -12,15 +12,15 @@ describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
     expect(initialMapState()).toEqual({
       primary: "rain", rainOn: true,
-      overlays: { wind: true, storms: true, quakes: true, terrain: false },
+      overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
       activeIndex: 0, playing: false,
     });
   });
 
   it("uses URL layer and overlay overrides without changing other defaults", () => {
-    expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, terrain: true } })).toEqual({
+    expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
       primary: "temp", rainOn: true,
-      overlays: { wind: false, storms: false, quakes: true, terrain: true },
+      overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
       activeIndex: 0, playing: false,
     });
   });
@@ -40,13 +40,18 @@ describe("map state", () => {
   });
 
   it("toggles every overlay without changing playback", () => {
-    for (const key of ["wind", "storms", "quakes", "terrain"] as const) {
+    for (const key of ["wind", "storms", "quakes", "dams", "terrain"] as const) {
       const state = { ...initialMapState(), playing: true };
       const changed = mapReducer(state, { type: "toggleOverlay", key });
       expect(changed.overlays[key]).toBe(!state.overlays[key]);
       expect(changed.playing).toBe(true);
       expect(mapReducer(changed, { type: "toggleOverlay", key }).overlays).toEqual(state.overlays);
     }
+  });
+
+  it("can explicitly close a failed overlay", () => {
+    const state = mapReducer(initialMapState(), { type: "toggleOverlay", key: "dams" });
+    expect(mapReducer(state, { type: "setOverlay", key: "dams", enabled: false }).overlays.dams).toBe(false);
   });
 
   it("sets an index and stops playback", () => {

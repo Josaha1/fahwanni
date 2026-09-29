@@ -29,6 +29,7 @@ import { useRadarLayer } from "./layers/use-radar-layer";
 import { useScalarLayer, type ScalarImage } from "./layers/use-scalar-layer";
 import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
+import { useDamsLayer } from "./layers/use-dams-layer";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
@@ -74,10 +75,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
-  const { manifest, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex } = useMapData();
+  const { manifest, wind, windSettled, pm25, pm25Status, loadPm25, dams, damsStatus, loadDams, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ primary: view.layer, overlays: view.ov }));
   const { activeIndex, playing, primary, rainOn, overlays } = mapState;
-  const { wind: windOn, storms: stormsOn, quakes: quakesOn, terrain: terrainOn } = overlays;
+  const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
@@ -181,6 +182,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useQuakeLayer(mapInstance, quakes, quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
+  const selectDam = useCallback((id: string, trigger: HTMLElement) => select({ kind: "dam", id }, trigger), [select]);
+  useDamsLayer(mapInstance, dams, damsOn, selectDam);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
   useEffect(() => {
@@ -192,6 +195,15 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: "rain" });
     });
   }, [urlView.layer, pm25Status, loadPm25, t]);
+
+  useEffect(() => {
+    if (!damsOn || damsStatus !== "idle") return;
+    loadDams().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error(t("ข้อมูลเขื่อนไม่พร้อมใช้งาน"));
+      dispatch({ type: "setOverlay", key: "dams", enabled: false });
+    });
+  }, [damsOn, damsStatus, loadDams, t]);
 
   useEffect(() => {
     const previous = previousTimeline.current;
@@ -441,9 +453,20 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     </button>
     {storms.length > 0 && <button type="button" aria-pressed={stormsOn} onClick={() => dispatch({ type: "toggleOverlay", key: "storms" })} className="map-chip text-sm">{t("พายุ")} ({storms.length})</button>}
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
+    <button type="button" aria-pressed={damsOn} aria-busy={damsStatus === "loading"} className="map-chip text-sm"
+      onClick={() => {
+        dispatch({ type: "toggleOverlay", key: "dams" });
+        if (!damsOn && damsStatus === "error") loadDams().catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          toast.error(t("ข้อมูลเขื่อนไม่พร้อมใช้งาน"));
+          dispatch({ type: "setOverlay", key: "dams", enabled: false });
+        });
+      }}>
+      {t("เขื่อน")}{damsStatus === "ready" && dams ? ` (${dams.dams.length + (dams.barrage ? 1 : 0)})` : ""}
+    </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} />;
+    probe={probe} onClose={close} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(wind?.tempHours?.length && wind.temp?.some((hour) => hour.length > 0))}
     pm25Loading={pm25Status === "loading"} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });

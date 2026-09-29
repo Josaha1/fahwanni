@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Marker, type Map, type MapMouseEvent } from "maplibre-gl";
 
-export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string };
+export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string };
 
 export function useProbe(map: Map | null) {
   const [probe, setProbe] = useState<Probe | null>(null);
@@ -29,11 +29,13 @@ export function useProbe(map: Map | null) {
     const container = map.getContainer();
     container.tabIndex = -1;
     const onClick = (event: MapMouseEvent) => {
-      const layers = ["quake-circle", "storm-cone", "storm-track", "storm-forecast"].filter((id) => map.getLayer(id));
+      const layers = ["dam-circle", "quake-circle", "storm-cone", "storm-track", "storm-forecast"].filter((id) => map.getLayer(id));
       const features = layers.length ? map.queryRenderedFeatures(event.point, { layers }) : [];
+      const dam = features.find((feature) => feature.layer?.id === "dam-circle" && typeof feature.properties?.id === "string");
       const quake = features.find((feature) => feature.layer?.id === "quake-circle" && typeof feature.properties?.id === "string");
       const storm = features.find((feature) => feature.layer?.id.startsWith("storm-") && typeof feature.properties?.id === "string");
-      if (quake) select({ kind: "quake", id: quake.properties!.id as string });
+      if (dam) select({ kind: "dam", id: dam.properties!.id as string });
+      else if (quake) select({ kind: "quake", id: quake.properties!.id as string });
       else if (storm) select({ kind: "storm", id: storm.properties!.id as string });
       else select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });
     };
