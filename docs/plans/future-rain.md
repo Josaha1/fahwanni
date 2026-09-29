@@ -1,6 +1,6 @@
 # Plan: future rain that reads like a forecast, not broken radar
 
-Status: APPROVED (2026-09-29)
+Status: DONE (2026-09-29) — probability shading tuned by Claude after screenshots: smooth alpha 0.15→0.5 instead of 3 bands
 
 ## Context
 User (2026-09-29): "ทำไมตอนเลื่อนเวลามาอนาคต แล้วรูปฝนแปลกๆ ต้องการให้เหมือนเวลาปกติ".
