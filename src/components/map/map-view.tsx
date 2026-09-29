@@ -37,6 +37,7 @@ import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
 import { useRiverLayer } from "./layers/use-river-layer";
+import { filterDams, type DamFilter } from "@/lib/water/find";
 import { useAllRoutesLayer } from "./layers/use-all-routes-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
@@ -185,7 +186,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
-  useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0);
+  const [damFilter, setDamFilter] = useState<DamFilter>("all");
+  const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
+    ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
+  useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);
   useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
   useRiverLayer(mapInstance, rivers, water, waterDay);
   useAllRoutesLayer(mapInstance, dams, water && allRoutes);
@@ -549,7 +553,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       select({ kind: "dam", id });
       const dam = dams?.dams.find((item) => item.id === id);
       if (dam) mapInstance?.easeTo({ center: [dam.lon, dam.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
-    }} onSelectRain={(id) => select({ kind: "rain", id })} />;
+    }} onSelectRain={(id) => select({ kind: "rain", id })}
+    damFilter={damFilter} onDamFilter={setDamFilter} riverPoints={rivers?.points ?? []}
+    onSelectRiver={(id) => {
+      select({ kind: "river", id });
+      const point = rivers?.points.find((item) => item.id === id);
+      if (point) mapInstance?.easeTo({ center: [point.lon, point.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
+    }} />;
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode; water source cards close in weather mode.

@@ -52,6 +52,9 @@ Verified by Claude today (live requests):
   downstreamOfDam = Bhumibol for the "ขึ้นกับการระบายของเขื่อน" note.
 - Task 4: instead of freezing 365 RID days of 2011, `/api/dams-history` fetches only two dates per day (same day last
   year and in 2011), cached 24 h — kinder to RID and nothing to regenerate.
+- Codex quota ran out at 17:43 (resets 19:32); Claude wrote 8b–8d directly.
+- 8d: the dam/river name search lives in the water panel (next to the filter chips) instead of inside MapSearchPill,
+  whose SearchBox is a geocoder — mixing the two would have meant rewriting it.
 
 ## Map page extras (added at the user's request "มีอะไรแนะนำเพิ่มเติมใส่มาได้เลย หน้าแผนที่")
 Water mode (8a–8e): forecast-day slider, all-routes overview, upstream dams per river point, filter chips + water

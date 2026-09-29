@@ -460,4 +460,13 @@ export const common: Record<string, string> = {
   "เขื่อนเหนือจุดนี้": "Dams upstream of this point",
   "{name} · ห่างตามลำน้ำ {km} กม. · ระบาย {release} ลบ.ม./วินาที": "{name} · {km} km upstream · release {release} m³/s",
   "และอีก {n} เขื่อน": "and {n} more dams",
+  "ค้นหาและกรองเขื่อน": "Search and filter dams",
+  "แสดงเขื่อน": "Show dams",
+  "ค้นหาเขื่อนหรือแม่น้ำ": "Search dams or rivers",
+  "ไม่พบชื่อนี้": "No match",
+  "ทั้งหมด": "All",
+  "น้ำมาก >80%": "Full >80%",
+  "ระบายมาก": "High release",
+  "ติดตาม": "Watched",
+  "แม่น้ำ": "River",
 };

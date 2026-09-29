@@ -21,18 +21,19 @@ type DamCollection = { type: "FeatureCollection"; features: {
   geometry: { type: "Point"; coordinates: [number, number] };
 }[] };
 
-export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, waterDay = 0) {
+/** `visibleIds`: a water-mode filter chip; null shows every dam. */
+export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, waterDay = 0, visibleIds: Set<string> | null = null) {
   const t = useT();
   const { theme } = useMapContext();
   const data = useMemo<DamCollection>(() => ({
     type: "FeatureCollection",
-    features: enabled ? (dams?.dams ?? []).map((dam) => ({
+    features: enabled ? (dams?.dams ?? []).filter((dam) => !visibleIds || visibleIds.has(dam.id)).map((dam) => ({
       type: "Feature", properties: {
         id: dam.id, band: dam.band, color: damBandColor(dam.band), capacity: dam.capacityMcm,
         high: dam.highRelease ? 1 : 0, name: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh,
       }, geometry: { type: "Point", coordinates: [dam.lon, dam.lat] },
     })) : [],
-  }), [dams, enabled, t.locale]);
+  }), [dams, enabled, t.locale, visibleIds]);
 
   useStyleEffect(map, (live) => {
     if (!live.getSource(SOURCE) && data.features.length) live.addSource(SOURCE, { type: "geojson", data });
