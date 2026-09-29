@@ -25,7 +25,7 @@ import type { DamsPayload } from "@/lib/dams/client";
 import type { Dam } from "@/lib/dams/types";
 import { trendDelta, type DamTrend } from "@/lib/dams/trend";
 import type { DamHistory } from "@/lib/dams/history";
-import type { DamWatch } from "@/lib/dams/watchlist";
+import type { WaterWatch } from "@/lib/water/watchlist";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
@@ -61,7 +61,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   dams: DamsPayload | null;
   damsTrend: DamTrend | null;
   damsHistory: DamHistory | null;
-  watch: DamWatch;
+  watch: WaterWatch;
   onToggleWatch: (dam: Dam) => void;
   rainRisk: RainRisk | null;
   downstream: Downstream | null;
@@ -134,9 +134,9 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
     <div className="flex items-start justify-between gap-2">
       <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold">{title}</h2>
       <div className="flex shrink-0 gap-1">
-        {dam && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, dam.id)}
-          aria-label={t(Object.hasOwn(watch, dam.id) ? "เลิกติดตามเขื่อนนี้" : "ติดตามเขื่อนนี้")}
-          onClick={() => onToggleWatch(dam)}>{Object.hasOwn(watch, dam.id) ? "★" : "☆"}</button>}
+        {dam && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `dam:${dam.id}`)}
+          aria-label={t(Object.hasOwn(watch, `dam:${dam.id}`) ? "เลิกติดตามเขื่อนนี้" : "ติดตามเขื่อนนี้")}
+          onClick={() => onToggleWatch(dam)}>{Object.hasOwn(watch, `dam:${dam.id}`) ? "★" : "☆"}</button>}
         <button type="button" className="map-icon-btn" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
       </div>
     </div>

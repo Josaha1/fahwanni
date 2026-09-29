@@ -40,7 +40,7 @@ import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
-import { readWatch, refreshWatch, toggleWatch, writeWatch } from "@/lib/dams/watchlist";
+import { readWatch, refreshWatch, toggleWatch, writeWatch } from "@/lib/water/watchlist";
 import type { Dam } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
@@ -94,7 +94,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
   const [watch, setWatch] = useState(readWatch);
-  const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, dam));
+  const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, { kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }));
   useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
@@ -243,7 +243,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (!water || damsStatus !== "ready" || !dams) return;
     let active = true;
     queueMicrotask(() => {
-      if (active) setWatch((current) => refreshWatch(current, dams.dams));
+      if (active) setWatch((current) => refreshWatch(current, dams.dams.map((dam) => ({ kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }))));
     });
     return () => { active = false; };
   }, [water, damsStatus, dams]);
