@@ -45,7 +45,8 @@ import { useIsDesktop } from "./ui/use-is-desktop";
 import { MapSheet, type SheetPosition } from "./ui/map-sheet";
 import { MapSidePanel } from "./ui/map-side-panel";
 import { MapPanelContent } from "./ui/map-panel-content";
-import { TimeBar } from "./ui/time-bar";
+import { TimeBar, timeLabelText } from "./ui/time-bar";
+import { seriesValueAt } from "@/lib/timeline/values";
 import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 import { PointCard } from "./ui/point-card";
@@ -148,8 +149,12 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     ? { ...stop, index: wind.precipHours?.indexOf(stop.time) ?? -1 } : stop), place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
   const legacyTempHour = activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : -1;
-  const locationTemp = primary === "temp" && wind && legacyTempHour >= 0 && wind.temp?.[legacyTempHour] && wind.feels?.[legacyTempHour]
-    ? { temp: sampleGrid(wind, wind.temp[legacyTempHour], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[legacyTempHour], place.lon, place.lat) }
+  const locationTemp = primary === "temp"
+    ? windSeries?.grids.temp
+      ? { temp: seriesValueAt(windSeries, "temp", effectiveTime, place.lon, place.lat, scalarGrid), feels: seriesValueAt(windSeries, "feels", effectiveTime, place.lon, place.lat, scalarGrid) }
+      : wind && legacyTempHour >= 0 && wind.temp?.[legacyTempHour] && wind.feels?.[legacyTempHour]
+        ? { temp: sampleGrid(wind, wind.temp[legacyTempHour], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[legacyTempHour], place.lon, place.lat) }
+        : null
     : null;
   const pm25Sample = pm25Series ? sampleSeries(pm25Series, "pm25", effectiveTime) : null;
   const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
@@ -492,7 +497,8 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} windField={windField} pm25Series={pm25Series} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
+    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams}
     downstream={activePath?.downstream ?? null} pathActive={Boolean(activePathId)} pathLoading={pathLoading && Boolean(activePathId)} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
     pm25Loading={pm25Loading} onChange={(next) => {

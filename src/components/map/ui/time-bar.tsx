@@ -8,6 +8,22 @@ import { DAY, HOUR, MINUTE, dayLabel, handleLabel, snapStep, timeBadge, type Tim
 
 const ZONE = "Asia/Bangkok";
 
+type Translate = (text: string, params?: Record<string, string | number>) => string;
+
+/** Day and month names are Thai keys inside label params, so they are translated before interpolation. */
+export function localizeLabel(t: Translate, label: { key: string; params: Record<string, string> }): string {
+  const { day, month, ...rest } = label.params;
+  return t(label.key, { ...rest, ...(day !== undefined ? { day: t(day) } : {}), ...(month !== undefined ? { month: t(month) } : {}) });
+}
+
+/** "พ. 14:37 · พยากรณ์ · ค่าประมาณระหว่างชั่วโมง" — shared by the bar and the point card. */
+export function timeLabelText(t: Translate, time: number, domain: TimeDomain,
+  { radarTime, primary, lastAvailable }: { radarTime?: number; primary: "rain" | "temp" | "pm25"; lastAvailable?: number }): string {
+  const badge = timeBadge(time, domain, { radarTime, onModelHour: time % HOUR === 0, primary });
+  const unavailable = lastAvailable !== undefined && time > lastAvailable;
+  return `${localizeLabel(t, handleLabel(time))} · ${unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}`;
+}
+
 export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, radarTime, primary, lastAvailable, mode }: {
   domain: TimeDomain;
   t: number;
@@ -99,7 +115,7 @@ export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, r
   const badge = timeBadge(time, domain, { radarTime, onModelHour: time % HOUR === 0, primary });
   const unavailable = lastAvailable !== undefined && time > lastAvailable;
   const label = handleLabel(time);
-  const valueText = `${t(label.key, label.params)} ${unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}`;
+  const valueText = timeLabelText(t, time, domain, { radarTime, primary, lastAvailable });
   const slider = {
     role: "slider" as const,
     tabIndex: 0,
@@ -119,9 +135,9 @@ export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, r
       return <span key={start} className="map-time-day-segment" style={mode === "fit"
         ? { left: percent(start), width: `${(position(end) - position(start)) * 100}%` }
         : { left: (start - domain.start) / HOUR * 10, width: (end - start) / HOUR * 10 }}>
-        <span className="map-time-day-label" title={t(label.key, label.params)}>
+        <span className="map-time-day-label" title={localizeLabel(t, label)}>
           {mode === "fit" ? <><span className="map-time-day-label-full">{t(label.params.day)} {label.params.date}</span><span className="map-time-day-label-short">{t(label.params.day)}</span></>
-            : t(label.key, label.params)}
+            : localizeLabel(t, label)}
         </span>
       </span>;
     })}
@@ -134,7 +150,7 @@ export function TimeBar({ domain, t: time, onChange, onTogglePlay, radarStart, r
 
   return <div className={`map-time-bar map-time-bar--${mode}`}>
     <div className="map-time-heading">
-      <strong>{t(label.key, label.params)}</strong>
+      <strong>{localizeLabel(t, label)}</strong>
       <small>{unavailable ? t("ไม่มีข้อมูล") : t(badge.key, badge.params as Record<string, string>)}</small>
     </div>
     {mode === "fit" ? <div {...slider} ref={track} className="map-time-track" onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); onPointer(event); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) onPointer(event); }}>

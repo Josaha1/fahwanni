@@ -1,4 +1,7 @@
 export const common: Record<string, string> = {
+  "ข้อมูล ณ {time}": "Data for {time}",
+  "ฝน (พยากรณ์)": "Rain (forecast)",
+  "ฝน (เรดาร์)": "Rain (radar)",
   "ความเร็วการเล่น {n} นาทีต่อวินาที": "Playback speed {n} minutes per second",
   "ฟ้าวันนี้": "Today's Sky",
   "นำทางหลัก": "Main navigation",

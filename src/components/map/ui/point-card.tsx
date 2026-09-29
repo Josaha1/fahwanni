@@ -6,12 +6,10 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
 import { pm25Level } from "@/lib/air";
-import { sampleSeries, type HourlySeries } from "@/lib/timeline/store";
-import { lerpGrid } from "@/lib/timeline/time";
+import { type HourlySeries } from "@/lib/timeline/store";
+import { modelRainLevelAt, seriesValueAt } from "@/lib/timeline/values";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { modelRainAt, sampleGrid, windAt, windAtField } from "@/lib/map/probe";
-import type { PrimaryLayer } from "@/lib/map/legend";
-import type { TimelineStop } from "@/lib/timeline/frames";
 import { nearestProvince, pointPlace } from "@/lib/map/nearest";
 import { RAIN_RAMP } from "@/lib/map/palette";
 import type { Quake } from "@/lib/quakes/usgs";
@@ -37,7 +35,7 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, windField, pm25Series, primary, activeStop, nowIso, storms, quakes, dams,
+export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams,
   downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
@@ -45,10 +43,13 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, pm
   wind: WindGrid | null;
   windHour: number;
   windField: WindField | null;
+  windSeries: HourlySeries | null;
   pm25Series: HourlySeries | null;
-  primary: PrimaryLayer;
-  activeStop?: TimelineStop;
-  nowIso: string;
+  /** The minute shown on the map; values are interpolated between model hours. */
+  timeMs: number;
+  nowMs: number;
+  /** Same wording as the time bar, e.g. "พ. 14:37 · พยากรณ์ · ค่าประมาณระหว่างชั่วโมง". */
+  timeLabel: string;
   storms: Storm[];
   quakes: Quake[];
   dams: DamsPayload | null;
@@ -72,19 +73,22 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, pm
   const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
   const barrage = probe.kind === "dam" && probe.id === dams?.barrage?.id ? dams.barrage : null;
   const selectedDam = dam ?? barrage;
-  const rain = probe.kind === "point" && wind ? modelRainAt(wind, probe.lon, probe.lat) : null;
+  const future = timeMs > nowMs;
+  const geo = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
+  // "Next 3 hours" only makes sense when the map shows now.
+  const rain = probe.kind === "point" && wind && !future && Math.abs(timeMs - nowMs) < 5 * 60_000 ? modelRainAt(wind, probe.lon, probe.lat) : null;
+  const modelRain = probe.kind === "point" && future ? modelRainLevelAt(windSeries, timeMs, probe.lon, probe.lat, geo) : null;
   const breeze = probe.kind === "point" ? windField ? windAtField(windField, probe.lon, probe.lat)
     : wind ? windAt(wind, windHour, probe.lon, probe.lat) : null : null;
-  const currentTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
-  const tempHour = primary === "temp" && activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : currentTempHour;
-  const temp = probe.kind === "point" && wind && tempHour >= 0 && wind.temp?.[tempHour] && wind.feels?.[tempHour]
-    ? { value: sampleGrid(wind, wind.temp[tempHour], probe.lon, probe.lat), feels: sampleGrid(wind, wind.feels[tempHour], probe.lon, probe.lat) }
+  const legacyTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= timeMs) ?? -1;
+  const temp = probe.kind === "point"
+    ? windSeries?.grids.temp
+      ? { value: seriesValueAt(windSeries, "temp", timeMs, probe.lon, probe.lat, geo), feels: seriesValueAt(windSeries, "feels", timeMs, probe.lon, probe.lat, geo) }
+      : wind && legacyTempHour >= 0 && wind.temp?.[legacyTempHour] && wind.feels?.[legacyTempHour]
+        ? { value: sampleGrid(wind, wind.temp[legacyTempHour], probe.lon, probe.lat), feels: sampleGrid(wind, wind.feels[legacyTempHour], probe.lon, probe.lat) }
+        : null
     : null;
-  const pm25Time = primary === "pm25" && activeStop ? Date.parse(activeStop.time) : Date.parse(nowIso);
-  const pm25Sample = pm25Series ? sampleSeries(pm25Series, "pm25", pm25Time) : null;
-  const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
-  const pm25Value = probe.kind === "point" && pm25Values
-    ? sampleGrid({ bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY }, pm25Values, probe.lon, probe.lat) : null;
+  const pm25Value = probe.kind === "point" ? seriesValueAt(pm25Series, "pm25", timeMs, probe.lon, probe.lat, geo) : null;
 
   useEffect(() => { heading.current?.focus(); }, [probe]);
   useEffect(() => {
@@ -107,13 +111,19 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, pm
       <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
     </div>
     {point && province && <>
+      <p className="map-muted text-xs">{t("ข้อมูล ณ {time}", { time: timeLabel })}</p>
       <p className="map-muted text-sm">{probe.kind === "point" && `${probe.lat.toFixed(2)}, ${probe.lon.toFixed(2)}`}{province.km <= 100 && <> · {t("ห่างจาก{province} {km} กม.", { province: t.locale === "en" ? province.en : province.th, km: Math.round(province.km) })}</>}</p>
       <dl className="mt-3 space-y-2 text-sm">
-        <div className="flex justify-between gap-3"><dt>{t("ฝนตอนนี้")}</dt><dd className="flex items-center gap-2 font-semibold">
-          {radarLevel !== null && radarLevel > 0 && <span className="h-3 w-3 rounded-full" style={{ backgroundColor: RAIN_RAMP[radarLevel] }} aria-hidden="true" />}
-          {!frame ? t("ไม่ทราบ") : radarLevel === null ? t("กำลังโหลด…") : radarLevel < 0 ? t("ไม่ทราบ") : t(rainKeys[radarLevel])}
-        </dd></div>
-        <div className="flex justify-between gap-3"><dt>{t("ฝน 3 ชม. ข้างหน้า")}</dt><dd className="text-right font-semibold">{!rain || rain.level === 0 ? t("ไม่มีฝน") : t("{rain} ราว {time} น.", { rain: t(rainKeys[rain.level]), time: wind?.precipHours?.[rain.hourIndex] ? formatTime(wind.precipHours[rain.hourIndex], "Asia/Bangkok", t.locale) : "" })}</dd></div>
+        {future
+          ? <div className="flex justify-between gap-3"><dt>{t("ฝน (พยากรณ์)")}</dt><dd className="flex items-center gap-2 font-semibold">
+            {modelRain !== null && modelRain > 0 && <span className="h-3 w-3 rounded-full" style={{ backgroundColor: RAIN_RAMP[modelRain] }} aria-hidden="true" />}
+            {modelRain === null ? t("ไม่มีข้อมูล") : t(rainKeys[modelRain])}
+          </dd></div>
+          : <div className="flex justify-between gap-3"><dt>{t("ฝน (เรดาร์)")}</dt><dd className="flex items-center gap-2 font-semibold">
+            {radarLevel !== null && radarLevel > 0 && <span className="h-3 w-3 rounded-full" style={{ backgroundColor: RAIN_RAMP[radarLevel] }} aria-hidden="true" />}
+            {!frame ? t("ไม่ทราบ") : radarLevel === null ? t("กำลังโหลด…") : radarLevel < 0 ? t("ไม่ทราบ") : t(rainKeys[radarLevel])}
+          </dd></div>}
+        {rain && <div className="flex justify-between gap-3"><dt>{t("ฝน 3 ชม. ข้างหน้า")}</dt><dd className="text-right font-semibold">{rain.level === 0 ? t("ไม่มีฝน") : t("{rain} ราว {time} น.", { rain: t(rainKeys[rain.level]), time: wind?.precipHours?.[rain.hourIndex] ? formatTime(wind.precipHours[rain.hourIndex], "Asia/Bangkok", t.locale) : "" })}</dd></div>}
         {temp && temp.value !== null && temp.feels !== null && <div className="flex justify-between gap-3"><dt>{t("อุณหภูมิ")}</dt><dd className="text-right font-semibold">{t("{temp}° รู้สึกเหมือน {feels}°", { temp: Math.round(temp.value), feels: Math.round(temp.feels) })}</dd></div>}
         {pm25Value !== null && <div className="flex justify-between gap-3"><dt>{t("ฝุ่น PM2.5")}</dt><dd className="text-right font-semibold">
           {t("{v} µg/m³ · {level}", { v: Math.round(pm25Value), level: pm25LevelWord(pm25Level(pm25Value), t) })}
