@@ -39,7 +39,6 @@ export const common: Record<string, string> = {
   "{storage} / {capacity} ล้าน ลบ.ม.": "{storage} / {capacity} million m³",
   "ใช้การได้ {pct}%": "Usable storage {pct}%",
   "น้ำไหลเข้า": "Inflow",
-  "ระบายออก": "Release",
   "{value} ลบ.ม./วินาที": "{value} m³/s",
   "{value} ล้าน ลบ.ม./วัน": "{value} million m³/day",
   "น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน": "Spillway overflow {value} million m³/day",
@@ -59,7 +58,6 @@ export const common: Record<string, string> = {
   "โทร กรมชลประทาน 1460": "Call RID 1460",
   "เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม": "This line shows the downstream river, not a flood boundary. Today's Sky does not forecast flood extents.",
   "เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "River path: HydroRIVERS (CC BY 4.0)",
-  "เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม": "The downstream river path (button below) is not a flood boundary",
   "ลมสงบ–อ่อน (ต่ำกว่า 11 กม./ชม.)": "Calm–light wind (under 11 km/h)",
   "ลมอ่อน–ปานกลาง (11–29 กม./ชม.)": "Light–moderate wind (11–29 km/h)",
   "ลมแรง (29–50 กม./ชม.)": "Strong wind (29–50 km/h)",
@@ -350,4 +348,5 @@ export const common: Record<string, string> = {
   "แผนที่ 3 มิติ": "3D map",
   "เพิ่มเติม": "More",
   "% ความจุ": "% of capacity",
+  "น้ำไหลผ่านเขื่อน (ระบาย)": "Flow through the dam (release)",
 };

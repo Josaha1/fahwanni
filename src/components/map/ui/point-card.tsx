@@ -162,24 +162,22 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+          <p className="map-muted">{t("น้ำไหลผ่านเขื่อน (ระบาย)")}</p>
+          <p className="font-semibold">{dam.releaseCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(dam.releaseCms) })}</p>
+          <p className="map-muted text-xs">{dam.releaseMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.releaseMcmDay) })}</p>
+        </div>
+        <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
           <p className="map-muted">{t("น้ำไหลเข้า")}</p>
           <p className="font-semibold">{dam.inflowCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(dam.inflowCms) })}</p>
           <p className="map-muted text-xs">{dam.inflowMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.inflowMcmDay) })}</p>
         </div>
-        <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
-          <p className="map-muted">{t("ระบายออก")}</p>
-          <p className="font-semibold">{dam.releaseCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(dam.releaseCms) })}</p>
-          <p className="map-muted text-xs">{dam.releaseMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.releaseMcmDay) })}</p>
-        </div>
       </div>
       {dam.spilledMcmDay !== null && dam.spilledMcmDay > 0 && <p className="map-warning">{t("น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.spilledMcmDay) })}</p>}
-      <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
-      <p className="map-muted text-xs">{t("ที่มา: กรมชลประทาน")}</p>
-      <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
       <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>
       {pathActive && downstream && <DownstreamDetails downstream={downstream} />}
+      <p className="map-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })} · {t("ที่มา: กรมชลประทาน")}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
     </div>}
   </section>;
 }
@@ -200,7 +198,9 @@ function DownstreamDetails({ downstream }: { downstream: Downstream }) {
           const province = provinceById.get(item.id);
           if (!province) return null;
           return <li key={`province-${item.id}`} className="flex justify-between gap-2">
-            <strong>{t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
+            {/* Bangkok is not a จังหวัด, so it has no "จ." prefix. */}
+            <strong>{item.id === "bangkok" ? (t.locale === "en" ? province.en : province.th)
+              : t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
             <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
           </li>;
         })}
@@ -217,7 +217,6 @@ function DownstreamDetails({ downstream }: { downstream: Downstream }) {
         <a className="map-chip inline-flex items-center" href="tel:1460">{t("โทร กรมชลประทาน 1460")}</a>
       </div>
     </details>
-    <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")}</p>
-    <p className="map-muted text-xs">{t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
+    <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")} · {t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
   </div>;
 }
