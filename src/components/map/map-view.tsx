@@ -22,6 +22,7 @@ import { windMotion } from "@/lib/wind/particles";
 import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
+import { mapShortcut } from "@/lib/map/shortcuts";
 import { formatUrlView, parseUrlView, type UrlView } from "@/lib/map/url-state";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";
@@ -66,6 +67,7 @@ import { DataFreshness } from "./ui/data-freshness";
 import { freshnessRows } from "@/lib/map/freshness";
 import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
+import { ShortcutsDialog } from "./ui/shortcuts-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
 import { captureMapBlob, mapSourceLine, renderMapShareImage } from "@/components/share/render-map-share";
@@ -127,6 +129,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const focusLayers = useRef(false);
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
+  const shortcutsDialog = useRef<HTMLDialogElement>(null);
+  const shortcutsButton = useRef<HTMLButtonElement>(null);
+  const shortcutsTrigger = useRef<HTMLElement>(null);
   const [immersive, setImmersive] = useState(false);
   const [makingImage, setMakingImage] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -631,12 +636,50 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       const point = rivers?.points.find((item) => item.id === id);
       if (point) mapInstance?.easeTo({ center: [point.lon, point.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
     }} />;
-  const changeMode = (next: typeof mode) => {
+  const changeMode = useCallback((next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode; water source cards close in weather mode.
     if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river")) close();
     dispatch({ type: "setMode", mode: next });
+  }, [mode, probe, close]);
+  const openShortcuts = () => {
+    shortcutsTrigger.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement : shortcutsButton.current;
+    if (!shortcutsDialog.current?.open) shortcutsDialog.current?.showModal();
   };
+  useEffect(() => {
+    if (!isDesktop) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || shortcutsDialog.current?.open) return;
+      // Keep Space's native button activation; arrow keys in picker/stepper handle their own focus.
+      if (event.key === " " && event.target instanceof HTMLButtonElement) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const action = mapShortcut({ key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey,
+        altKey: event.altKey, target }, { mode });
+      if (!action || (event.repeat && (action.type === "togglePlay" || action.type === "toggleWaterPlay"))) return;
+      event.preventDefault();
+      switch (action.type) {
+        case "togglePlay":
+        case "toggleWaterPlay":
+          if (!reducedMotion) dispatch({ type: "togglePlay" });
+          break;
+        case "step":
+          dispatch({ type: "stop" });
+          if (water) dispatch({ type: "setWaterDay", day: Math.max(0, Math.min(7, waterDay + action.direction)) });
+          else {
+            const hour = Math.max(Math.ceil(domain.start / HOUR), Math.min(Math.floor(domain.end / HOUR),
+              Math.floor(effectiveTime / HOUR) + action.direction));
+            dispatch({ type: "setTime", t: hour * HOUR });
+          }
+          break;
+        case "setPrimary": dispatch({ type: "setPrimary", primary: action.primary }); break;
+        case "setMode": changeMode(action.mode); break;
+        case "help": openShortcuts(); break;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isDesktop, mode, water, waterDay, domain, effectiveTime, reducedMotion, changeMode]);
   const showLegend = mapState.primary !== "rain" || rainOn;
   const more = <>
     {terrainOk && <button type="button" className="map-chip text-sm" aria-pressed={terrainOn}
@@ -663,6 +706,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
     <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendButton} />
+    <ShortcutsDialog dialogRef={shortcutsDialog} triggerRef={shortcutsTrigger} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}
     {isDesktop && water && <div className="map-panel map-time-floating">{waterStepper}</div>}
@@ -670,7 +714,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
     <ActionRail compact={!isDesktop} onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
-      immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage} />
+      immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
+      onShortcuts={openShortcuts} shortcutsButton={(element) => { shortcutsButton.current = element; }} />
     {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
       {status === "error" ? <div className="text-center"><p>{t("โหลดแผนที่ไม่สำเร็จ")}</p><button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button></div>
         : t("กำลังโหลดแผนที่…")}

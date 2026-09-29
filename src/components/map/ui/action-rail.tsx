@@ -1,6 +1,6 @@
 import { useT } from "@/i18n/client";
 
-export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage }: {
+export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage, onShortcuts, shortcutsButton }: {
   /** Phones: only the layers button; 3D, fullscreen and share move to the sheet's "เพิ่มเติม" row. */
   compact: boolean;
   onLayers: () => void;
@@ -12,6 +12,8 @@ export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain,
   onShare: () => void;
   onShareImage: () => void;
   makingImage: boolean;
+  onShortcuts: () => void;
+  shortcutsButton: (element: HTMLButtonElement | null) => void;
 }) {
   const t = useT();
   const terrainLabel = terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ");
@@ -26,6 +28,11 @@ export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain,
       {!compact && terrainOk && <button type="button" className="map-icon-btn text-sm font-semibold" onClick={onTerrain}
         aria-pressed={terrainOn} aria-label={terrainLabel} title={terrainLabel}>3D</button>}
       {!compact && <>
+        <button ref={shortcutsButton} type="button" className="map-icon-btn" onClick={onShortcuts} aria-label={t("ปุ่มลัด")} title={t("ปุ่มลัด")}>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2" /><path d="M6 9h1m3 0h1m3 0h1m3 0h1M6 12h1m3 0h1m3 0h1m3 0h1M7 15h10" />
+          </svg>
+        </button>
         <button type="button" className="map-icon-btn" onClick={onFullscreen} aria-pressed={immersive} aria-label={fullscreenLabel} title={fullscreenLabel}>
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             {immersive ? <><path d="M9 3v6H3M15 3v6h6M3 15h6v6M21 15h-6v6" /></> : <><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6" /></>}
