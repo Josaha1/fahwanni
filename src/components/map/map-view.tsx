@@ -8,6 +8,7 @@ import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { sampleSeries } from "@/lib/timeline/store";
+import { rainSourceAt } from "@/lib/timeline/rain-source";
 import { lerpGrid, MINUTE, roundTo } from "@/lib/timeline/time";
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
@@ -124,7 +125,7 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
   const timeMs = initialFocus ? Date.parse(initialFocus) : activeStop ? Date.parse(activeStop.time) : null;
-  const rainModel = activeStop?.kind === "model" || (initialFocus !== null && timeMs !== null && timeMs > Date.parse(nowIso));
+  const rainSource = timeMs === null ? { kind: "none" as const } : rainSourceAt(timeMs, frames.map((frame) => Date.parse(frame.time)), Date.parse(nowIso));
   const shares = segmentShares(stops);
   const activeTimeLabel = activeStop?.kind === "model" && primary === "rain"
     ? t("+{n} ชม. · {time} น.", { n: Math.max(0, Math.ceil((Date.parse(activeStop.time) - Date.parse(nowIso)) / 3_600_000)), time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) })
@@ -153,8 +154,8 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = terrainAvailable(device.deviceMemory);
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, !rainModel && activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible && !rainModel);
-  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainModel, series: windSeries, timeMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, rainSource.kind === "radar" ? rainSource.index : -1, rainVisible && rainSource.kind === "radar");
+  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainSource.kind === "model", series: windSeries, timeMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
   useTimeImageLayer(mapInstance, { id: "temp", enabled: primary === "temp", series: windSeries, timeMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: primary === "pm25", series: pm25Series, timeMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
