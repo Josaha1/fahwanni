@@ -479,4 +479,6 @@ export const common: Record<string, string> = {
   "ดัชนีความร้อนที่ตำแหน่งคุณ ~{v}° · {band}": "Heat index at your location ~{v}° · {band}",
   "เมฆที่ตำแหน่งคุณ {v}%": "Cloud cover at your location {v}%",
   "ค่าประมาณจากแบบจำลอง Open-Meteo ความละเอียดราว 100 กม.": "Open-Meteo model estimate at about 100 km resolution",
+  "24 ชม. ข้างหน้า: {low}–{high}° · ฝนโอกาส 50% ขึ้นไป {n} ชม.": "Next 24 h: {low}–{high}° · {n} h with a 50% or higher chance of rain",
+  "เส้น: อุณหภูมิ · แท่ง: โอกาสฝน (แบบจำลอง)": "Line: temperature · bars: chance of rain (model)",
 };

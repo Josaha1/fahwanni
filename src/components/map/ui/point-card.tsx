@@ -8,7 +8,8 @@ import { formatFullDate, formatTime } from "@/lib/format";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { pm25Level } from "@/lib/air";
 import { type HourlySeries } from "@/lib/timeline/store";
-import { modelRainLevelAt, seriesValueAt } from "@/lib/timeline/values";
+import { modelRainLevelAt, pointHours, seriesValueAt } from "@/lib/timeline/values";
+import { PointDayChart } from "./point-day-chart";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { modelRainAt, sampleGrid, windAt, windAtField } from "@/lib/map/probe";
 import { nearestProvince, pointPlace } from "@/lib/map/nearest";
@@ -175,6 +176,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
         </dd></div>}
         <div className="flex justify-between gap-3"><dt>{t("ลม")}</dt><dd className="text-right font-semibold">{breeze ? t("{wind} {speed} กม./ชม. จากทิศ{bearing}", { wind: windWord(breeze.speedKmh, t), speed: breeze.speedKmh, bearing: bearingWord(breeze.fromDeg, t) }) : t("ไม่ทราบ")}</dd></div>
       </dl>
+      {probe.kind === "point" && <PointDayChart hours={pointHours(windSeries, Math.max(timeMs, nowMs), probe.lon, probe.lat, geo)} />}
       <button type="button" className="map-chip mt-3 w-full" onClick={() => { setPlace(point); router.push("/"); }}>{t("ดูพยากรณ์เต็ม")}</button>
     </>}
     {storm && <div className="mt-2 space-y-1 text-sm">

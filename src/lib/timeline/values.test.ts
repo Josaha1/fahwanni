@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mergeDays } from "./store";
 import { HOUR } from "./time";
-import { modelRainLevelAt, seriesValueAt } from "./values";
+import { modelRainLevelAt, pointHours, seriesValueAt } from "./values";
 
 const geo = { bbox: [0, 0, 1, 1] as const, nx: 2, ny: 2 };
 const t0 = Date.parse("2026-09-30T14:00:00+07:00");
@@ -32,5 +32,12 @@ describe("values at a place and minute", () => {
     expect(modelRainLevelAt(series, t0, 0.5, 0.5, geo)).toBe(0);
     expect(modelRainLevelAt(series, t0 + HOUR, 0.5, 0.5, geo)).toBe(3);
     expect(modelRainLevelAt(null, t0, 0.5, 0.5, geo)).toBeNull();
+  });
+
+  it("lists whole hours at a place from the hour of the start time and stops where data ends", () => {
+    const hours = pointHours(series, t0 + 20 * 60_000, 0.5, 0.5, geo, 24);
+    expect(hours.map((hour) => hour.time)).toEqual([t0, t0 + HOUR]);
+    expect(hours[1]).toEqual({ time: t0 + HOUR, temp: 34, prob: 80, precip: 6 });
+    expect(pointHours(null, t0, 0.5, 0.5, geo)).toEqual([]);
   });
 });
