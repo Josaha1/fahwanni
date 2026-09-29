@@ -12,6 +12,7 @@ import { formatFullDate } from "@/lib/format";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { distanceKm } from "@/lib/storms/normalize";
 import { rareLevelWord, statusWord } from "@/lib/rivers/status";
+import { riverColors } from "@/lib/rivers/colors";
 import type { RiverBand, RiverStatus, RiverTrend } from "@/lib/rivers/types";
 import type { TmdWarnings } from "@/lib/tmd";
 import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/lib/water/whats-new";
@@ -46,7 +47,6 @@ const validRivers = (value: RiversPayload) => Array.isArray(value?.points);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validRain = (value: RainRisk) => Array.isArray(value?.stations);
 const validWarnings = (value: TmdWarnings & { error?: string }) => Array.isArray(value?.items) && !value.error;
-const riverColors: Record<RiverStatus, string> = { low: "#64748b", normal: "#16a34a", high: "#d97706", veryHigh: "#dc2626" };
 function stored(key: string) { try { return localStorage.getItem(key); } catch { return null; } }
 function subscribeWater(onChange: () => void) {
   window.addEventListener("storage", onChange);
