@@ -13,6 +13,7 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
     case "ring": return <span className="block h-4 w-4 rounded-full border-[3px]" style={{ borderColor: swatch.color }} aria-hidden="true" />;
     case "square": return <span className="block h-3 w-3 rounded-[2px] border border-white" style={{ backgroundColor: swatch.color }} aria-hidden="true" />;
     case "pin": return <span className="block h-3 w-3 rounded-full border-2 border-white" style={{ backgroundColor: "var(--map-accent)" }} aria-hidden="true" />;
+    case "favourite": return <span className="block h-2.5 w-2.5 rounded-full border-2" style={{ backgroundColor: "var(--map-bg)", borderColor: "var(--map-accent)" }} aria-hidden="true" />;
     case "probe": return <span className="block h-3.5 w-3.5 rounded-full border-[3px] bg-white/80" style={{ borderColor: "var(--map-accent)" }} aria-hidden="true" />;
   }
 }
@@ -21,7 +22,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {

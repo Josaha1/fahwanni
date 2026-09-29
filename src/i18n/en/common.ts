@@ -16,6 +16,7 @@ export const common: Record<string, string> = {
   "สัญลักษณ์": "Symbols",
   "ตำแหน่งของคุณ": "Your location",
   "จุดที่แตะดูอากาศ": "Tapped weather point",
+  "สถานที่ที่บันทึกไว้": "Saved places",
   "เขื่อน": "Dams",
   "เขื่อนเหนือน้ำของคุณ": "Dams upstream of you",
   "น้ำใกล้คุณ": "Water near you",

@@ -14,13 +14,15 @@ export type Swatch =
   | { kind: "ring"; color: string }
   | { kind: "square"; color: string }
   | { kind: "pin" }
+  | { kind: "favourite" }
   | { kind: "probe" };
 export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
+    ...(active.favourites ? [{ swatch: { kind: "favourite" as const }, label: "สถานที่ที่บันทึกไว้" }] : []),
   ] }];
   if (active.wind) sections.push({ title: "ลม", rows: [
     { swatch: { kind: "line", color: windColor(1) }, label: "ลมสงบ–อ่อน (ต่ำกว่า 11 กม./ชม.)" },

@@ -48,6 +48,10 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
         // Downstream reaches are shared by several routes; the dam nearest the tap is the one the user means.
         .sort((a, b) => Math.hypot(a.properties!.damLat - event.lngLat.lat, a.properties!.damLon - event.lngLat.lng)
           - Math.hypot(b.properties!.damLat - event.lngLat.lat, b.properties!.damLon - event.lngLat.lng))[0] : undefined;
+      const favourite = !dam && !rain && !river && !route && map.getLayer("favourite-circle") ? map.queryRenderedFeatures([
+        [event.point.x - 8, event.point.y - 8], [event.point.x + 8, event.point.y + 8],
+      ], { layers: ["favourite-circle"] }).find((feature) =>
+        typeof feature.properties?.lat === "number" && typeof feature.properties?.lon === "number") : undefined;
       const layers = ["quake-circle", "storm-cone", "storm-track", "storm-forecast"].filter((id) => map.getLayer(id));
       const features = layers.length ? map.queryRenderedFeatures(event.point, { layers }) : [];
       const quake = features.find((feature) => feature.layer?.id === "quake-circle" && typeof feature.properties?.id === "string");
@@ -60,6 +64,7 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
         select({ kind: "dam", id: damId });
         routeHandler.current?.(damId);
       }
+      else if (favourite) select({ kind: "point", lat: favourite.properties!.lat as number, lon: favourite.properties!.lon as number });
       else if (quake) select({ kind: "quake", id: quake.properties!.id as string });
       else if (storm) select({ kind: "storm", id: storm.properties!.id as string });
       else if (points) select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });

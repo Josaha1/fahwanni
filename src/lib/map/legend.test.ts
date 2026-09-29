@@ -95,6 +95,9 @@ describe("overlayLegend", () => {
       { kind: "circle", color: DATA.quake, size: 20 },
     ]);
     expect(overlayLegend({ wind: false, storms: true, quakes: false, dams: false }).map((section) => section.title)).toEqual(["สัญลักษณ์", "พายุ"]);
+    expect(overlayLegend({ wind: false, storms: false, quakes: false, dams: false, favourites: true })[0].rows.at(-1)).toEqual({
+      swatch: { kind: "favourite" }, label: "สถานที่ที่บันทึกไว้",
+    });
   });
 
   it("describes dam bands, the release marker and the downstream path", () => {
@@ -134,7 +137,7 @@ describe("overlayLegend", () => {
 
   it("has English translations for every Thai row and section", () => {
     const en = translator("en");
-    for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true, rivers: true })) {
+    for (const section of overlayLegend({ wind: true, storms: true, quakes: true, dams: true, favourites: true, rivers: true })) {
       expect(en(section.title)).not.toBe(section.title);
       for (const row of section.rows) expect(en(row.label)).not.toBe(row.label);
     }

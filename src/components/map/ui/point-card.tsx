@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLastPlace } from "@/hooks/use-favourites";
+import type { Place } from "@/lib/place";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
@@ -43,9 +44,10 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
+export function PointCard({ probe, favourites, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
   rivers, riversStatus, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
   probe: Probe;
+  favourites: Place[];
   onClose: () => void;
   frame?: RadarFrame;
   wind: WindGrid | null;
@@ -85,7 +87,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   const { place, setPlace } = useLastPlace();
   const heading = useRef<HTMLHeadingElement>(null);
   const [radarLevel, setRadarLevel] = useState<number | null>(null);
-  const point = probe.kind === "point" ? pointPlace(probe.lat, probe.lon) : null;
+  const point = probe.kind === "point" ? favourites.find((item) => item.lat === probe.lat && item.lon === probe.lon) ?? pointPlace(probe.lat, probe.lon) : null;
   const province = probe.kind === "point" ? nearestProvince(probe.lat, probe.lon) : null;
   const storm = probe.kind === "storm" ? storms.find((item) => item.id === probe.id) : undefined;
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
