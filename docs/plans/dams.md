@@ -1,6 +1,6 @@
 # Plan: dam situation + where released water goes
 
-Status: APPROVED (2026-09-29)
+Status: DONE (2026-09-29) — live, verify:deploy 14/14
 
 ## Context
 User (2026-09-29): "ต้องการดูสถานการณ์เขื่อนด้วย และถ้าเขื่อนระบายน้ำหรือเขื่อนแตกน้ำจะมาทางไหน".
