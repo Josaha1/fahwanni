@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/i18n/client";
+import Link from "next/link";
 import type { Dam } from "@/lib/dams/types";
 import { formatFullDate } from "@/lib/format";
 import { riverColors } from "@/lib/rivers/colors";
@@ -86,6 +87,7 @@ export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, e
     {waterDay === 0 && detail.rare && <p>{t(rareLevelWord(detail.rare))}</p>}
     {upstream && <p>{t("ปริมาณจริงขึ้นกับการระบายของเขื่อน{name} (ระบาย {release} ลบ.ม./วินาที)", { name: t.locale === "en" ? upstream.nameEn || upstream.nameTh : upstream.nameTh, release: upstream.releaseCms === null ? "—" : number.format(upstream.releaseCms) })}</p>}
     <UpstreamDams point={point} dams={dams} muted={muted} onSelectDam={onSelectDam} damHref={damHref} />
+    {point.id === "chaophraya-ayutthaya" && <p><Link className="font-semibold text-given underline underline-offset-2" href="/water#tide">{t("ดูน้ำขึ้นน้ำลงปากเจ้าพระยา")}</Link></p>}
     {detail.value2554Today !== null && <p>{t("วันนี้ปี 2554: {value} ลบ.ม./วินาที", { value: number.format(detail.value2554Today) })}</p>}
     {showDisclaimers && detail.value2554Today !== null && <p className={`${muted} text-xs`}>{t("ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน")}</p>}
     {showDisclaimers && mapCard && <p className={`${muted} pt-2 text-xs`}>{t("ประมาณการจากแบบจำลอง GloFAS ความละเอียด 5 กม. · ไม่ใช่ค่าที่วัดจริงจากสถานี · ไม่ใช่แผนที่น้ำท่วม")}</p>}

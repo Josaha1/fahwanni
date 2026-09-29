@@ -28,6 +28,7 @@ const paths = [
   "/api/dams-trend",
   "/api/dams-history",
   "/api/rivers",
+  "/api/tide",
   "/api/rain-risk",
   "/api/storms",
   "/api/quakes",

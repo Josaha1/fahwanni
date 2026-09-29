@@ -8,15 +8,19 @@ import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, waterSummary } from "@/lib/dams/summary";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate } from "@/lib/format";
+import { nearestProvince } from "@/lib/map/nearest";
+import type { Place } from "@/lib/place";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { distanceKm } from "@/lib/storms/normalize";
 import { statusWord } from "@/lib/rivers/status";
 import type { TmdWarnings } from "@/lib/tmd";
+import type { TideSeries } from "@/lib/tide/tide";
 import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/lib/water/whats-new";
 import { readWatch, refreshWatch, toggleWatch, watchRows, writeWatch, type WaterWatch, type WatchItem } from "@/lib/water/watchlist";
 import { TmdWarningList } from "./tmd-warnings";
 import { DamRowHeader } from "./dam-row";
 import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
+import { TideChart } from "./tide-chart";
 type Load<T> = { status: "loading" | "ready" | "error"; data: T | null };
 
 function useWaterSource<T>(url: string, valid: (value: T) => boolean): Load<T> {
@@ -38,6 +42,21 @@ const validRivers = (value: RiversPayload) => Array.isArray(value?.points);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validRain = (value: RainRisk) => Array.isArray(value?.stations);
 const validWarnings = (value: TmdWarnings & { error?: string }) => Array.isArray(value?.items) && !value.error;
+const validTide = (value: TideSeries) => Array.isArray(value?.times) && value.times.length === value?.heights?.length;
+const tideProvinces = new Set(["bangkok", "nonthaburi", "pathum-thani", "samut-prakan", "samut-sakhon", "phra-nakhon-si-ayutthaya"]);
+function TideSection() {
+  const t = useT();
+  const tide = useWaterSource("/api/tide", validTide);
+  return <section id="tide" className="placeholder-card space-y-2" aria-label={t("น้ำขึ้นน้ำลง (ปากเจ้าพระยา)")}>
+    <h2 className="text-lg font-semibold">{t("น้ำขึ้นน้ำลง (ปากเจ้าพระยา)")}</h2>
+    {tide.data ? <TideChart series={tide.data} />
+      : <p className="text-muted text-sm" role="status">{t(tide.status === "loading" ? "กำลังโหลดข้อมูลน้ำขึ้นน้ำลง…" : "ข้อมูลน้ำขึ้นน้ำลงไม่พร้อมใช้งาน")}</p>}
+  </section>;
+}
+
+export function showTideForPlace(place: Place) {
+  return tideProvinces.has(nearestProvince(place.lat, place.lon).id);
+}
 function stored(key: string) { try { return localStorage.getItem(key); } catch { return null; } }
 function subscribeWater(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -177,6 +196,7 @@ export function WaterPage() {
         {!showAll && nearbyRivers.length > 3 && <button type="button" className="min-h-11 font-semibold text-given underline" onClick={() => setShowAll(true)}>{t("ดูทุกจุด ({n})", { n: nearbyRivers.length })}</button>}
       </>}
     </section>
+    {showTideForPlace(place) && <TideSection />}
     <section className="placeholder-card space-y-2" aria-label={t("เขื่อนใกล้คุณ")}>
       <div><h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
         {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}</p>}

@@ -9,7 +9,7 @@ const route = (path: string, options?: RequestInit) => sandbox.self.fahRoute!(ne
 
 describe("service worker routing", () => {
   it.each([
-    "/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers",
+    "/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide",
     "/data/dam-paths.geojson", "/data/dam-downstream.json",
   ])("caches water data at %s", (path) => {
     expect(route(path)).toBe("data");
