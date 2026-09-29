@@ -91,6 +91,7 @@ export function MapProvider({ containerRef, initialCenter, initialZoom = 6, chil
         '<a href="https://www.hydrosheds.org" target="_blank" rel="noopener noreferrer">Rivers: HydroRIVERS (CC BY 4.0)</a>',
         '<a href="https://app.rid.go.th/reservoir/" target="_blank" rel="noopener noreferrer">Dams: Royal Irrigation Dept.</a>',
         '<a href="https://www.tmd.go.th" target="_blank" rel="noopener noreferrer">Rain: Thai Meteorological Department</a>',
+        '<a href="https://open-meteo.com/en/docs/flood-api" target="_blank" rel="noopener noreferrer">River discharge: GloFAS via Open-Meteo (CC BY 4.0)</a>',
       ] }), "bottom-right");
       // Start collapsed on every screen size: expanded credits cover the map.
       const attribution = live.getContainer().querySelector(".maplibregl-ctrl-attrib");

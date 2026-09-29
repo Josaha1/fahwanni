@@ -463,7 +463,7 @@ export const common: Record<string, string> = {
   "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.": "The model has no area reaching 90 mm over the next 3 days",
   "แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม. ในช่วงที่เลือก": "The model has no area reaching 90 mm over the selected 3 days",
   "ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน": "Rain forecast data unavailable",
-  "ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "Data: Royal Irrigation Department, Thai Meteorological Department, Open-Meteo · River paths: HydroRIVERS (CC BY 4.0)",
+  "ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · ปริมาณน้ำไหลผ่าน: GloFAS ผ่าน Open-Meteo (CC BY 4.0) · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)": "Data: Royal Irrigation Department, Thai Meteorological Department, Open-Meteo · River discharge: GloFAS via Open-Meteo (CC BY 4.0) · River paths: HydroRIVERS (CC BY 4.0)",
   "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)": "Moving dashes = direction of flow (thicker = larger release)",
   "{mm} มม.": "{mm} mm",
   "ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน": "This number alone does not tell whether flooding will occur; 2011 flooded through rain, full dams and timing together",
