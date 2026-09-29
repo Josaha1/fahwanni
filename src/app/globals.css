@@ -170,6 +170,8 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-play { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; background: var(--map-accent); color: #fff; }
 .map-range { accent-color: var(--map-accent); }
 .map-muted { color: var(--map-muted); }
+.map-warning { color: #b45309; font-weight: 600; }
+:is([data-theme="dark"], [data-theme="night"]) .map-warning { color: #fbbf24; }
 .map-series-item[aria-pressed="true"] { background: rgb(37 99 235 / .15); }
 .map-shell button:focus-visible, .map-shell input:focus-visible, .map-shell h2:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 2px; }
 .map-shell .maplibregl-map :is(.maplibregl-ctrl-group, .maplibregl-ctrl-attrib) { background: var(--map-panel); color: var(--map-label); border: 1px solid var(--map-panel-border); }

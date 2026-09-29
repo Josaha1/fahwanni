@@ -12,3 +12,8 @@ export function nextFrameIndex(index: number, count: number): number {
 export function minutesSinceNewest(frames: RadarFrame[], nowIso: string): number {
   return frames.length ? minutesAgo(frames[frames.length - 1].time, nowIso) : 0;
 }
+
+export function radarAgeLabel(minutes: number, stale: boolean | undefined): { key: string; warn: boolean } {
+  const warn = minutes > 30 || stale === true;
+  return { key: warn ? "เรดาร์ล่าช้า {n} นาที" : "อัปเดตเมื่อ {n} นาทีที่แล้ว", warn };
+}

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
-import { lastRadarFrames, minutesSinceNewest } from "@/lib/radar/frames";
+import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
 import { renderPrecipImage } from "@/lib/precip/render";
 import { renderPm25Image, renderTempImage } from "@/lib/raster/render-scalar";
 import { pm25Level } from "@/lib/air";
@@ -90,6 +90,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
+  const radarAge = minutesSinceNewest(frames, nowIso);
+  const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const modelImages = useMemo(() => {
     if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ScalarImage | null)[];
     const images = wind.precipHours.slice(0, 12).map((_, index) => {
@@ -426,7 +428,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       </div>
       <p className="map-muted text-center text-[10px]">{t("เวลา (น.)")}</p>
     </section>}
-    {primary === "rain" && frames.length > 0 && <p className="map-muted mt-2 text-right text-xs">{t("อัปเดตเมื่อ {n} นาทีที่แล้ว", { n: minutesSinceNewest(frames, nowIso) })}</p>}
+    {primary === "rain" && frames.length > 0 && <p className={`${ageLabel.warn ? "map-warning" : "map-muted"} mt-2 text-right text-xs`}>
+      {ageLabel.warn && <span aria-hidden="true">⚠ </span>}{t(ageLabel.key, { n: radarAge })}
+    </p>}
   </div>;
   const layers = <>
     {primary === "rain" && <button type="button" disabled={!available} aria-pressed={available && rainVisible} onClick={() => dispatch({ type: "toggleRain" })} className="map-chip text-sm disabled:opacity-60">

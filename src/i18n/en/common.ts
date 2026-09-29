@@ -186,6 +186,7 @@ export const common: Record<string, string> = {
   "ฝุ่น PM2.5…": "PM2.5…",
   "{temp}° รู้สึกเหมือน {feels}°": "{temp}° feels like {feels}°",
   "อัปเดตเมื่อ {n} นาทีที่แล้ว": "Updated {n} {n:minute|minutes} ago",
+  "เรดาร์ล่าช้า {n} นาที": "Radar delayed {n} min",
   "ค้นหาเมืองหรือจังหวัด": "Search city or province",
   "ค้นหาสถานที่": "Search places",
   "ปิดการค้นหา": "Close search",
