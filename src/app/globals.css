@@ -204,7 +204,7 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-time-layout { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
 .map-time-layout > .map-time-bar { flex: 1; }
 .map-time-actions { display: flex; align-items: center; gap: 6px; flex: none; }
-.map-time-now-button { min-height: 32px; padding-inline: 9px; font-size: 11px; }
+.map-time-now-button, .map-time-speed { min-height: 32px; padding-inline: 9px; font-size: 11px; }
 @media (min-width: 1024px) { .map-time-layout { align-items: center; } }
 .map-muted { color: var(--map-muted); }
 .map-warning { color: #b45309; font-weight: 600; }

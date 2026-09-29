@@ -1,4 +1,5 @@
 export const common: Record<string, string> = {
+  "ความเร็วการเล่น {n} นาทีต่อวินาที": "Playback speed {n} minutes per second",
   "ฟ้าวันนี้": "Today's Sky",
   "นำทางหลัก": "Main navigation",
   "พยากรณ์": "Forecast",

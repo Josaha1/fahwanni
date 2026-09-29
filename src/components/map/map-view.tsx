@@ -10,6 +10,7 @@ import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { sampleSeries } from "@/lib/timeline/store";
 import { rainSourceAt } from "@/lib/timeline/rain-source";
 import { HOUR, lerpGrid, makeDomain, MINUTE, roundTo } from "@/lib/timeline/time";
+import { advance, DEFAULT_PLAY_SPEED, isPlaySpeed, nextPlaySpeed, PLAY_SPEEDS, type PlaySpeed } from "@/lib/timeline/play";
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
@@ -110,6 +111,17 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const previousTimeline = useRef<{ manifest: typeof manifest; stops: TimelineStop[]; defaultIdx: number; primary: typeof primary } | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
+    try {
+      const saved = Number(localStorage.getItem("fah-map-play-speed"));
+      return isPlaySpeed(saved) ? saved : DEFAULT_PLAY_SPEED;
+    } catch { return DEFAULT_PLAY_SPEED; }
+  });
+  const changePlaySpeed = () => setPlaySpeed((speed) => {
+    const next = nextPlaySpeed(speed);
+    try { localStorage.setItem("fah-map-play-speed", String(next)); } catch { /* Keep the speed for this visit only. */ }
+    return next;
+  });
   const [pathRequestedId, setPathRequestedId] = useState<string | null>(urlView.dam ?? null);
   const [pathData, setPathData] = useState<{ id: string; path: DamPath; downstream: Downstream } | null>(null);
   const [pathLoading, setPathLoading] = useState(Boolean(urlView.dam));
@@ -272,14 +284,30 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
   }, []);
 
+  // Playback runs in requestAnimationFrame at `playSpeed` simulated minutes per second; it reads the
+  // latest time from a ref so the loop is not restarted on every minute it sets.
+  const playTime = useRef(effectiveTime);
+  useEffect(() => { playTime.current = effectiveTime; }, [effectiveTime]);
+  const playLimit = primary === "pm25" && pm25LoadedDays.includes(4) && pm25LastAvailable !== null ? pm25LastAvailable : null;
   useEffect(() => {
     if (!playing || reducedMotion || (primary === "rain" && !rainOn)) return;
-    const step = effectiveTime < nowMs ? 10 * MINUTE : HOUR;
-    const limit = primary === "pm25" && pm25LoadedDays.includes(4) && pm25LastAvailable !== null ? Math.min(domain.end, pm25LastAvailable) : domain.end;
-    const next = effectiveTime + step;
-    const timer = window.setTimeout(() => dispatch({ type: "setTime", t: next > limit ? domain.start : next }), 600);
-    return () => window.clearTimeout(timer);
-  }, [playing, reducedMotion, primary, rainOn, effectiveTime, nowMs, domain.start, domain.end, pm25LoadedDays, pm25LastAvailable]);
+    let frame = 0;
+    let last = performance.now();
+    let t = playTime.current;
+    const tick = (now: number) => {
+      if (document.visibilityState !== "visible") { dispatch({ type: "stop" }); return; }
+      const dt = Math.min(now - last, 250);
+      last = now;
+      // Keep sub-minute progress locally; only whole minutes go to state.
+      if (roundTo(t, MINUTE) !== roundTo(playTime.current, MINUTE)) t = playTime.current;
+      t = advance(t, dt, playSpeed, domain, playLimit).t;
+      const minute = roundTo(t, MINUTE);
+      if (minute !== roundTo(playTime.current, MINUTE)) { playTime.current = minute; dispatch({ type: "setTime", t: minute }); }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [playing, reducedMotion, primary, rainOn, playSpeed, domain, playLimit]);
 
   const viewQuery = useCallback(() => {
     if (!mapInstance) return null;
@@ -387,6 +415,8 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const timeline = <div className="map-time-layout">
     <div className="map-time-actions">
       {playButton}
+      <button type="button" className="map-chip map-time-speed" onClick={changePlaySpeed}
+        aria-label={t("ความเร็วการเล่น {n} นาทีต่อวินาที", { n: playSpeed })}>×{playSpeed / PLAY_SPEEDS[0]}</button>
       {timeMs !== null && Math.abs(effectiveTime - nowMs) >= MINUTE && <button type="button" className="map-chip map-time-now-button" aria-label={t("กลับไปเวลาปัจจุบัน")} onClick={() => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: null }); }}>{t("ตอนนี้")}</button>}
     </div>
     <TimeBar domain={domain} t={effectiveTime} onChange={(value) => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: value }); }}
