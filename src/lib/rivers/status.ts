@@ -78,3 +78,9 @@ export function summarizeRiver(point: RiverPoint, forecast: RiverForecast, today
     days,
   };
 }
+
+export function riverAtDay(summary: { today: { date: string; value: number; status: RiverStatus }; days: { date: string; value: number; status: RiverStatus }[] } | null, day: number): { date: string; value: number; status: RiverStatus } | null {
+  if (!summary || !Number.isInteger(day) || day < 0 || day > 7) return null;
+  const selected = day === 0 ? summary.today : summary.days[day - 1];
+  return selected ? { date: selected.date, value: selected.value, status: selected.status } : null;
+}

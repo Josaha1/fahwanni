@@ -5,6 +5,7 @@ import type { Map } from "maplibre-gl";
 import { useT } from "@/i18n/client";
 import { BASE } from "@/lib/map/base-style";
 import { riverColors } from "@/lib/rivers/colors";
+import { riverAtDay } from "@/lib/rivers/status";
 import type { RiversPayload } from "@/components/water/river-details";
 import { useMapContext } from "../map-provider";
 import { useStyleEffect } from "../use-style-effect";
@@ -12,17 +13,19 @@ import { useStyleEffect } from "../use-style-effect";
 const SOURCE = "rivers";
 const LAYERS = ["river-circle", "river-label"] as const;
 
-export function useRiverLayer(map: Map | null, rivers: RiversPayload | null, enabled: boolean) {
+export function useRiverLayer(map: Map | null, rivers: RiversPayload | null, enabled: boolean, waterDay: number) {
   const { theme } = useMapContext();
   const t = useT();
   const data = useMemo(() => ({ type: "FeatureCollection" as const, features: enabled ? (rivers?.points ?? []).flatMap((point) => {
-    if (!point.summary) return [];
-    const trend = point.summary.trend;
+    const selected = riverAtDay(point.summary, waterDay);
+    if (!selected || !point.summary) return [];
+    const next = riverAtDay(point.summary, Math.min(7, waterDay + 1));
+    const trend = waterDay === 0 ? point.summary.trend : next && next.value > selected.value * 1.1 ? "rising" : next && next.value < selected.value * 0.9 ? "falling" : "steady";
     const name = t.locale === "en" ? point.nameEn.split(" at ")[0] : point.nameTh.split(" ")[0];
     return [{ type: "Feature" as const, properties: {
-      id: point.id, color: riverColors[point.summary.today.status], label: `${name} ${trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}`,
+      id: point.id, color: riverColors[selected.status], label: `${name} ${trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}`,
     }, geometry: { type: "Point" as const, coordinates: [point.lon, point.lat] } }];
-  }) : [] }), [rivers, enabled, t.locale]);
+  }) : [] }), [rivers, enabled, waterDay, t.locale]);
 
   useStyleEffect(map, (live) => {
     if (!live.getSource(SOURCE) && data.features.length) live.addSource(SOURCE, { type: "geojson", data });

@@ -28,7 +28,7 @@ function subscribeOnline(onChange: () => void) {
   return () => { window.removeEventListener("online", onChange); window.removeEventListener("offline", onChange); };
 }
 
-export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
+export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay, rainStartDate,
   legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, rainAccumOn, rainAccumStatus, onToggleRainAccum }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
@@ -40,6 +40,8 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   placeName: string;
   onSelectDam: (id: string) => void;
   onSelectRain: (id: string) => void;
+  waterDay: number;
+  rainStartDate: string;
   legendButton: RefObject<HTMLButtonElement | null>;
   onOpenLegend: () => void;
   showAllRainProvinces: boolean;
@@ -57,7 +59,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
     setDismissed(next);
     try { sessionStorage.setItem(DISMISSED_KEY, JSON.stringify(next)); } catch { /* Keep dismissal for this visit. */ }
   };
-  const summary = damsStatus === "ready" && dams ? waterSummary(dams.dams, rainRiskStatus === "ready" && rainRisk ? rainRisk.stations : null) : null;
+  const summary = damsStatus === "ready" && dams ? waterSummary(dams.dams, waterDay === 0 && rainRiskStatus === "ready" && rainRisk ? rainRisk.stations : null) : null;
   const nearby = damsStatus === "ready" && dams ? nearestDams(dams.dams, place) : [];
   const watched = damsStatus === "ready" && dams ? watchRows(watch, dams.dams.map((dam) => ({ kind: "dam" as const, id: dam.id, value: dam.storagePct, unit: "pct" as const, date: dam.date, dam }))) : [];
   const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
@@ -75,6 +77,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
             : t("ข้อมูลกรมชลประทาน")}</span>
       </p>
       {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
+      {waterDay > 0 && dams.dataDate && <p className="map-muted text-xs">{t("เขื่อนแสดงข้อมูลวัดจริงวันที่ {date} — ไม่ใช่พยากรณ์", { date: formatFullDate(`${dams.dataDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
@@ -83,8 +86,9 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
         <button type="button" className="map-chip text-sm" aria-pressed={rainAccumOn} onClick={onToggleRainAccum}>{t("ฝนสะสม 3 วัน")}</button>
         <span className="map-water-badge">{t("พยากรณ์ (แบบจำลอง)")}</span>
       </div>
+      {waterDay > 0 && <p className="map-muted mt-1 text-xs">{t("ฝนสะสม 3 วัน เริ่ม {date}", { date: formatFullDate(`${rainStartDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
       <p className="map-muted mt-2 text-xs">{t("พื้นที่ที่แบบจำลองคาดว่าฝนรวม 3 วันถึง 90 มม. (ส้ม) หรือ 150 มม. (แดง) — ไม่ใช่แผนที่น้ำท่วม")}</p>
-      {rainAccumOn && rainAccumStatus === "none" && <p className="mt-1 text-xs">{t("ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.")}</p>}
+      {rainAccumOn && rainAccumStatus === "none" && <p className="mt-1 text-xs">{t(waterDay > 0 ? "แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม. ในช่วงที่เลือก" : "ตอนนี้แบบจำลองไม่มีพื้นที่ที่ฝนรวม 3 วันถึง 90 มม.")}</p>}
       {rainAccumOn && rainAccumStatus === "unavailable" && <p className="map-muted mt-1 text-xs">{t("ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน")}</p>}
     </section>
     {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
@@ -110,7 +114,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
         </button>
       </li>)}</ul>
     </section>}
-    <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-rain-risk">
+    {waterDay === 0 && <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-rain-risk">
       <h2 id="map-rain-risk" className="font-semibold">{t("ฝนหนัก 24 ชม. (กรมอุตุฯ)")} <span className="map-water-badge">{t("สังเกต")}</span></h2>
       {rainRiskStatus === "ready" && rainRisk ? <>
         {rainProvinces.length ? <>
@@ -124,7 +128,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
         </> : <p className="map-muted mt-2">{t("ไม่มีสถานีที่ฝน 24 ชม. เข้าเกณฑ์ฝนหนัก ({n} สถานี)", { n: rainRisk.reporting })}</p>}
         {rainRisk.observedAt && <p className="map-muted mt-2 text-xs">{t("ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
       </> : <p className="map-muted mt-2" role="status">{t(rainRiskStatus === "error" ? "ข้อมูลฝนหนักไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลฝนหนัก…")}</p>}
-    </section>
+    </section>}
     <details className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }}>
       <summary className="cursor-pointer font-semibold">{t("เบอร์ฉุกเฉิน")}</summary>
       <div className="mt-2 flex flex-wrap gap-2">

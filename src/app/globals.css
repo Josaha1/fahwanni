@@ -189,6 +189,15 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-play { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; background: var(--map-accent); color: #fff; }
 .map-time-bar { min-width: 0; width: 100%; }
 .map-time-floating { position: absolute; z-index: 5; left: 392px; right: 72px; bottom: 16px; min-height: 84px; }
+.map-water-stepper { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.map-water-stepper-controls { display: flex; flex: none; align-items: center; gap: 4px; }
+.map-water-stepper-controls .map-chip { min-width: 32px; min-height: 36px; padding: 0 8px; font-size: 22px; }
+.map-water-stepper-controls .map-chip:disabled { opacity: .45; }
+.map-water-days { display: flex; flex: 1; min-width: 0; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.map-water-days::-webkit-scrollbar { display: none; }
+.map-water-day { flex: 1 0 auto; min-width: 50px; min-height: 40px; padding: 0 6px; border-radius: 999px; color: var(--map-label); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.map-water-day[aria-checked="true"] { background: var(--map-accent); color: #fff; }
+@media (max-width: 1023px) { .map-water-stepper { margin: 0 0 6px; } .map-water-day { flex: none; } }
 .map-time-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
 .map-time-heading strong { font-size: 14px; }
 .map-time-heading small { overflow: hidden; color: var(--map-muted); font-size: 11px; text-overflow: ellipsis; }

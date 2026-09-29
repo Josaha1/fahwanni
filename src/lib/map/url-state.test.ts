@@ -67,4 +67,15 @@ describe("map URL view", () => {
       expect(parseUrlView(`?river=${encodeURIComponent(invalid)}`).river).toBeUndefined();
     }
   });
+
+  it("keeps only future water days in water URLs", () => {
+    const base = { lat: 13.7, lon: 100.5, z: 8, layer: "rain" as const,
+      ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false } };
+    expect(formatUrlView({ ...base, mode: "water", wd: 3 })).toContain("wd=3");
+    expect(formatUrlView({ ...base, mode: "water", wd: 0 })).not.toContain("wd=");
+    expect(formatUrlView({ ...base, mode: "weather", wd: 3 })).not.toContain("wd=");
+    expect(parseUrlView("?mode=water&wd=7").wd).toBe(7);
+    for (const value of ["0", "8", "2.5", "-1", "foo"]) expect(parseUrlView(`?mode=water&wd=${value}`).wd).toBeUndefined();
+    expect(parseUrlView("?wd=3").wd).toBeUndefined();
+  });
 });

@@ -5,7 +5,7 @@ import type { RiverBand } from "@/lib/rivers/types";
 
 export type RiverChartDay = { date: string; value: number; doyBand: RiverBand };
 
-export function RiverChart({ days, color }: { days: RiverChartDay[]; color: string }) {
+export function RiverChart({ days, color, selectedIndex }: { days: RiverChartDay[]; color: string; selectedIndex?: number }) {
   const t = useT();
   const shown = days.slice(0, 7);
   if (!shown.length) return null;
@@ -26,7 +26,8 @@ export function RiverChart({ days, color }: { days: RiverChartDay[]; color: stri
   return <svg className="mt-2 w-full" viewBox="0 0 160 64" role="img" aria-label={t("กราฟปริมาณน้ำไหลผ่าน 7 วัน")}>
     {band && <polygon points={band} fill="currentColor" opacity="0.12" />}
     <polyline points={shown.map((day, index) => `${x(index)},${y(day.value)}`).join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    {shown.map((day, index) => <circle key={day.date} cx={x(index)} cy={y(day.value)} r="1.8" fill={color}><title>{day.date}: {day.value.toFixed(0)} m³/s; p25–p75 {day.doyBand?.p25.toFixed(0)}–{day.doyBand?.p75.toFixed(0)}</title></circle>)}
+    {selectedIndex !== undefined && selectedIndex >= 0 && selectedIndex < shown.length && <line x1={x(selectedIndex)} x2={x(selectedIndex)} y1="4" y2="52" stroke={color} strokeWidth="1" opacity="0.5" />}
+    {shown.map((day, index) => <circle key={day.date} cx={x(index)} cy={y(day.value)} r={index === selectedIndex ? "3.5" : "1.8"} fill={color}><title>{day.date}: {day.value.toFixed(0)} m³/s; p25–p75 {day.doyBand?.p25.toFixed(0)}–{day.doyBand?.p75.toFixed(0)}</title></circle>)}
     {shown.map((day, index) => <text key={`label-${day.date}`} x={x(index)} y="62" textAnchor="middle" fontSize="6" fill="currentColor" opacity="0.6">{weekday(day.date)}</text>)}
   </svg>;
 }

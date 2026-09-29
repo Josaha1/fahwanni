@@ -1,6 +1,7 @@
 export type MapState = {
   /** "weather": forecast layers + time bar; "water": dams and their downstream routes (observed daily data). */
   mode: "weather" | "water";
+  waterDay: number;
   primary: "rain" | "temp" | "pm25";
   rainOn: boolean;
   overlays: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; terrain: boolean };
@@ -20,12 +21,15 @@ export type MapAction =
   | { type: "togglePlay" }
   | { type: "stop" }
   | { type: "setFocus"; focus: MapState["focus"] }
-  | { type: "setMode"; mode: MapState["mode"] };
+  | { type: "setMode"; mode: MapState["mode"] }
+  | { type: "setWaterDay"; day: number };
 
-export function initialMapState(override?: Partial<Pick<MapState, "mode" | "primary" | "overlays" | "timeMs" | "focus">>): MapState {
+export function initialMapState(override?: Partial<Pick<MapState, "mode" | "waterDay" | "primary" | "overlays" | "timeMs" | "focus">>): MapState {
   const mode = override?.mode ?? "weather";
+  const waterDay = override?.waterDay ?? 0;
   return {
     mode,
+    waterDay: mode === "water" && Number.isInteger(waterDay) && waterDay >= 0 && waterDay <= 7 ? waterDay : 0,
     primary: override?.primary ?? "rain",
     rainOn: true,
     overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false, ...override?.overlays,
@@ -49,9 +53,11 @@ export function mapReducer(state: MapState, action: MapAction): MapState {
     case "togglePlay": return { ...state, playing: !state.playing };
     case "stop": return { ...state, playing: false };
     case "setFocus": return { ...state, focus: action.focus };
+    case "setWaterDay": return state.mode === "water" && Number.isInteger(action.day) && action.day >= 0 && action.day <= 7
+      ? { ...state, waterDay: action.day } : state;
     // Dams belong to water mode; leaving it drops the route too.
     case "setMode": return action.mode === "water"
       ? { ...state, mode: "water", overlays: { ...state.overlays, dams: true }, playing: false }
-      : { ...state, mode: "weather", overlays: { ...state.overlays, dams: false }, focus: null };
+      : { ...state, mode: "weather", waterDay: 0, overlays: { ...state.overlays, dams: false }, focus: null, playing: false };
   }
 }

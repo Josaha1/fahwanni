@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import pointsData from "../../../public/data/river-points.json";
 import fixture from "./fixture-flood.json";
 import { parseFlood } from "./client";
-import { calendarDoy, peakAhead, rareLevel, rareLevelWord, riverStatus, statusWord, summarizeRiver, trend } from "./status";
+import { calendarDoy, peakAhead, rareLevel, rareLevelWord, riverAtDay, riverStatus, statusWord, summarizeRiver, trend } from "./status";
 import type { RiverForecastDay, RiverPoint } from "./types";
 
 const points = pointsData.points as RiverPoint[];
@@ -72,4 +72,17 @@ it("keeps the missing 2011 value on February 29 explicit", () => {
   const point = points[0];
   const forecast = { id: point.id, days: [day("2024-02-29", point.doy[60].p50)] };
   expect(summarizeRiver(point, forecast, "2024-02-29")?.value2554Today).toBeNull();
+});
+
+it("selects today's status and each forecast day's own status", () => {
+  const summary = { today: { date: "2026-09-29", value: 60, status: "normal" as const }, days: [
+    { date: "2026-09-30", value: 90, status: "high" as const },
+    { date: "2026-10-01", value: 120, status: "veryHigh" as const },
+  ] };
+  expect(riverAtDay(summary, 0)).toEqual(summary.today);
+  expect(riverAtDay(summary, 1)).toEqual(summary.days[0]);
+  expect(riverAtDay(summary, 2)).toEqual(summary.days[1]);
+  expect(riverAtDay(summary, 7)).toBeNull();
+  expect(riverAtDay(summary, -1)).toBeNull();
+  expect(riverAtDay(null, 0)).toBeNull();
 });

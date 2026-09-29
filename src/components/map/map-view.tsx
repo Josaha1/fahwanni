@@ -58,6 +58,7 @@ import { PointCard } from "./ui/point-card";
 import { PrimaryPicker } from "./ui/primary-picker";
 import { LegendChip } from "./ui/legend-chip";
 import { WaterPanel } from "./ui/water-panel";
+import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
@@ -102,8 +103,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   };
   useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
-    primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
-  const { mode, timeMs, playing, primary, rainOn, overlays } = mapState;
+    primary: view.layer, overlays: view.ov, timeMs: view.t, waterDay: view.wd, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
+  const { mode, timeMs, playing, primary, rainOn, overlays, waterDay } = mapState;
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(true);
@@ -182,10 +183,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
-  useDamsLayer(mapInstance, dams, damsOn);
-  useRainRiskLayer(mapInstance, rainRisk, water);
-  useRiverLayer(mapInstance, rivers, water);
-  const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs);
+  useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0);
+  useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
+  useRiverLayer(mapInstance, rivers, water, waterDay);
+  const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs, waterDay);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
   const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
@@ -204,6 +205,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (urlView.river) select({ kind: "river", id: urlView.river });
     else if (urlView.dam) select({ kind: "dam", id: urlView.dam });
   }, [urlView.dam, urlView.river, select]);
+
+  useEffect(() => {
+    if (waterDay > 0 && probe?.kind === "rain") close();
+  }, [waterDay, probe, close]);
 
   useEffect(() => {
     if (!activePathId || pathData?.id === activePathId) return;
@@ -318,6 +323,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const playLimit = primary === "pm25" && pm25LoadedDays.includes(4) && pm25LastAvailable !== null ? pm25LastAvailable : null;
   useEffect(() => {
     if (!playing || reducedMotion || (primary === "rain" && !rainOn)) return;
+    if (water) return;
     let frame = 0;
     let last = performance.now();
     let t = playTime.current;
@@ -334,16 +340,27 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, reducedMotion, primary, rainOn, playSpeed, domain, playLimit]);
+  }, [playing, reducedMotion, primary, rainOn, playSpeed, domain, playLimit, water]);
+
+  useEffect(() => {
+    if (!water || !playing || reducedMotion) return;
+    const onVisibilityChange = () => { if (document.visibilityState !== "visible") dispatch({ type: "stop" }); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") { dispatch({ type: "stop" }); return; }
+      dispatch({ type: "setWaterDay", day: (waterDay + 1) % 8 });
+    }, 1500);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
+  }, [water, playing, reducedMotion, waterDay]);
 
   const viewQuery = useCallback(() => {
     if (!mapInstance) return null;
     const center = mapInstance.getCenter();
     const query = formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
       t: timeMs === null ? undefined : effectiveTime, ov: overlays, dam: activePathId ?? undefined,
-      river: probe?.kind === "river" ? probe.id : undefined, mode });
+      river: probe?.kind === "river" ? probe.id : undefined, mode, wd: waterDay });
     return query;
-  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode]);
+  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode, waterDay]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -460,6 +477,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       <span aria-hidden="true">{visibleSheetPosition === "half" ? "⌄" : "⌃"}</span>
     </button>}
   </div>;
+  const waterStepper = <WaterDayStepper day={waterDay} nowMs={nowMs} playing={water && playing} reducedMotion={reducedMotion}
+    onChange={(day) => { dispatch({ type: "stop" }); dispatch({ type: "setWaterDay", day }); }} onTogglePlay={() => dispatch({ type: "togglePlay" })} />;
   const details = <div>
     {locationTemp && locationTemp.temp !== null && locationTemp.feels !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {t("อุณหภูมิที่ตำแหน่งคุณ {temp}° (รู้สึกเหมือน {feels}°)", { temp: Math.round(locationTemp.temp), feels: Math.round(locationTemp.feels) })}
@@ -509,7 +528,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
@@ -518,7 +537,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: next });
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
-  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings}
+  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay} rainStartDate={waterDate(nowMs, waterDay)}
     rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
@@ -540,7 +559,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <button type="button" className="map-chip text-sm" aria-pressed={immersive} onClick={toggleFullscreen}>{immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ")}</button>
     <button type="button" className="map-chip text-sm" onClick={shareView}>{t("แชร์มุมมองนี้")}</button>
   </>;
-  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
+  const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} waterStepper={!isDesktop && water ? waterStepper : null}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} primaryPicker={primaryPicker} layers={layers} card={card} water={waterPanel || null} more={isDesktop ? null : more}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
@@ -558,6 +577,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}
+    {isDesktop && water && <div className="map-panel map-time-floating">{waterStepper}</div>}
     {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
     <ActionRail compact={!isDesktop} onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}

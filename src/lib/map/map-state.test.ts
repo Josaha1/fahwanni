@@ -4,7 +4,7 @@ import { initialMapState, mapReducer } from "./map-state";
 describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
     expect(initialMapState()).toEqual({
-      mode: "weather", primary: "rain", rainOn: true,
+      mode: "weather", waterDay: 0, primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
       timeMs: null, playing: false, focus: null,
     });
@@ -16,7 +16,7 @@ describe("map state", () => {
 
   it("uses URL layer and overlay overrides without changing other defaults", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
-      mode: "weather", primary: "temp", rainOn: true,
+      mode: "weather", waterDay: 0, primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
       timeMs: null, playing: false, focus: null,
     });
@@ -97,5 +97,14 @@ describe("map state", () => {
     expect(mapReducer(focused, { type: "setMode", mode: "weather" })).toMatchObject({ mode: "weather", focus: null, overlays: { dams: false } });
     expect(initialMapState({ mode: "water" }).overlays.dams).toBe(true);
     expect(initialMapState({ mode: "water", overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false } }).overlays.dams).toBe(true);
+  });
+
+  it("selects only days 0–7 in water mode and resets on weather", () => {
+    const water = initialMapState({ mode: "water", waterDay: 7 });
+    expect(water.waterDay).toBe(7);
+    expect(mapReducer(water, { type: "setWaterDay", day: 3 }).waterDay).toBe(3);
+    expect(mapReducer(water, { type: "setWaterDay", day: 8 })).toBe(water);
+    expect(mapReducer(initialMapState(), { type: "setWaterDay", day: 3 }).waterDay).toBe(0);
+    expect(mapReducer(water, { type: "setMode", mode: "weather" }).waterDay).toBe(0);
   });
 });

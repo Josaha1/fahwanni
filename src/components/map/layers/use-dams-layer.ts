@@ -21,7 +21,7 @@ type DamCollection = { type: "FeatureCollection"; features: {
   geometry: { type: "Point"; coordinates: [number, number] };
 }[] };
 
-export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean) {
+export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, waterDay = 0) {
   const t = useT();
   const { theme } = useMapContext();
   const data = useMemo<DamCollection>(() => ({
@@ -43,7 +43,7 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
         "circle-stroke-width": 3, "circle-stroke-color": DATA.storm,
       } });
     if (!live.getLayer("dam-circle")) live.addLayer({ id: "dam-circle", type: "circle", source: SOURCE, paint: {
-      "circle-radius": RADIUS, "circle-color": ["get", "color"], "circle-opacity": 0.95,
+      "circle-radius": RADIUS, "circle-color": ["get", "color"], "circle-opacity": waterDay > 0 ? 0.45 : 0.95,
       "circle-stroke-width": 2, "circle-stroke-color": theme === "light" ? "#ffffff" : "#0f1720",
     } });
     if (!live.getLayer("dam-label")) live.addLayer({ id: "dam-label", type: "symbol", source: SOURCE, minzoom: 7,
@@ -52,5 +52,5 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
   }, (live) => {
     for (const id of LAYERS) if (live.getLayer(id)) live.removeLayer(id);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
-  }, [data, theme]);
+  }, [data, theme, waterDay]);
 }
