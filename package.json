@@ -16,6 +16,7 @@
     "check:sources": "node scripts/sources-check.mjs",
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "map:relief": "node scripts/map/build-relief.mjs",
+    "dams:paths": "node scripts/dams/build-paths.mjs",
     "test": "vitest"
   },
   "dependencies": {
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.5",
+    "shapefile": "^0.6.6",
     "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
