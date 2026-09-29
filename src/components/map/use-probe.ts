@@ -29,9 +29,11 @@ export function useProbe(map: Map | null) {
     const container = map.getContainer();
     container.tabIndex = -1;
     const onClick = (event: MapMouseEvent) => {
-      const layers = ["dam-circle", "quake-circle", "storm-cone", "storm-track", "storm-forecast"].filter((id) => map.getLayer(id));
+      const dam = map.getLayer("dam-circle") ? map.queryRenderedFeatures([
+        [event.point.x - 8, event.point.y - 8], [event.point.x + 8, event.point.y + 8],
+      ], { layers: ["dam-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
+      const layers = ["quake-circle", "storm-cone", "storm-track", "storm-forecast"].filter((id) => map.getLayer(id));
       const features = layers.length ? map.queryRenderedFeatures(event.point, { layers }) : [];
-      const dam = features.find((feature) => feature.layer?.id === "dam-circle" && typeof feature.properties?.id === "string");
       const quake = features.find((feature) => feature.layer?.id === "quake-circle" && typeof feature.properties?.id === "string");
       const storm = features.find((feature) => feature.layer?.id.startsWith("storm-") && typeof feature.properties?.id === "string");
       if (dam) select({ kind: "dam", id: dam.properties!.id as string });

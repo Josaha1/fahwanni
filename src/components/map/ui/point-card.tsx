@@ -20,9 +20,17 @@ import type { WindGrid } from "@/lib/wind/grid";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
+import { damBandColor, damBandWord, stationSituationColor, situationWord } from "@/lib/dams/thaiwater";
 import { readRadarLevel } from "../radar-tile";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
+
+function damDate(value: string, locale: "th" | "en") {
+  const iso = value.length === 10 ? `${value}T12:00:00+07:00` : value;
+  return new Intl.DateTimeFormat(locale === "th" ? "th-TH-u-ca-buddhist-nu-latn" : "en-GB", {
+    day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok",
+  }).format(new Date(iso));
+}
 
 export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes, dams }: {
   probe: Probe;
@@ -39,6 +47,9 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   dams: DamsPayload | null;
 }) {
   const t = useT();
+  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
+  const percent = new Intl.NumberFormat(t.intl, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const daily = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 2 });
   const router = useRouter();
   const { place, setPlace } = useLastPlace();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -75,6 +86,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   else if (storm) title = t("{category} {name}", { category: stormCategoryLabel(storm, t), name: storm.name });
   else if (quake) title = t("แผ่นดินไหว M{mag}", { mag: quake.mag });
   else if (selectedDam) title = t.locale === "en" ? selectedDam.nameEn || selectedDam.nameTh : selectedDam.nameTh;
+  else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
 
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">
@@ -110,6 +122,56 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
       <p>{t("ลึก {depth} กม.", { depth: quake.depthKm })}</p>
       {quake.tsunami && <p className="font-semibold">{t("มีประกาศเตือนสึนามิ")}</p>}
       {quake.url && <a href={quake.url} target="_blank" rel="noopener noreferrer" className="underline">{t("ดูข้อมูล USGS")}</a>}
+    </div>}
+    {dam && <div className="mt-2 space-y-3 text-sm">
+      <p className="map-muted">{[
+        // ThaiWater's agency is the reporting agency (RID for EGAT dams too), so it is not shown.
+        t.locale === "en" ? dam.basin.en || dam.basin.th : dam.basin.th,
+        t("จ.{province}", { province: t.locale === "en" ? dam.province.en || dam.province.th : dam.province.th }),
+      ].filter(Boolean).join(" · ")}</p>
+      {dam.highRelease && <span className="inline-block rounded-full bg-[#e5484d] px-2 py-0.5 text-xs font-semibold text-white">{t("ระบายน้ำมาก")}</span>}
+      <div>
+        <div className="relative h-[10px] rounded-full" style={{ backgroundColor: "var(--map-panel-border)" }} role="meter" aria-label={t("ปริมาณน้ำในเขื่อน")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(Math.max(dam.storagePct, 0), 100)} aria-valuetext={`${percent.format(dam.storagePct)}%`}>
+          <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(dam.storagePct, 0), 100)}%`, backgroundColor: damBandColor(dam.band) }} />
+          {dam.storagePct > 100 && <span className="absolute -top-0.5 right-0 h-[14px] border-r-2" style={{ borderColor: damBandColor(dam.band) }} aria-hidden="true" />}
+        </div>
+        <p className="mt-1 font-semibold">{percent.format(dam.storagePct)}% · {t(damBandWord(dam.band))}</p>
+        <p className="map-muted">{t("{storage} / {capacity} ล้าน ลบ.ม.", { storage: number.format(dam.storageMcm), capacity: number.format(dam.capacityMcm) })}</p>
+        {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+          <p className="map-muted">{t("น้ำไหลเข้า")}</p>
+          <p className="font-semibold">{dam.inflowCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(dam.inflowCms) })}</p>
+          <p className="map-muted text-xs">{dam.inflowMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.inflowMcmDay) })}</p>
+        </div>
+        <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+          <p className="map-muted">{t("ระบายออก")}</p>
+          <p className="font-semibold">{dam.releaseCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(dam.releaseCms) })}</p>
+          <p className="map-muted text-xs">{dam.releaseMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.releaseMcmDay) })}</p>
+        </div>
+      </div>
+      {dam.spilledMcmDay !== null && dam.spilledMcmDay > 0 && <p className="map-warning">{t("น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.spilledMcmDay) })}</p>}
+      <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
+      <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
+      <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
+      <button type="button" className="map-chip w-full" disabled>{t("ดูทิศทางน้ำท้ายเขื่อน")}</button>
+    </div>}
+    {barrage && <div className="mt-2 space-y-3 text-sm">
+      <p className="map-muted">{t("ลำน้ำเจ้าพระยา · จ.ชัยนาท")}</p>
+      <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+        <p className="map-muted">{t("ระบายท้ายเขื่อน")}</p>
+        <p className="font-semibold">{barrage.dischargeCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(barrage.dischargeCms) })}</p>
+      </div>
+      <p className="map-muted">{barrage.qmaxCms === null ? "–" : t("ความจุลำน้ำ ~{value} ลบ.ม./วินาที", { value: number.format(barrage.qmaxCms) })}</p>
+      {barrage.dischargeCms !== null && barrage.qmaxCms !== null && barrage.qmaxCms > 0 && <div className="h-[10px] rounded-full" style={{ backgroundColor: "var(--map-panel-border)" }} role="meter" aria-label={t("สัดส่วนการระบายต่อความจุลำน้ำ")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(barrage.dischargeCms / barrage.qmaxCms * 100, 100)}>
+        <div className="h-full rounded-full" style={{ width: `${Math.min(barrage.dischargeCms / barrage.qmaxCms * 100, 100)}%`, backgroundColor: stationSituationColor(barrage.situation) ?? "var(--map-muted)" }} />
+      </div>}
+      <p style={{ color: stationSituationColor(barrage.situation) ?? undefined }}>{t("สถานการณ์: {situation}", { situation: barrage.situation === null ? t("ไม่ทราบ") : t(situationWord(barrage.situation) ?? "ไม่ทราบ") })}</p>
+      <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(barrage.time, t.locale) })} · {formatTime(barrage.time, "Asia/Bangkok", t.locale)}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
+      <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
+      <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
+      <button type="button" className="map-chip w-full" disabled>{t("ดูทิศทางน้ำท้ายเขื่อน")}</button>
     </div>}
   </section>;
 }
