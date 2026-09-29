@@ -17,6 +17,7 @@
     "verify:deploy": "node scripts/verify-deploy.mjs",
     "map:relief": "node scripts/map/build-relief.mjs",
     "dams:paths": "node scripts/dams/build-paths.mjs",
+    "rivers:points": "node scripts/rivers/build-points.mjs",
     "test": "vitest"
   },
   "dependencies": {
