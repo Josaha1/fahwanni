@@ -32,7 +32,7 @@ function subscribeOnline(onChange: () => void) {
 
 export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay, rainStartDate,
   legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, allRoutes, onToggleAllRoutes, rainAccumOn, rainAccumStatus, onToggleRainAccum,
-  damFilter, onDamFilter, riverPoints, onSelectRiver }: {
+  damFilter, onDamFilter, riverPoints, onSelectRiver, radar, onToggleRadar }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
@@ -51,6 +51,9 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onShowAllRainProvinces: () => void;
   allRoutes: boolean;
   onToggleAllRoutes: () => void;
+  /** Newest radar frame overlay ("ฝนตอนนี้"), off by default. */
+  radar: { on: boolean; available: boolean; ageKey: string; age: number; warn: boolean };
+  onToggleRadar: () => void;
   damFilter: DamFilter;
   onDamFilter: (filter: DamFilter) => void;
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
@@ -90,7 +93,11 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
-    <button type="button" className="map-chip text-sm" aria-pressed={allRoutes} onClick={onToggleAllRoutes}>{t("เส้นทางน้ำทุกเขื่อน")}</button>
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" className="map-chip text-sm" aria-pressed={allRoutes} onClick={onToggleAllRoutes}>{t("เส้นทางน้ำทุกเขื่อน")}</button>
+      {radar.available && <button type="button" className="map-chip text-sm" aria-pressed={radar.on} onClick={onToggleRadar}>{t("ฝนตอนนี้ (เรดาร์)")}</button>}
+    </div>
+    {radar.on && <p className={`${radar.warn ? "map-warning" : "map-muted"} text-xs`}>{radar.warn && <span aria-hidden="true">⚠ </span>}{t(radar.ageKey, { n: radar.age })}</p>}
     {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams} watch={watch} damFilter={damFilter} onDamFilter={onDamFilter}
       riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver} />}
     <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-label={t("ฝนสะสม 3 วัน")}>

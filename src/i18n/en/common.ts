@@ -469,4 +469,5 @@ export const common: Record<string, string> = {
   "ระบายมาก": "High release",
   "ติดตาม": "Watched",
   "แม่น้ำ": "River",
+  "ฝนตอนนี้ (เรดาร์)": "Rain now (radar)",
 };

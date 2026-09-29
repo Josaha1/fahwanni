@@ -176,8 +176,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = terrainAvailable(device.deviceMemory);
   const rainImageSize = terrainOn || (device.deviceMemory !== undefined && device.deviceMemory < 4) ? 256 : 512;
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, hasRadarFrame ? rainSource.index : -1,
-    rainVisible && hasRadarFrame, rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
+  // Water mode can overlay the newest radar frame ("ฝนตอนนี้") to spot heavy cells near dams and rivers.
+  const [waterRadar, setWaterRadar] = useState(false);
+  const waterRadarOn = water && waterRadar && frames.length > 0;
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, waterRadarOn ? frames.length - 1 : hasRadarFrame ? rainSource.index : -1,
+    waterRadarOn || (rainVisible && hasRadarFrame), waterRadarOn ? 0.5 : rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
   useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && (rainSource.kind === "model" || (rainSource.kind === "blend" && rainSource.modelOpacity > 0)), series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: rainSource.kind === "blend" ? rainSource.modelOpacity : 1, size: rainImageSize });
   useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
@@ -554,6 +557,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       const dam = dams?.dams.find((item) => item.id === id);
       if (dam) mapInstance?.easeTo({ center: [dam.lon, dam.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
     }} onSelectRain={(id) => select({ kind: "rain", id })}
+    radar={{ on: waterRadar, available: frames.length > 0, ageKey: ageLabel.key, age: radarAge, warn: ageLabel.warn }}
+    onToggleRadar={() => setWaterRadar((on) => !on)}
     damFilter={damFilter} onDamFilter={setDamFilter} riverPoints={rivers?.points ?? []}
     onSelectRiver={(id) => {
       select({ kind: "river", id });
