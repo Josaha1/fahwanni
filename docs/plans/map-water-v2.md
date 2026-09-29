@@ -225,3 +225,31 @@ Verify: `npx vitest run src/lib/map` ; `npm run typecheck && npm run lint && nod
 headless (Claude): at 390×844 in both modes and both themes, count visible floating elements outside the sheet
 (search pill, mode switch, rail buttons, legend chip, focus chip) ≤ 4 + sheet; legend strip visible in the peek;
 3D/fullscreen/share reachable from the half sheet; desktop 1280×800 screenshot unchanged apart from the mode switch.
+
+### Task 9 — animated flow line (detailed)
+Only ONE route is drawn at a time (the focused dam), so the S4 "36 animated routes" perf risk does not apply.
+Files: src/lib/dams/flow.ts (new) + flow.test.ts, src/components/map/layers/use-dam-path-layer.ts,
+src/components/map/map-view.tsx.
+1. `src/lib/dams/flow.ts`:
+   - `flowWidth(releaseCms: number | null): number` = line width in px for the solid route:
+     null or ≤ 0 → 3; otherwise `Math.min(10, 3 + Math.sqrt(releaseCms) / 4.5)` rounded to 0.5.
+     (≈ 4.5 px at 35 m³/s, 6.5 at 250, 10 at ≥ 1000.)
+   - `FLOW_DASH_STEPS: number[][]` — the 14-step dash sequence from MapLibre's "animate a line" example:
+     [0,4,3],[0.5,4,2.5],[1,4,2],[1.5,4,1.5],[2,4,1],[2.5,4,0.5],[3,4,0],[0,0.5,3,3.5],[0,1,3,3],[0,1.5,3,2.5],
+     [0,2,3,2],[0,2.5,3,1.5],[0,3,3,1],[0,3.5,3,0.5]
+   - `flowStep(elapsedMs: number): number` = `Math.floor(elapsedMs / 60) % FLOW_DASH_STEPS.length`.
+   Tests: widths for null/0/35/250/1000/5000; flowStep wraps; every step array has an even total length pattern ≥ 3 entries.
+2. use-dam-path-layer: signature `(map, path, releaseCms, isDesktop, reducedMotion)`.
+   - `dam-path` width = `flowWidth(releaseCms)`; casing width = that + 4.
+   - New layer `dam-path-flow` (after `dam-path`, before `dam-path-arrows`): same source, `line-color` `#bfdbfe`,
+     `line-width` = `Math.max(2, flowWidth - 1.5)`, `line-dasharray` = FLOW_DASH_STEPS[0], `line-cap` butt.
+     Add it to LAYERS so it is removed with the others.
+   - Animation effect: when `map && path && !reducedMotion`, a requestAnimationFrame loop that calls
+     `map.setPaintProperty("dam-path-flow", "line-dasharray", FLOW_DASH_STEPS[step])` only when the step changes
+     (guard `map.getLayer("dam-path-flow")`); stop the loop while `document.visibilityState !== "visible"` and
+     restart on `visibilitychange`; cancel on cleanup. With reduced motion the dashes stay static (step 0) and
+     the `›` arrows remain the direction cue.
+3. map-view: pass `activePath ? dams?.dams.find((d) => d.id === activePath.id)?.releaseCms ?? null : null`.
+Verify: `npx vitest run src/lib/dams` ; `npm run typecheck && npm run lint` ;
+headless (Claude): `/map?mode=water&dam=200101` → `dam-path-flow` layer exists and its `line-dasharray` changes
+between two reads 300 ms apart; with `reducedMotion: "reduce"` it does not change; screenshot both themes.
