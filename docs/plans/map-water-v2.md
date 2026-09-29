@@ -152,3 +152,47 @@ closing the card, rain-risk list, no ThaiWater requests in the network log.
 ## Out of scope
 River discharge along rivers, canals, flooded roads, CCTV, GISTDA flood extent, Google Flood Hub, dam-break
 modelling, push notifications.
+
+## Task specs (Claude, written from the code after tasks 1, 2, 5, 6, 7 landed)
+
+### Task 3 — mode switch "อากาศ | น้ำ" (detailed)
+Files: src/lib/map/map-state.ts (+ .test.ts), src/lib/map/url-state.ts (+ .test.ts), src/components/map/use-probe.ts,
+src/components/map/map-view.tsx, src/components/map/ui/mode-switch.tsx (new), src/components/map/ui/map-panel-content.tsx,
+src/components/map/ui/legend-dialog.tsx, src/app/globals.css, src/i18n/en/*.ts.
+1. map-state: add `mode: "weather" | "water"` (default "weather") and action `{ type: "setMode"; mode }`.
+   `setMode` water → `overlays.dams = true`, `playing = false`. `setMode` weather → `overlays.dams = false`,
+   `focus = null`. `initialMapState` accepts `mode`; when `mode === "water"` it forces `overlays.dams = true`.
+   Tests: both transitions, focus cleared on leaving water, initial water forces dams.
+2. url-state: `UrlView.mode?: "water"`. Parse: `mode=water`, OR legacy links with `dam=` or `ov` containing `dams`
+   → `mode: "water"`. Format: add `mode` to the input; write `mode=water` only in water mode; stop writing
+   `dams` inside `ov`; write `dam=` only in water mode. Tests for all of these (legacy `?ov=dams`, `?dam=200101`).
+3. map-view: `const water = mapState.mode === "water"`. In water mode do NOT render: radar + model-rain + temp +
+   pm25 image layers (pass enabled=false), WindCanvas, storms, quakes, LegendChip, the timeline (mobile sheet and
+   desktop `.map-time-floating`), primaryPicker, `details`, `layers`, and the "ดูอากาศตรงกลางแผนที่" button.
+   Playback stops (the reducer already does it). Terrain, place marker, plates stay. State for the weather
+   layers is kept, so switching back restores them. Replace the `view.dam` → `overlays.dams = true` hack with
+   `mode: view.mode`. Remove the "เขื่อน" chip from `layers` (dams now belong to water mode only).
+   Pass `mode` to `formatUrlView`.
+4. Water panel content (new `water` prop on MapPanelContent, shown instead of timeline/details/layers):
+   - source stamp: `ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}` (Thai date via existing formatFullDate with
+     dams.dataDate) + badge `สังเกต` (small pill); when `dams.stale` add `map-warning` text `ข้อมูลอาจไม่เป็นปัจจุบัน`;
+     while loading `กำลังโหลดข้อมูลเขื่อน…`.
+   - a `map-chip` button `อ่านแผนที่` that opens the legend dialog (same ref/showModal as LegendChip).
+   - hint text `แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ`.
+5. use-probe: `useProbe(map, { points: boolean })` — when `points` is false a tap on empty map does nothing
+   (dam/quake/storm taps unchanged). map-view passes `points: !water`.
+6. LegendDialog: new prop `mode`; in water mode skip the primary-layer section and the RainViewer/Open-Meteo
+   source line; `active` = `{ wind:false, storms:false, quakes:false, dams: true-when-ready }`.
+7. ModeSwitch (`ui/mode-switch.tsx`): `role="radiogroup"` `aria-label="โหมดแผนที่"`, two `role="radio"` buttons
+   `อากาศ` / `น้ำ` with `aria-checked`, arrow keys move between them; min 44px tall; class `map-panel map-mode-switch`.
+   CSS: mobile `position:absolute; z-index:6; top: calc(64px + env(safe-area-inset-top)); left:50%;
+   transform:translateX(-50%)`; move `.map-legend-chip` mobile top to `calc(120px + env(safe-area-inset-top))`
+   (task 4 replaces it); desktop (≥1024px) `top:16px; left: calc(50% + 196px)` and move `.map-focus-chip`
+   desktop `top` to `76px`. Selected radio uses `--map-accent` background + white text.
+   Switching to water on a phone keeps the sheet position; `close()` any open weather card (point/storm/quake)
+   when switching to water, and any dam card when switching to weather.
+8. i18n: every new Thai string gets an English entry; `node scripts/i18n-check.mjs` passes.
+Verify: `npx vitest run src/lib/map` ; `npm run typecheck && npm run lint && node scripts/i18n-check.mjs` ;
+headless (Claude): toggle to น้ำ → dam markers visible, no time bar, no wind canvas, URL has `mode=water`;
+reload `/map?mode=water` → water mode; `/map?ov=dams&dam=200101` → water mode + route; back to อากาศ → rain
+layer and time bar return, URL has no `mode`.
