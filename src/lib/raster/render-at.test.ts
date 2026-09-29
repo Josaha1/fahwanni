@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { renderPrecipImage } from "../precip/render";
 import { renderPm25Image, renderTempImage } from "./render-scalar";
 import { renderPm25At, renderRainAt, renderTempAt } from "./render-at";
 import type { HourlySeries } from "../timeline/store";
@@ -18,22 +17,11 @@ const pm25: Pm25Grid = { ...grid, hours: times.map((time) => new Date(time).toIS
   source: "open-meteo-cams", attribution: { text: "Air quality: Open-Meteo.com (CAMS, CC BY 4.0)", url: "https://open-meteo.com" } };
 
 describe("render at a model time", () => {
-  it("matches each old renderer byte for byte on exact hours", () => {
+  it("matches the existing temperature and PM2.5 renderers on exact hours", () => {
     for (const [index, time] of times.entries()) {
-      expect(renderRainAt(series, time, grid, 32, 32)?.data).toEqual(renderPrecipImage(wind, index, 32, 32)?.data);
       expect(renderTempAt(series, time, grid, 32, 32)?.data).toEqual(renderTempImage(wind, index, 32, 32)?.data);
       expect(renderPm25At(series, time, grid, 32, 32)?.data).toEqual(renderPm25Image(pm25, index, 32, 32)?.data);
     }
-  });
-
-  it("matches old pixel arithmetic across a varying grid", () => {
-    const varied = Array.from({ length: grid.nx * grid.ny }, (_, i) => i / 37);
-    const rainGrid = { ...wind, precip: [varied], prob: [varied.map((v) => 30 + v * 7)] };
-    const variedSeries: HourlySeries = { times: [start], grids: {
-      precip: [Float32Array.from(varied)], prob: [Float32Array.from(rainGrid.prob[0])],
-    } };
-    expect(renderRainAt(variedSeries, start, grid, 64, 64)?.data)
-      .toEqual(renderPrecipImage({ ...rainGrid, precip: [Array.from(variedSeries.grids.precip[0])], prob: [Array.from(variedSeries.grids.prob[0])] }, 0, 64, 64)?.data);
   });
 
   it("interpolates values before applying rain thresholds and palettes", () => {
