@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DAY, HOUR, MINUTE, bracket, clampToDomain, dayLabel, handleLabel, lerpGrid, makeDomain, nearestIndex, roundTo, snapStep, timeBadge } from "./time";
+import { rainSourceAt } from "./rain-source";
 
 const bangkok = (day: number, hour: number, minute = 0) => Date.parse(`2026-09-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+07:00`);
 
@@ -64,12 +65,31 @@ describe("continuous timeline time", () => {
     expect(handleLabel(now)).toEqual({ key: "{day} {time}", params: { day: "อ.", time: "14:37" } });
     expect(dayLabel(bangkok(29, 0))).toEqual({ key: "{day} {date} {month}", params: { day: "อ.", date: "29", month: "ก.ย." } });
     expect(dayLabel(bangkok(29, 0) - MINUTE)).toEqual({ key: "{day} {date} {month}", params: { day: "จ.", date: "28", month: "ก.ย." } });
-    expect(timeBadge(now, domain, { radarTime: bangkok(29, 14, 30), onModelHour: false }))
+    expect(timeBadge(now, domain, { radarTime: bangkok(29, 14, 30), onModelHour: false, primary: "rain" }))
       .toEqual({ key: "เรดาร์ {time}", params: { time: "14:30" } });
-    expect(timeBadge(now + 23 * MINUTE, domain, { onModelHour: true }))
+    expect(timeBadge(now + 23 * MINUTE, domain, { onModelHour: true, primary: "rain" }))
       .toEqual({ key: "พยากรณ์ {time}", params: { time: "15:00" } });
-    expect(timeBadge(now + MINUTE, domain, { onModelHour: false }))
+    expect(timeBadge(now + MINUTE, domain, { onModelHour: false, primary: "rain" }))
       .toEqual({ key: "พยากรณ์ · ค่าประมาณระหว่างชั่วโมง", params: {} });
-    expect(timeBadge(now, domain, { onModelHour: true })).toEqual({ key: "ตอนนี้", params: {} });
+    expect(timeBadge(now, domain, { onModelHour: true, primary: "rain" })).toEqual({ key: "ตอนนี้", params: {} });
+  });
+
+  it("labels the actual radar frame and unavailable past data", () => {
+    const now = bangkok(29, 12, 26);
+    const domain = makeDomain(now);
+    const selected = bangkok(29, 12, 25);
+    const source = rainSourceAt(selected, [bangkok(29, 12, 10)], now);
+    expect(source.kind).toBe("radar");
+    expect(timeBadge(selected, domain, { radarTime: source.kind === "radar" ? source.frameTime : undefined,
+      onModelHour: false, primary: "rain" }))
+      .toEqual({ key: "เรดาร์ {time}", params: { time: "12:10" } });
+    expect(timeBadge(bangkok(29, 11, 30), domain, { onModelHour: false, primary: "rain" }))
+      .toEqual({ key: "ไม่มีภาพเรดาร์ช่วงนี้", params: {} });
+    for (const primary of ["temp", "pm25"] as const) {
+      expect(timeBadge(bangkok(29, 12, 21), domain, { onModelHour: false, primary }))
+        .toEqual({ key: "ตอนนี้", params: {} });
+      expect(timeBadge(bangkok(29, 12, 20), domain, { onModelHour: false, primary }))
+        .toEqual({ key: "ข้อมูลย้อนหลังไม่มีในชั้นนี้", params: {} });
+    }
   });
 });

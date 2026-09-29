@@ -13,7 +13,7 @@ describe("map state", () => {
     expect(initialMapState()).toEqual({
       primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
-      activeIndex: 0, playing: false,
+      activeIndex: 0, timeMs: null, playing: false,
     });
   });
 
@@ -21,7 +21,7 @@ describe("map state", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
       primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
-      activeIndex: 0, playing: false,
+      activeIndex: 0, timeMs: null, playing: false,
     });
   });
 
@@ -57,6 +57,14 @@ describe("map state", () => {
   it("sets an index and stops playback", () => {
     const state = { ...initialMapState(), playing: true };
     expect(mapReducer(state, { type: "setIndex", index: 2 })).toEqual({ ...state, activeIndex: 2, playing: false });
+  });
+
+  it("selects a time and returns to automatic now", () => {
+    const state = initialMapState();
+    const selected = mapReducer(state, { type: "setTime", t: 1_800_000 });
+    expect(selected.timeMs).toBe(1_800_000);
+    expect(mapReducer(selected, { type: "setTime", t: null }).timeMs).toBeNull();
+    expect(state.timeMs).toBeNull();
   });
 
   it("ticks through radar and model stops before looping", () => {

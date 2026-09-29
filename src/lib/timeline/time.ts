@@ -88,13 +88,15 @@ export function dayLabel(t: number) {
   return { key: "{day} {date} {month}", params: { day, date, month } };
 }
 
-export function timeBadge(t: number, d: TimeDomain, source: { radarTime?: number; onModelHour: boolean }) {
-  if (t <= d.now && source.radarTime !== undefined) {
+export function timeBadge(t: number, d: TimeDomain, source: { radarTime?: number; onModelHour: boolean; primary: "rain" | "temp" | "pm25" }) {
+  if (t <= d.now && source.primary === "rain" && source.radarTime !== undefined) {
     return { key: "เรดาร์ {time}", params: { time: localParts(source.radarTime).time } };
   }
   if (t > d.now && source.onModelHour) {
     return { key: "พยากรณ์ {time}", params: { time: localParts(t).time } };
   }
   if (t > d.now) return { key: "พยากรณ์ · ค่าประมาณระหว่างชั่วโมง", params: {} };
+  if (source.primary !== "rain" && d.now - t > 5 * MINUTE) return { key: "ข้อมูลย้อนหลังไม่มีในชั้นนี้", params: {} };
+  if (source.primary === "rain" && t < d.now) return { key: "ไม่มีภาพเรดาร์ช่วงนี้", params: {} };
   return { key: "ตอนนี้", params: {} };
 }

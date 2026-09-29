@@ -20,7 +20,7 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, details
       {desktop && <div className="mb-3"><MapSearchPill placeName={placeName} /></div>}
       {card}
       {timeline}
-      <button type="button" className="map-chip mt-2 w-full text-sm" onClick={(event) => onProbeCenter(event.currentTarget)}>{t("ดูอากาศตรงกลางแผนที่")}</button>
+      <button type="button" className="map-chip map-probe-center mt-2 w-full text-sm" onClick={(event) => onProbeCenter(event.currentTarget)}>{t("ดูอากาศตรงกลางแผนที่")}</button>
       {!compact && <>
         {details}
         <section className="mt-4" aria-labelledby="map-layers">
