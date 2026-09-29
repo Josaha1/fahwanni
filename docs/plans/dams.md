@@ -57,6 +57,12 @@ Verified facts:
 1. **Spike (Claude):** HydroRIVERS Asia download size/format, NEXT_DOWN walk for ภูมิพล reaches
    นครสวรรค์ → C.13 → Bangkok; decide shapefile reader (npm `shapefile` dev dependency vs GDAL).
    Verify: printed path length + stations matched. If it fails → BLOCKED, re-plan (OSM fallback).
+   **Result (2026-09-29, DONE):** HydroRIVERS_v10_as_shp.zip 91 MB → 457 MB unzipped in `.cache/hydro`
+   (gitignored); 253,052 reaches inside 90–112E / 3–24N, read in ~9 s with npm `shapefile` (no GDAL
+   installed). 35/35 dams traced: snap = reach with the largest UPLAND_SKM ≥ 200 km² within 5 km
+   (fallback ≥ 20 km² for small reservoirs — บางพระ); walk NEXT_DOWN to the sea or 700 km.
+   ภูมิพล → 600 km to the Chao Phraya mouth (13.61N 100.56E), 37 stations incl. C.2; สิริกิติ์ → Bangkok,
+   42 stations. Station match tolerance raised to 3 km (C.13 missed at 2 km). Task 4 uses these rules.
 2. Fixture + `src/lib/dams/thaiwater.ts`: zod parse of `dam` and `waterlevel`, normalize to
    `Dam` / `RiverStation`, bands (official scale), unit conversion, barrage from C.13 (+ tests on a
    trimmed real fixture: missing fields, >100 %, no discharge). Verify: `npx vitest run src/lib/dams`
