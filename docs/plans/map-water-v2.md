@@ -253,3 +253,49 @@ src/components/map/map-view.tsx.
 Verify: `npx vitest run src/lib/dams` ; `npm run typecheck && npm run lint` ;
 headless (Claude): `/map?mode=water&dam=200101` → `dam-path-flow` layer exists and its `line-dasharray` changes
 between two reads 300 ms apart; with `reducedMotion: "reduce"` it does not change; screenshot both themes.
+
+### Task 10 — TMD heavy-rain risk (detailed)
+Source: `https://data.tmd.go.th/api/WeatherToday/V2/?uid=api&ukey=api12345&format=json` (TMD's public demo key,
+already used for WeatherWarningNews). Real response saved at `src/lib/rain-risk/fixture-tmd-today.json`
+(124 stations; `Stations.Station[]` with `WmoStationNumber`, `StationNameThai`, `StationNameEnglish`, `Province`
+(Thai), `Latitude`, `Longitude` (strings) and `Observation.DateTime` ("2026-09-29 07:00:00.000", Bangkok time),
+`Observation.Rainfall` (string mm, rain in the 24 h ending at DateTime)).
+TMD categories (24 h): ฝนหนัก 35.1–90.0 mm, ฝนหนักมาก > 90.0 mm.
+Files: src/lib/rain-risk/tmd.ts (+ tmd.test.ts), src/app/api/rain-risk/route.ts (+ route.test.ts if the dams route
+has one — copy its style), src/components/map/layers/use-rain-risk-layer.ts, src/components/map/use-map-data.ts,
+src/components/map/use-probe.ts, src/components/map/ui/point-card.tsx, src/components/map/map-view.tsx,
+src/lib/map/legend.ts (+ test), src/components/map/ui/legend-dialog.tsx, src/components/map/map-provider.tsx (attribution),
+scripts/verify-deploy.mjs (add `/api/rain-risk`), src/i18n/en/*.ts.
+1. `parseTmdRain(raw: unknown): RainRisk` with zod (lenient: skip bad stations, never throw on one bad row):
+   `type RainStation = { id; nameTh; nameEn; provinceTh; lat; lon; rainMm: number; category: "heavy" | "veryHeavy" }`
+   `type RainRisk = { observedAt: string | null /* ISO with +07:00 */; reporting: number /* stations with a numeric
+   Rainfall */; stations: RainStation[] /* ONLY rainMm > 35.0, sorted by rainMm desc */ }`.
+   `rainCategory(mm)`: > 90 → veryHeavy, > 35 → heavy, else null. Tests with the fixture (reporting = 124,
+   6 stations > 35 on the fixture, sorted, all have lat/lon inside Thailand bbox) + boundary tests 35.0 / 35.1 / 90.0 / 90.1
+   + a row with Rainfall "-" or missing is skipped from both counts.
+2. `/api/rain-risk`: same shape as src/app/api/tmd-warnings/route.ts (WeatherCache, 30 min fresh, `s-maxage=1800,
+   stale-while-revalidate=3600`, `fetch(..., { next: { revalidate: 1800 }, signal: AbortSignal.timeout(15_000) })`,
+   stale-on-failure, 503 `{ error: "upstream" }` when nothing cached).
+3. use-map-data: `rainRisk`, `rainRiskStatus`, `loadRainRisk()` exactly like `dams`/`loadDams`. map-view loads it
+   when water mode is on (same effect style as dams; on failure a toast `ข้อมูลฝนหนักไม่พร้อมใช้งาน`, water mode stays).
+4. Layer `use-rain-risk-layer.ts` (water mode only): geojson source `rain-risk`, circle layer `rain-risk-circle`
+   (heavy `#f97316` radius 8, veryHeavy `#b91c1c` radius 11, white/dark stroke 2 like dams) drawn BELOW `dam-circle`
+   if it exists; symbol `rain-risk-label` at minzoom 7 with text `{rainMm} มม.` offset below.
+5. Probe: new kind `{ kind: "rain"; id }`; use-probe queries `rain-risk-circle` after dams (8 px box like dams).
+   PointCard for rain: title = station nameTh (en: nameEn), line `จ.{province}`, big `{mm} มม. ใน 24 ชม.`, category
+   word (`ฝนหนัก` / `ฝนหนักมาก`) coloured like the point, `สังเกต` badge, `ถึง {time} น. {date}` from observedAt,
+   footer `ที่มา: กรมอุตุนิยมวิทยา` + `ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม`.
+   switching to weather mode closes a rain card too (same rule as dam cards: `probe.kind` dam or rain belongs to water).
+6. Water panel (after the dam source line): section `ฝนหนัก 24 ชม. (กรมอุตุฯ)` with `สังเกต` badge:
+   if stations: a list grouped by province (max mm per province, sorted desc, top 8, then `แสดงทั้งหมด ({n})`),
+   each row `จ.{province}` + `{mm} มม. · {category word}`; tapping a row selects that station (opens its card).
+   If none: `ไม่มีสถานีที่ฝน 24 ชม. เข้าเกณฑ์ฝนหนัก ({n} สถานี)`. Footer `ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา`.
+   Loading / error states in one muted line. Bangkok has no `จ.` prefix (province "กรุงเทพมหานคร").
+7. Legend: `overlayLegend` gets `rainRisk: boolean` → section `ฝน 24 ชม. (กรมอุตุฯ)` rows
+   `ฝนหนัก 35.1–90 มม.` (circle #f97316 size 12) and `ฝนหนักมาก มากกว่า 90 มม.` (circle #b91c1c size 14).
+   LegendDialog passes it true in water mode when data is ready. Update legend tests. Dam strip unchanged.
+8. Attribution: add `<a href="https://www.tmd.go.th" ...>Rain: Thai Meteorological Department</a>`.
+9. i18n for every new string.
+Verify: `npx vitest run src/lib/rain-risk src/lib/map` ; `npm run typecheck && npm run lint && node scripts/i18n-check.mjs` ;
+`curl -s localhost:3457/api/rain-risk | head -c 600` after `npm run build && PORT=3457 npm run start` (Claude runs it);
+headless (Claude): water mode shows the rain points + province list; tap a point → rain card; weather mode hides them.
