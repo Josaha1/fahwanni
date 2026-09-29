@@ -172,7 +172,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       return dam ? (t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh) : "";
     })()
     : "";
-  useDamPathLayer(mapInstance, activePath?.path ?? null, isDesktop, reducedMotion);
+  const activeRelease = activePath ? dams?.dams.find((dam) => dam.id === activePath.id)?.releaseCms ?? null : null;
+  useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
   useEffect(() => {
