@@ -6,7 +6,6 @@ export type DamPath = {
 
 export type Downstream = {
   km: number;
-  stations: { code: string; km: number }[];
   provinces: { id: string; km: number }[];
 };
 

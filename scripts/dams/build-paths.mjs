@@ -115,7 +115,7 @@ for (const dam of targets) {
     return result.distanceKm <= limit ? [{ [key]: item[key], km: round(result.km) }] : [];
   }).sort((a, b) => a.km - b.km || String(a[key]).localeCompare(String(b[key])));
   // No river stations: no source with published terms (see docs/plans/map-water-v2.md).
-  downstream[dam.id] = { km: round(km), stations: [], provinces: matches(provinces, 15, "id") };
+  downstream[dam.id] = { km: round(km), provinces: matches(provinces, 15, "id") };
   const coordinates = douglasPeucker(path, 0.003)
     .map((point) => point.map((value) => Math.round(value * 10000) / 10000));
   features.push({ type: "Feature", properties: { damId: dam.id, km: round(km) },

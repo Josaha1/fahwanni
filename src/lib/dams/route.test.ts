@@ -6,7 +6,7 @@ vi.mock("next/server", () => ({ after: (task: () => unknown) => { void task(); }
 
 const payload = {
   dataDate: "2026-09-28", fetchedAt: "2026-09-29T00:00:00.000Z", stale: false,
-  dams: [], barrage: null, stations: [],
+  dams: [],
 } satisfies DamsPayload;
 const HOUR = 60 * 60 * 1000;
 

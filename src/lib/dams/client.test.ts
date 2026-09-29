@@ -14,7 +14,7 @@ it("fetches the RID large-dam report and marks it stale after 36 h", async () =>
   expect(fetchImpl).toHaveBeenCalledOnce();
   expect(fetchImpl).toHaveBeenCalledWith("https://app.rid.go.th/reservoir/api/dam/public",
     { next: { revalidate: 3600 }, signal: expect.any(AbortSignal) });
-  expect(payload).toMatchObject({ dataDate: fixture.date, stale: false, barrage: null, stations: [] });
+  expect(payload).toMatchObject({ dataDate: fixture.date, stale: false });
   expect(payload?.dams).toHaveLength(35);
 
   vi.setSystemTime(new Date(Date.parse(`${fixture.date}T00:00:00+07:00`) + 36 * 3_600_000 + 1000));

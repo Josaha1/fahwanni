@@ -1,44 +1,46 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import downstream from "../../../public/data/dam-downstream.json";
-import fixture from "./fixture-thaiwater.json";
+import fixture from "./fixture-rid.json";
 import type { DamsPayload } from "./client";
 import { upstreamDamsFor } from "./near";
-import { parseThaiWater } from "./thaiwater";
+import { parseRidDams } from "./rid";
 import type { DamPath } from "./paths";
 
-const normalized = parseThaiWater(fixture);
-const dams: DamsPayload = { ...normalized, dataDate: normalized.dataDate, fetchedAt: "", stale: false };
+const parsed = parseRidDams(fixture);
+const dams: DamsPayload = { dams: parsed.dams, dataDate: parsed.dataDate, fetchedAt: "", stale: false };
 const paths = JSON.parse(readFileSync(new URL("../../../public/data/dam-paths.geojson", import.meta.url), "utf8")) as {
   type: "FeatureCollection"; features: DamPath[];
 };
 const input = { paths, downstream, dams };
-const pingPath = paths.features.find((path) => path.properties.damId === "1")!;
+const pingPath = paths.features.find((path) => path.properties.damId === "200101")!;
+const withBhumibol = (patch: Partial<DamsPayload["dams"][number]>): DamsPayload =>
+  ({ ...dams, dams: dams.dams.map((dam) => dam.id === "200101" ? { ...dam, ...patch } : dam) });
+const tak = { lat: 16.87, lon: 99.13 };
 
 describe("upstreamDamsFor", () => {
-  it("finds Bhumibol near Tak when the nearest downstream station is high", () => {
-    const p2a = { ...dams.stations[0], code: "P.2A", nameTh: "สถานี P.2A", situation: 4 as const, pctBank: 82 };
-    const result = upstreamDamsFor({ lat: 16.87, lon: 99.13 }, {
-      ...input, dams: { ...dams, stations: [...dams.stations, p2a] },
-    });
-    expect(result[0]).toMatchObject({
-      damId: "1", nameTh: "ภูมิพล", reason: "river",
-      nearStation: { code: "P.2A", situation: 4, km: 60.3 },
-    });
-    expect(result[0].kmToUser).toBeCloseTo(56.16, 0);
+  it("finds Bhumibol near Tak when it is more than 80% full", () => {
+    const result = upstreamDamsFor(tak, { ...input, dams: withBhumibol({ storagePct: 90, highRelease: false }) });
+    expect(result[0]).toMatchObject({ damId: "200101", nameTh: "ภูมิพล", storagePct: 90, reason: "storage" });
+    expect(result[0].kmToUser).toBeGreaterThan(20);
+    expect(result[0].kmToUser).toBeLessThan(120);
   });
 
-  it("uses C.2 when it is the closest downstream station", () => {
-    const c2 = dams.stations.find((station) => station.code === "C.2")!;
-    const result = upstreamDamsFor(c2, input);
-    expect(result.find((dam) => dam.damId === "1")?.nearStation?.code).toBe("C.2");
+  it("reports a high release when storage is at most 80%", () => {
+    const result = upstreamDamsFor(tak, { ...input, dams: withBhumibol({ storagePct: 64, highRelease: true }) });
+    expect(result.find((dam) => dam.damId === "200101")?.reason).toBe("release");
+  });
+
+  it("hides a dam at most 80% full without a high release", () => {
+    expect(upstreamDamsFor(tak, {
+      ...input, paths: { type: "FeatureCollection", features: [pingPath] },
+      dams: withBhumibol({ storagePct: 80, highRelease: false }),
+    })).toEqual([]);
   });
 
   it("rejects a place more than 10 km from the path", () => {
-    const p2a = { ...dams.stations[0], code: "P.2A", situation: 4 as const };
     expect(upstreamDamsFor({ lat: 16.87, lon: 99.5 }, {
-      ...input, paths: { type: "FeatureCollection", features: [pingPath] },
-      dams: { ...dams, stations: [...dams.stations, p2a] },
+      ...input, paths: { type: "FeatureCollection", features: [pingPath] }, dams: withBhumibol({ storagePct: 90 }),
     })).toEqual([]);
   });
 
@@ -46,16 +48,7 @@ describe("upstreamDamsFor", () => {
     const coordinates = pingPath.geometry.coordinates;
     const point = coordinates[Math.floor(coordinates.length * 0.8)];
     expect(upstreamDamsFor({ lat: point[1], lon: point[0] }, {
-      ...input, paths: { type: "FeatureCollection", features: [pingPath] },
-      dams: { ...dams, dams: [{ ...dams.dams.find((dam) => dam.id === "1")!, storagePct: 90 }] },
-    })).toEqual([]);
-  });
-
-  it("hides a dam when storage is at most 80 and all stations are below level 4", () => {
-    const p2a = { ...dams.stations[0], code: "P.2A", situation: 3 as const };
-    expect(upstreamDamsFor({ lat: 16.87, lon: 99.13 }, {
-      ...input, paths: { type: "FeatureCollection", features: [pingPath] },
-      dams: { ...dams, stations: [...dams.stations.map((station) => ({ ...station, situation: 3 as const })), p2a] },
+      ...input, paths: { type: "FeatureCollection", features: [pingPath] }, dams: withBhumibol({ storagePct: 90 }),
     })).toEqual([]);
   });
 });

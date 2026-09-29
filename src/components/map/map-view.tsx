@@ -37,7 +37,6 @@ import { useDamsLayer } from "./layers/use-dams-layer";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
-import type { RiverStation } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
@@ -67,7 +66,6 @@ function rememberSheetPosition(position: SheetPosition): void {
   try { localStorage.setItem("fah-map-sheet", position); } catch { /* Keep the sheet usable without storage. */ }
 }
 
-const emptyStations: RiverStation[] = [];
 const scalarGrid = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
 
 export function MapView() {
@@ -164,19 +162,18 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useQuakeLayer(mapInstance, quakes, quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
-  const selectDam = useCallback((id: string, trigger: HTMLElement) => select({ kind: "dam", id }, trigger), [select]);
-  useDamsLayer(mapInstance, dams, damsOn, selectDam);
+  useDamsLayer(mapInstance, dams, damsOn);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
   const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
   const pathLoading = Boolean(activePathId) && pathData?.id !== activePathId;
   const focusDamName = activePathId
     ? (() => {
-      const dam = dams?.dams.find((item) => item.id === activePathId) ?? (dams?.barrage?.id === activePathId ? dams.barrage : undefined);
+      const dam = dams?.dams.find((item) => item.id === activePathId);
       return dam ? (t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh) : "";
     })()
     : "";
-  useDamPathLayer(mapInstance, activePath?.path ?? null, activePath?.downstream ?? null, dams?.stations ?? emptyStations, isDesktop, reducedMotion);
+  useDamPathLayer(mapInstance, activePath?.path ?? null, isDesktop, reducedMotion);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
   useEffect(() => {
@@ -446,7 +443,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
           dispatch({ type: "setOverlay", key: "dams", enabled: false });
         });
       }}>
-      {t("เขื่อน")}{damsStatus === "ready" && dams ? ` (${dams.dams.length + (dams.barrage ? 1 : 0)})` : ""}
+      {t("เขื่อน")}{damsStatus === "ready" && dams ? ` (${dams.dams.length})` : ""}
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}

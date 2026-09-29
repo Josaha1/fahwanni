@@ -228,7 +228,6 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-shell .maplibregl-marker { z-index: 2; }
 .map-shell .maplibregl-canvas-container { cursor: crosshair; }
 .map-probe-marker { width: 18px; height: 18px; border: 3px solid var(--map-accent); border-radius: 50%; background: rgb(255 255 255 / .8); pointer-events: none; }
-.map-barrage { width: 16px; height: 16px; border: 2px solid #fff; border-radius: 3px; cursor: pointer; }
 .map-point-card { box-shadow: none; }
 @media (max-width: 1023px) { .map-shell .maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in) { display: none; } }
 .map-typhoon { width: 56px; height: 56px; background-image: url("/anim/typhoon-calm.webp"); background-repeat: no-repeat; background-size: 2400% 100%; background-position: 0 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / .35)); animation: anim-icon-play 2.4s steps(24, jump-none) infinite; }

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { parseRidDams } from "./rid";
-import type { Barrage, Dam, RiverStation } from "./types";
+import type { Dam } from "./types";
 
 /** RID's public large-dam report (35 dams, ~7 KB, daily). Docs: app.rid.go.th/reservoir/api/document/dam */
 const URL = "https://app.rid.go.th/reservoir/api/dam/public";
@@ -11,9 +11,6 @@ export interface DamsPayload {
   fetchedAt: string;
   stale: boolean;
   dams: Dam[];
-  /** No source with published terms for the Chao Phraya barrage or river stations yet; kept empty. */
-  barrage: Barrage;
-  stations: RiverStation[];
 }
 
 /** Returns null on upstream failure; the route may still serve cached data. */
@@ -29,7 +26,7 @@ export async function fetchDams(fetchImpl: typeof fetch = fetch): Promise<DamsPa
       dataDate, fetchedAt,
       // Daily report: stale once it is more than 36 h old.
       stale: dataTime !== null && Date.parse(fetchedAt) - dataTime > 36 * 60 * 60 * 1000,
-      dams, barrage: null, stations: [],
+      dams,
     };
   } catch {
     return null;

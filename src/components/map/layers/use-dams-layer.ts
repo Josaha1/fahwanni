@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { Marker, type Map } from "maplibre-gl";
+import { useMemo } from "react";
+import type { Map } from "maplibre-gl";
 import type { DamsPayload } from "@/lib/dams/client";
 import { damBandColor } from "@/lib/dams/bands";
-import { stationSituationColor } from "@/lib/dams/thaiwater";
 import { useT } from "@/i18n/client";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";
@@ -22,7 +21,7 @@ type DamCollection = { type: "FeatureCollection"; features: {
   geometry: { type: "Point"; coordinates: [number, number] };
 }[] };
 
-export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, onSelect: (id: string, trigger: HTMLElement) => void) {
+export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean) {
   const t = useT();
   const { theme } = useMapContext();
   const data = useMemo<DamCollection>(() => ({
@@ -54,21 +53,4 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
     for (const id of LAYERS) if (live.getLayer(id)) live.removeLayer(id);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
   }, [data, theme]);
-
-  useEffect(() => {
-    if (!map || !enabled || !dams?.barrage) return;
-    const barrage = dams.barrage;
-    const element = document.createElement("div");
-    element.className = "map-barrage";
-    element.style.backgroundColor = stationSituationColor(barrage.situation) ?? "#6b7a8c";
-    element.setAttribute("role", "button");
-    element.tabIndex = 0;
-    element.setAttribute("aria-label", t("เขื่อนเจ้าพระยา ระบาย {n} ลบ.ม./วินาที", { n: barrage.dischargeCms ?? t("ไม่ทราบ") }));
-    element.addEventListener("click", (event) => { event.stopPropagation(); onSelect(barrage.id, element); });
-    element.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") { event.preventDefault(); onSelect(barrage.id, element); }
-    });
-    const marker = new Marker({ element, anchor: "center" }).setLngLat([barrage.lon, barrage.lat]).addTo(map);
-    return () => { marker.remove(); };
-  }, [map, dams, enabled, t, onSelect]);
 }

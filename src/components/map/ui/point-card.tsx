@@ -24,7 +24,6 @@ import type { DamsPayload } from "@/lib/dams/client";
 import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
-import { stationSituationColor, situationWord } from "@/lib/dams/thaiwater";
 import { readRadarLevel } from "../radar-tile";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
@@ -72,8 +71,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   const storm = probe.kind === "storm" ? storms.find((item) => item.id === probe.id) : undefined;
   const quake = probe.kind === "quake" ? quakes.find((item) => item.id === probe.id) : undefined;
   const dam = probe.kind === "dam" ? dams?.dams.find((item) => item.id === probe.id) : undefined;
-  const barrage = probe.kind === "dam" && probe.id === dams?.barrage?.id ? dams.barrage : null;
-  const selectedDam = dam ?? barrage;
+  const selectedDam = dam;
   const future = timeMs > nowMs;
   const geo = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
   // "Next 3 hours" only makes sense when the map shows now.
@@ -149,7 +147,6 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
     </div>}
     {dam && <div className="mt-2 space-y-3 text-sm">
       <p className="map-muted">{[
-        // ThaiWater's agency is the reporting agency (RID for EGAT dams too), so it is not shown.
         t.locale === "en" ? dam.basin.en || dam.basin.th : dam.basin.th,
         t("จ.{province}", { province: t.locale === "en" ? dam.province.en || dam.province.th : dam.province.th }),
       ].filter(Boolean).join(" · ")}</p>
@@ -177,69 +174,33 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       </div>
       {dam.spilledMcmDay !== null && dam.spilledMcmDay > 0 && <p className="map-warning">{t("น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.spilledMcmDay) })}</p>}
       <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
-      <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
+      <p className="map-muted text-xs">{t("ที่มา: กรมชลประทาน")}</p>
       <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
       <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>
-      {pathActive && downstream && <DownstreamDetails downstream={downstream} dams={dams} />}
-    </div>}
-    {barrage && <div className="mt-2 space-y-3 text-sm">
-      <p className="map-muted">{t("ลำน้ำเจ้าพระยา · จ.ชัยนาท")}</p>
-      <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
-        <p className="map-muted">{t("ระบายท้ายเขื่อน")}</p>
-        <p className="font-semibold">{barrage.dischargeCms === null ? "–" : t("{value} ลบ.ม./วินาที", { value: number.format(barrage.dischargeCms) })}</p>
-      </div>
-      <p className="map-muted">{barrage.qmaxCms === null ? "–" : t("ความจุลำน้ำ ~{value} ลบ.ม./วินาที", { value: number.format(barrage.qmaxCms) })}</p>
-      {barrage.dischargeCms !== null && barrage.qmaxCms !== null && barrage.qmaxCms > 0 && <div className="h-[10px] rounded-full" style={{ backgroundColor: "var(--map-panel-border)" }} role="meter" aria-label={t("สัดส่วนการระบายต่อความจุลำน้ำ")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(barrage.dischargeCms / barrage.qmaxCms * 100, 100)}>
-        <div className="h-full rounded-full" style={{ width: `${Math.min(barrage.dischargeCms / barrage.qmaxCms * 100, 100)}%`, backgroundColor: stationSituationColor(barrage.situation) ?? "var(--map-muted)" }} />
-      </div>}
-      <p style={{ color: stationSituationColor(barrage.situation) ?? undefined }}>{t("สถานการณ์: {situation}", { situation: barrage.situation === null ? t("ไม่ทราบ") : t(situationWord(barrage.situation) ?? "ไม่ทราบ") })}</p>
-      <p className="map-muted">{t("ข้อมูลวันที่ {date}", { date: damDate(barrage.time, t.locale) })} · {formatTime(barrage.time, "Asia/Bangkok", t.locale)}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
-      <p className="map-muted text-xs">{t("ที่มา: คลังข้อมูลน้ำแห่งชาติ (สสน.)")}</p>
-      <p className="map-muted text-xs">{t("เส้นทางน้ำท้ายเขื่อน (ปุ่มด้านล่าง) ไม่ใช่ขอบเขตน้ำท่วม")}</p>
-      <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
-        {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
-      </button>
-      {pathActive && downstream && <DownstreamDetails downstream={downstream} dams={dams} />}
+      {pathActive && downstream && <DownstreamDetails downstream={downstream} />}
     </div>}
   </section>;
 }
 
-function DownstreamDetails({ downstream, dams }: { downstream: Downstream; dams: DamsPayload | null }) {
+function DownstreamDetails({ downstream }: { downstream: Downstream }) {
   const t = useT();
   const [showAll, setShowAll] = useState(false);
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
-  const stationByCode = new Map(dams?.stations.map((station) => [station.code, station]) ?? []);
   const provinceById = new Map(provinces.map((province) => [province.id, province]));
-  const items = [
-    ...downstream.stations.map((station) => ({ kind: "station" as const, ...station })),
-    ...downstream.provinces.map((province) => ({ kind: "province" as const, ...province })),
-  ].sort((a, b) => a.km - b.km);
+  // Provinces along the route (no river stations: no source with published terms).
+  const items = [...downstream.provinces].sort((a, b) => a.km - b.km);
   return <div className="space-y-3">
     <p>{t("น้ำที่ระบายจะไหลไปตามลำน้ำนี้ ระดับน้ำท้ายเขื่อนอาจสูงขึ้นในช่วง 1–3 วัน ติดตามประกาศจากกรมชลประทาน/ปภ. ในพื้นที่")}</p>
     <div>
       <h3 className="font-semibold">{t("ลำน้ำท้ายเขื่อน ({km} กม.)", { km: number.format(downstream.km) })}</h3>
       <ol className="mt-2 space-y-2">
         {(showAll ? items : items.slice(0, 12)).map((item) => {
-          if (item.kind === "province") {
-            const province = provinceById.get(item.id);
-            if (!province) return null;
-            return <li key={`province-${item.id}`} className="flex justify-between gap-2">
-              <strong>{t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
-              <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
-            </li>;
-          }
-          const station = stationByCode.get(item.code);
-          return <li key={`station-${item.code}`} className="flex items-start justify-between gap-2">
-            <span className="min-w-0">
-              <span className="font-semibold">{station ? `${station.nameTh}${station.nameTh.includes("(") ? "" : ` (${item.code})`}` : item.code}</span>
-              {station ? <span className={`mt-0.5 flex items-center gap-1.5 text-xs${station.situation === null ? " map-muted" : ""}`}>
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: stationSituationColor(station.situation) ?? "var(--map-muted)" }} aria-hidden="true" />
-                {station.situation === null ? t("ไม่มีข้อมูลล่าสุด") : t(situationWord(station.situation) ?? "ไม่ทราบ")}
-                {station.pctBank !== null && <> · {t("{pct}% ของตลิ่ง", { pct: number.format(station.pctBank) })}</>}
-              </span> : <span className="map-muted block text-xs">{t("ไม่มีข้อมูลล่าสุด")}</span>}
-            </span>
+          const province = provinceById.get(item.id);
+          if (!province) return null;
+          return <li key={`province-${item.id}`} className="flex justify-between gap-2">
+            <strong>{t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
             <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
           </li>;
         })}
