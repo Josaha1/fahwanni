@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Ref
 import { toast } from "sonner";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
-import { formatFullDate, formatTime } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { sampleSeries } from "@/lib/timeline/store";
@@ -35,7 +35,6 @@ import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
-import { provinces } from "@/lib/provinces";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
@@ -52,7 +51,8 @@ import { MapSearchPill } from "./ui/map-search-pill";
 import { ActionRail } from "./ui/action-rail";
 import { PointCard } from "./ui/point-card";
 import { PrimaryPicker } from "./ui/primary-picker";
-import { DamLegendStrip, LegendChip } from "./ui/legend-chip";
+import { LegendChip } from "./ui/legend-chip";
+import { WaterPanel } from "./ui/water-panel";
 import { LegendDialog } from "./ui/legend-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
@@ -457,36 +457,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: next });
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
-  const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
-    .sort((a, b) => b.rainMm - a.rainMm);
-  const waterPanel = water && <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
-    <DamLegendStrip buttonRef={legendButton} onOpen={openLegend} />
-    {damsStatus === "ready" && dams ? <>
-      <p className="flex flex-wrap items-center gap-2">
-        <span className="map-water-badge">{t("สังเกต")}</span>
-        <span>{dams.dataDate
-          ? t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: formatFullDate(`${dams.dataDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })
-          : t("ข้อมูลกรมชลประทาน")}</span>
-      </p>
-      {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
-    </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
-    <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-rain-risk">
-      <h2 id="map-rain-risk" className="font-semibold">{t("ฝนหนัก 24 ชม. (กรมอุตุฯ)")} <span className="map-water-badge">{t("สังเกต")}</span></h2>
-      {rainRiskStatus === "ready" && rainRisk ? <>
-        {rainProvinces.length ? <>
-          <ul className="mt-2 space-y-1">{(showAllRainProvinces ? rainProvinces : rainProvinces.slice(0, 8)).map((station) => <li key={station.provinceTh}>
-            <button type="button" className="map-chip flex w-full justify-between gap-2 text-left" onClick={() => select({ kind: "rain", id: station.id })}>
-              <span>{station.provinceTh === "กรุงเทพมหานคร" ? t.locale === "en" ? "Bangkok" : station.provinceTh : t("จ.{province}", { province: t.locale === "en" ? provinces.find((item) => item.th === station.provinceTh)?.en ?? station.provinceTh : station.provinceTh })}</span>
-              <span>{t("{mm} มม. · {category}", { mm: station.rainMm, category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span>
-            </button>
-          </li>)}</ul>
-          {!showAllRainProvinces && rainProvinces.length > 8 && <button type="button" className="map-chip mt-2 w-full" onClick={() => setShowAllRainProvinces(true)}>{t("แสดงทั้งหมด ({n})", { n: rainProvinces.length })}</button>}
-        </> : <p className="map-muted mt-2">{t("ไม่มีสถานีที่ฝน 24 ชม. เข้าเกณฑ์ฝนหนัก ({n} สถานี)", { n: rainRisk.reporting })}</p>}
-        {rainRisk.observedAt && <p className="map-muted mt-2 text-xs">{t("ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
-      </> : <p className="map-muted mt-2" role="status">{t(rainRiskStatus === "error" ? "ข้อมูลฝนหนักไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลฝนหนัก…")}</p>}
-    </section>
-    <p className="map-muted text-xs">{t("แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ")}</p>
-  </section>;
+  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus}
+    place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
+    showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
+    onSelectDam={(id) => {
+      select({ kind: "dam", id });
+      const dam = dams?.dams.find((item) => item.id === id);
+      if (dam) mapInstance?.easeTo({ center: [dam.lon, dam.lat], zoom: Math.max(mapInstance.getZoom(), 8), duration: reducedMotion ? 0 : 800 });
+    }} onSelectRain={(id) => select({ kind: "rain", id })} />;
   const changeMode = (next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode and a dam card does not belong in weather mode.
