@@ -6,8 +6,9 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
-import { renderPrecipImage } from "@/lib/precip/render";
-import { renderPm25Image, renderTempImage } from "@/lib/raster/render-scalar";
+import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
+import { sampleSeries } from "@/lib/timeline/store";
+import { lerpGrid } from "@/lib/timeline/time";
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
@@ -27,7 +28,7 @@ import { useForecastDays } from "./use-forecast-days";
 import { MapProvider, useMapContext } from "./map-provider";
 import { bearingWord } from "@/lib/storms/present";
 import { useRadarLayer } from "./layers/use-radar-layer";
-import { useScalarLayer, type ScalarImage } from "./layers/use-scalar-layer";
+import { useTimeImageLayer } from "./layers/use-time-image-layer";
 import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
@@ -62,6 +63,7 @@ function rememberSheetPosition(position: SheetPosition): void {
 }
 
 const emptyStations: RiverStation[] = [];
+const scalarGrid = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
 
 export function MapView() {
   const { place } = useLastPlace();
@@ -85,7 +87,7 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
-  const { manifest, wind, windSettled, pm25, pm25Status, loadPm25, dams, damsStatus, loadDams, storms, quakes, initialIndex } = useMapData();
+  const { manifest, wind, windSettled, dams, damsStatus, loadDams, storms, quakes, initialIndex } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => {
     const initial = initialMapState({ primary: view.layer, overlays: view.ov });
     if (view.dam) initial.overlays.dams = true;
@@ -110,83 +112,34 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const radarAge = minutesSinceNewest(frames, nowIso);
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
-  const modelImages = useMemo(() => {
-    if (!wind?.precipHours || !wind.precip || !wind.prob) return [] as (ScalarImage | null)[];
-    const images = wind.precipHours.slice(0, 12).map((_, index) => {
-      const image = renderPrecipImage(wind, index);
-      if (!image) return null;
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext("2d");
-      if (!context) return null;
-      const pixels = context.createImageData(image.width, image.height);
-      pixels.data.set(image.data);
-      context.putImageData(pixels, 0, 0);
-      return { url: canvas.toDataURL(), coordinates: image.coordinates };
-    });
-    return images.every(Boolean) ? images : [];
-  }, [wind]);
-  const modelHours = useMemo(() => modelImages.length ? wind?.precipHours?.slice(0, modelImages.length) ?? [] : [], [modelImages, wind]);
+  const loadFocusTime = initialFocus ? Date.parse(initialFocus) : urlView.t ? Date.parse(urlView.t) : null;
+  const { series: windSeries } = useForecastDays({ source: "wind", enabled: true, focusTime: loadFocusTime, nowMs: Date.parse(nowIso) });
+  const { series: pm25Series, loading: pm25Loading, error: pm25Error } = useForecastDays({ source: "pm25", enabled: primary === "pm25", focusTime: loadFocusTime, nowMs: Date.parse(nowIso) });
+  const modelHours = useMemo(() => windSeries?.times.map((time) => new Date(time).toISOString()) ?? [], [windSeries]);
   const stops = useMemo(() => buildLayerTimeline(primary, {
-    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? wind?.tempHours : primary === "pm25" ? pm25?.hours : undefined,
-  }, nowIso), [primary, frames, modelHours, wind?.tempHours, pm25?.hours, nowIso]);
-  const tempImages = useMemo(() => {
-    if (primary !== "temp" || !wind?.tempHours || !wind.temp) return [] as (ScalarImage | null)[];
-    const images: (ScalarImage | null)[] = Array(wind.tempHours.length).fill(null);
-    for (const stop of stops) {
-      const image = renderTempImage(wind, stop.index);
-      if (!image) continue;
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext("2d");
-      if (!context) continue;
-      const pixels = context.createImageData(image.width, image.height);
-      pixels.data.set(image.data);
-      context.putImageData(pixels, 0, 0);
-      images[stop.index] = { url: canvas.toDataURL(), coordinates: image.coordinates };
-    }
-    return images;
-  }, [primary, wind, stops]);
-  const pm25Images = useMemo(() => {
-    if (primary !== "pm25" || !pm25) return [] as (ScalarImage | null)[];
-    const images: (ScalarImage | null)[] = Array(pm25.hours.length).fill(null);
-    for (const stop of stops) {
-      const image = renderPm25Image(pm25, stop.index);
-      if (!image) continue;
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext("2d");
-      if (!context) continue;
-      const pixels = context.createImageData(image.width, image.height);
-      pixels.data.set(image.data);
-      context.putImageData(pixels, 0, 0);
-      images[stop.index] = { url: canvas.toDataURL(), coordinates: image.coordinates };
-    }
-    return images;
-  }, [primary, pm25, stops]);
+    radarTimes: frames.map((frame) => frame.time), modelHours, hourly: primary === "temp" ? modelHours : primary === "pm25" ? pm25Series?.times.map((time) => new Date(time).toISOString()) : undefined,
+  }, nowIso), [primary, frames, modelHours, pm25Series, nowIso]);
   const defaultIdx = defaultIndexFor(primary, stops, nowIso);
   const available = stops.length > 0;
   const activeStop = stops[Math.min(activeIndex, stops.length - 1)];
-  const focusTime = initialFocus ? Date.parse(initialFocus) : activeStop ? Date.parse(activeStop.time) : null;
-  // Task 5 will use these loaded grids for rendering; the current map layers still use the legacy responses.
-  useForecastDays({ source: "wind", enabled: true, focusTime, nowMs: Date.parse(nowIso) });
-  useForecastDays({ source: "pm25", enabled: primary === "pm25", focusTime, nowMs: Date.parse(nowIso) });
+  const timeMs = initialFocus ? Date.parse(initialFocus) : activeStop ? Date.parse(activeStop.time) : null;
+  const rainModel = activeStop?.kind === "model" || (initialFocus !== null && timeMs !== null && timeMs > Date.parse(nowIso));
   const shares = segmentShares(stops);
   const activeTimeLabel = activeStop?.kind === "model" && primary === "rain"
     ? t("+{n} ชม. · {time} น.", { n: Math.max(0, Math.ceil((Date.parse(activeStop.time) - Date.parse(nowIso)) / 3_600_000)), time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) })
     : activeStop ? t("{time} น.", { time: formatTime(activeStop.time, "Asia/Bangkok", t.locale) }) : "";
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
-  const series = useMemo(() => wind ? placeSeries(wind, stops, place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
+  const series = useMemo(() => wind ? placeSeries(wind, stops.map((stop) => stop.kind === "model"
+    ? { ...stop, index: wind.precipHours?.indexOf(stop.time) ?? -1 } : stop), place, radarSummary ?? undefined) : [], [wind, stops, place, radarSummary]);
   const seriesSummary = placeSeriesSummary(series, nowIso);
-  const locationTemp = primary === "temp" && activeStop && wind?.temp?.[activeStop.index] && wind.feels?.[activeStop.index]
-    ? { temp: sampleGrid(wind, wind.temp[activeStop.index], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[activeStop.index], place.lon, place.lat) }
+  const legacyTempHour = activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : -1;
+  const locationTemp = primary === "temp" && wind && legacyTempHour >= 0 && wind.temp?.[legacyTempHour] && wind.feels?.[legacyTempHour]
+    ? { temp: sampleGrid(wind, wind.temp[legacyTempHour], place.lon, place.lat), feels: sampleGrid(wind, wind.feels[legacyTempHour], place.lon, place.lat) }
     : null;
-  const locationPm25 = primary === "pm25" && activeStop && pm25?.pm25[activeStop.index]
-    ? sampleGrid(pm25, pm25.pm25[activeStop.index], place.lon, place.lat) : null;
+  const pm25Sample = pm25Series && timeMs !== null ? sampleSeries(pm25Series, "pm25", timeMs) : null;
+  const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
+  const locationPm25 = primary === "pm25" && pm25Values ? sampleGrid(scalarGrid, pm25Values, place.lon, place.lat) : null;
   const [device] = useState(() => {
     const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
     return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
@@ -194,10 +147,10 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   const motion = windMotion({ reducedMotion, ...device });
   const windHour = wind ? windHourFor(activeStop, wind.hours, nowIso) : 0;
   const terrainOk = terrainAvailable(device.deviceMemory);
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible);
-  useScalarLayer(mapInstance, modelImages, activeStop?.kind === "model" ? activeStop.index : -1, rainVisible, "model-rain", 1);
-  useScalarLayer(mapInstance, tempImages, activeStop?.kind === "model" && primary === "temp" ? activeStop.index : -1, primary === "temp", "temp", 1);
-  useScalarLayer(mapInstance, pm25Images, activeStop?.kind === "model" && primary === "pm25" ? activeStop.index : -1, primary === "pm25", "pm25", 1);
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, !rainModel && activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible && !rainModel);
+  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainModel, series: windSeries, timeMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
+  useTimeImageLayer(mapInstance, { id: "temp", enabled: primary === "temp", series: windSeries, timeMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
+  useTimeImageLayer(mapInstance, { id: "pm25", enabled: primary === "pm25", series: pm25Series, timeMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, quakesOn);
@@ -234,14 +187,11 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   };
 
   useEffect(() => {
-    if (urlView.layer !== "pm25" || pm25Status !== "idle") return;
-    loadPm25().catch((error: unknown) => {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      pendingTime.current = undefined;
-      toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
-      dispatch({ type: "setPrimary", primary: "rain" });
-    });
-  }, [urlView.layer, pm25Status, loadPm25, t]);
+    if (primary !== "pm25" || !pm25Error) return;
+    pendingTime.current = undefined;
+    toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
+    dispatch({ type: "setPrimary", primary: "rain" });
+  }, [primary, pm25Error, t]);
 
   useEffect(() => {
     if (!damsOn || damsStatus !== "idle") return;
@@ -515,16 +465,11 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25={pm25} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
+    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25Series={pm25Series} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
     downstream={activePath?.downstream ?? null} pathActive={Boolean(activePathId)} pathLoading={pathLoading && Boolean(activePathId)} onTogglePath={togglePath} />;
-  const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(wind?.tempHours?.length && wind.temp?.some((hour) => hour.length > 0))}
-    pm25Loading={pm25Status === "loading"} onChange={(next) => {
+  const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
+    pm25Loading={pm25Loading} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });
-      if (next === "pm25" && pm25Status !== "loading") loadPm25().catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        toast.error(t("ข้อมูลฝุ่น PM2.5 ไม่พร้อมใช้งาน"));
-        dispatch({ type: "setPrimary", primary: "rain" });
-      });
     }} />;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={timeline} details={details} primaryPicker={primaryPicker} layers={layers}
     card={card} onProbeCenter={(trigger) => probeCenter(trigger)} />;

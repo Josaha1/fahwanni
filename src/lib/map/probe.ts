@@ -1,7 +1,7 @@
 import { MIN_PROB, precipLevel } from "../precip/render";
 import type { WindGrid } from "../wind/grid";
 
-export function sampleGrid(grid: Pick<WindGrid, "bbox" | "nx" | "ny">, values: number[], lon: number, lat: number): number | null {
+export function sampleGrid(grid: Pick<WindGrid, "bbox" | "nx" | "ny">, values: ArrayLike<number>, lon: number, lat: number): number | null {
   const [west, south, east, north] = grid.bbox;
   if (!Number.isFinite(lon) || !Number.isFinite(lat) || lon < west || lon > east || lat < south || lat > north || grid.nx < 2 || grid.ny < 2) return null;
   const x = (lon - west) / (east - west) * (grid.nx - 1);

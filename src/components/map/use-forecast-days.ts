@@ -25,14 +25,20 @@ function idle(callback: () => void): () => void {
 
 export function useForecastDays({ source, enabled, focusTime, nowMs }: {
   source: "wind" | "pm25"; enabled: boolean; focusTime: number | null; nowMs: number;
-}): { series: HourlySeries | null; loadedDays: number[]; loading: boolean; lastAvailable: number | null } {
+}): { series: HourlySeries | null; loadedDays: number[]; loading: boolean; error: boolean; lastAvailable: number | null } {
   const chunks = useRef(new Map<number, Chunk>());
   const failures = useRef(new Map<number, Failure>());
   const requests = useRef(new Map<number, AbortController>());
   const lastFetched = useRef<number | null>(null);
-  const [snapshot, setSnapshot] = useState<{ chunks: Map<number, Chunk>; loading: boolean }>(() => ({ chunks: new Map(), loading: false }));
-  const changed = useCallback(() => setSnapshot({ chunks: new Map(chunks.current), loading: requests.current.size > 0 }), []);
+  const [snapshot, setSnapshot] = useState<{ chunks: Map<number, Chunk>; loading: boolean; error: boolean }>(() => ({ chunks: new Map(), loading: false, error: false }));
+  const changed = useCallback(() => setSnapshot({ chunks: new Map(chunks.current), loading: requests.current.size > 0, error: !chunks.current.has(0) && failures.current.has(0) }), []);
   const vars = source === "wind" ? WIND_VARS : PM25_VARS;
+
+  useEffect(() => {
+    if (enabled || !failures.current.size) return;
+    failures.current.clear();
+    changed();
+  }, [enabled, changed]);
 
   const loadDay = useCallback(async (day: number): Promise<void> => {
     if (day < 0 || day > 6 || chunks.current.has(day) || requests.current.has(day)) return;
@@ -125,5 +131,5 @@ export function useForecastDays({ source, enabled, focusTime, nowMs }: {
 
   const loadedDays = useMemo(() => [...snapshot.chunks.keys()].sort((a, b) => a - b), [snapshot.chunks]);
   const series = useMemo(() => loadedDays.length ? mergeDays(loadedDays.map((day) => snapshot.chunks.get(day)!), vars) : null, [loadedDays, snapshot.chunks, vars]);
-  return { series, loadedDays, loading: snapshot.loading, lastAvailable: series?.times.at(-1) ?? null };
+  return { series, loadedDays, loading: snapshot.loading, error: snapshot.error, lastAvailable: series?.times.at(-1) ?? null };
 }

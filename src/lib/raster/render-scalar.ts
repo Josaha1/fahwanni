@@ -25,14 +25,17 @@ export function mercYToLat(y: number): number {
 /** Rasterises a scalar grid with bilinear sampling and Mercator-spaced image rows. */
 export function renderScalarImage(
   grid: Pick<WindGrid, "bbox" | "nx" | "ny">,
-  sample: (at: (arr: number[]) => number) => [number, number, number, number] | null,
+  sample: (at: (arr: ArrayLike<number>) => number) => [number, number, number, number] | null,
   width = 256,
   height = 256,
+  out?: Uint8ClampedArray,
 ): ScalarImage {
   const [west, south, east, north] = grid.bbox;
   const { nx, ny } = grid;
   const yTop = latToMercY(north), yBottom = latToMercY(south);
-  const data = new Uint8ClampedArray(width * height * 4);
+  const data = out ?? new Uint8ClampedArray(width * height * 4);
+  if (data.length !== width * height * 4) throw new RangeError("Raster output size does not match image dimensions");
+  if (out) data.fill(0);
 
   for (let row = 0; row < height; row++) {
     const lat = mercYToLat(yTop + ((row + 0.5) / height) * (yBottom - yTop));
@@ -41,7 +44,7 @@ export function renderScalarImage(
     for (let col = 0; col < width; col++) {
       const gx = ((col + 0.5) / width) * (nx - 1);
       const x0 = Math.min(nx - 1, Math.floor(gx)), x1 = Math.min(nx - 1, x0 + 1), fx = gx - x0;
-      const at = (arr: number[]) =>
+      const at = (arr: ArrayLike<number>) =>
         arr[y0 * nx + x0] * (1 - fx) * (1 - fy) + arr[y0 * nx + x1] * fx * (1 - fy) +
         arr[y1 * nx + x0] * (1 - fx) * fy + arr[y1 * nx + x1] * fx * fy;
       const rgba = sample(at);

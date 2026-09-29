@@ -6,7 +6,9 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
 import { pm25Level } from "@/lib/air";
-import type { Pm25Grid } from "@/lib/pm25/grid";
+import { sampleSeries, type HourlySeries } from "@/lib/timeline/store";
+import { lerpGrid } from "@/lib/timeline/time";
+import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { modelRainAt, sampleGrid, windAt } from "@/lib/map/probe";
 import type { PrimaryLayer } from "@/lib/map/legend";
 import type { TimelineStop } from "@/lib/timeline/frames";
@@ -34,14 +36,14 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary, activeStop, nowIso, storms, quakes, dams,
+export function PointCard({ probe, onClose, frame, wind, windHour, pm25Series, primary, activeStop, nowIso, storms, quakes, dams,
   downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
   wind: WindGrid | null;
   windHour: number;
-  pm25: Pm25Grid | null;
+  pm25Series: HourlySeries | null;
   primary: PrimaryLayer;
   activeStop?: TimelineStop;
   nowIso: string;
@@ -71,14 +73,15 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25, primary
   const rain = probe.kind === "point" && wind ? modelRainAt(wind, probe.lon, probe.lat) : null;
   const breeze = probe.kind === "point" && wind ? windAt(wind, windHour, probe.lon, probe.lat) : null;
   const currentTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
-  const tempHour = primary === "temp" && activeStop ? activeStop.index : currentTempHour;
+  const tempHour = primary === "temp" && activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : currentTempHour;
   const temp = probe.kind === "point" && wind && tempHour >= 0 && wind.temp?.[tempHour] && wind.feels?.[tempHour]
     ? { value: sampleGrid(wind, wind.temp[tempHour], probe.lon, probe.lat), feels: sampleGrid(wind, wind.feels[tempHour], probe.lon, probe.lat) }
     : null;
-  const currentPm25Hour = pm25?.hours.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
-  const pm25Hour = primary === "pm25" && activeStop ? activeStop.index : currentPm25Hour;
-  const pm25Value = probe.kind === "point" && pm25 && pm25Hour >= 0 && pm25.pm25[pm25Hour]
-    ? sampleGrid(pm25, pm25.pm25[pm25Hour], probe.lon, probe.lat) : null;
+  const pm25Time = primary === "pm25" && activeStop ? Date.parse(activeStop.time) : Date.parse(nowIso);
+  const pm25Sample = pm25Series ? sampleSeries(pm25Series, "pm25", pm25Time) : null;
+  const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
+  const pm25Value = probe.kind === "point" && pm25Values
+    ? sampleGrid({ bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY }, pm25Values, probe.lon, probe.lat) : null;
 
   useEffect(() => { heading.current?.focus(); }, [probe]);
   useEffect(() => {

@@ -4,14 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { lastRadarFrames } from "@/lib/radar/frames";
 import type { RadarManifest } from "@/lib/radar/types";
 import type { WindGrid } from "@/lib/wind/grid";
-import type { Pm25Grid } from "@/lib/pm25/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import type { DamsPayload } from "@/lib/dams/client";
 import { buildTimeline, defaultIndex } from "@/lib/timeline/frames";
 import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 
-type DataKey = "radar" | "wind" | "storms" | "quakes" | "pm25" | "dams";
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams";
 type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
@@ -20,46 +19,14 @@ export function useMapData() {
   const [initialIndex, setInitialIndex] = useState(0);
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windSettled, setWindSettled] = useState(false);
-  const [pm25, setPm25] = useState<Pm25Grid | null>(null);
-  const [pm25Status, setPm25Status] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const pm25Request = useRef<Promise<void> | null>(null);
-  const pm25Controller = useRef<AbortController | null>(null);
-  const pm25Loaded = useRef(false);
   const [dams, setDams] = useState<DamsPayload | null>(null);
   const [damsStatus, setDamsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const damsRequest = useRef<Promise<void> | null>(null);
   const damsController = useRef<AbortController | null>(null);
   const damsLoaded = useRef(false);
-  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, pm25: null, dams: null });
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, dams: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
-
-  const loadPm25 = useCallback((refresh = false): Promise<void> => {
-    if (!refresh && pm25Loaded.current) return Promise.resolve();
-    if (!refresh && pm25Request.current) return pm25Request.current;
-    pm25Controller.current?.abort();
-    const controller = new AbortController();
-    pm25Controller.current = controller;
-    if (!pm25Loaded.current) setPm25Status("loading");
-    const request = fetch("/api/pm25", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("pm25 unavailable"); return response.json() as Promise<Pm25Grid>; })
-      .then((data) => {
-        if (controller.signal.aborted) return;
-        lastFetched.current.pm25 = Date.now();
-        pm25Loaded.current = true;
-        setPm25(data);
-        setPm25Status("ready");
-      })
-      .catch((error: unknown) => { if (!controller.signal.aborted && !pm25Loaded.current) setPm25Status("error"); throw error; })
-      .finally(() => {
-        if (pm25Controller.current === controller) {
-          pm25Request.current = null;
-          pm25Controller.current = null;
-        }
-      });
-    pm25Request.current = request;
-    return request;
-  }, []);
 
   const loadDams = useCallback((refresh = false): Promise<void> => {
     if (!refresh && damsLoaded.current) return Promise.resolve();
@@ -89,8 +56,8 @@ export function useMapData() {
   }, []);
 
   useEffect(() => {
-    const controllers: Partial<Record<Exclude<DataKey, "pm25" | "dams">, AbortController>> = {};
-    const replaceController = (key: Exclude<DataKey, "pm25" | "dams">) => {
+    const controllers: Partial<Record<Exclude<DataKey, "dams">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "dams">) => {
       controllers[key]?.abort();
       const controller = new AbortController();
       controllers[key] = controller;
@@ -153,7 +120,6 @@ export function useMapData() {
       if (lastFetched.current.wind !== null && shouldRefresh(lastFetched.current.wind, now, REFRESH.slow)) loadWind();
       if (lastFetched.current.storms !== null && shouldRefresh(lastFetched.current.storms, now, REFRESH.slow)) loadStorms();
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
-      if (lastFetched.current.pm25 !== null && shouldRefresh(lastFetched.current.pm25, now, REFRESH.slow)) loadPm25(true).catch(() => {});
       if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
@@ -169,10 +135,9 @@ export function useMapData() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("online", refreshOnReturn);
       Object.values(controllers).forEach((controller) => controller.abort());
-      pm25Controller.current?.abort();
       damsController.current?.abort();
     };
-  }, [loadPm25, loadDams]);
+  }, [loadDams]);
 
-  return { manifest, radarFetchedAt, wind, windSettled, pm25, pm25Status, loadPm25, dams, damsStatus, loadDams, storms, quakes, initialIndex };
+  return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, storms, quakes, initialIndex };
 }
