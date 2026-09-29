@@ -7,11 +7,11 @@ const headers = { "Cache-Control": "public, s-maxage=300, stale-while-revalidate
 
 export async function GET() {
   const fresh = cache.getFresh("radar");
-  if (fresh) return Response.json(fresh, { headers });
+  if (fresh && fresh.stale !== true) return Response.json(fresh, { headers });
 
   const manifest = await fetchRadar();
   if (manifest.provider === "rainviewer") {
-    cache.set("radar", manifest);
+    if (manifest.stale !== true) cache.set("radar", manifest);
     return Response.json(manifest, { headers });
   }
   return Response.json(cache.getStale("radar") ?? manifest, { headers: { "Cache-Control": "no-store" } });
