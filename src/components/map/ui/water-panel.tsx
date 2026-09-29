@@ -1,4 +1,4 @@
-import { useState, type RefObject } from "react";
+import { useState, useSyncExternalStore, type RefObject } from "react";
 import { useT } from "@/i18n/client";
 import { damBandColor } from "@/lib/dams/bands";
 import type { DamsPayload } from "@/lib/dams/client";
@@ -19,6 +19,12 @@ function readDismissed(): string[] {
     const value: unknown = JSON.parse(sessionStorage.getItem(DISMISSED_KEY) ?? "[]");
     return Array.isArray(value) ? value.filter((key): key is string => typeof key === "string") : [];
   } catch { return []; }
+}
+
+function subscribeOnline(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => { window.removeEventListener("online", onChange); window.removeEventListener("offline", onChange); };
 }
 
 export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
@@ -42,6 +48,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onToggleRainAccum: () => void;
 }) {
   const t = useT();
+  const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
   const [dismissed, setDismissed] = useState<string[]>(readDismissed);
   const warnings = visibleWarnings(tmdWarnings?.items ?? [], dismissed);
   const dismissWarning = (key: string) => {
@@ -57,6 +64,17 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   const percent = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
 
   return <section className="mt-2 space-y-2 text-sm" aria-label={t("สถานการณ์น้ำ")}>
+    {damsStatus === "ready" && dams ? <>
+      <p className={`flex flex-wrap items-center gap-2${online ? "" : " map-warning"}`}>
+        <span className="map-water-badge">{t("สังเกต")}</span>
+        <span>{!online && dams.fetchedAt && !Number.isNaN(Date.parse(dams.fetchedAt))
+          ? t("ข้อมูลออฟไลน์ เมื่อ {time} น.", { time: formatTime(dams.fetchedAt, "Asia/Bangkok", t.locale) })
+          : dams.dataDate
+            ? t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: formatFullDate(`${dams.dataDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })
+            : t("ข้อมูลกรมชลประทาน")}</span>
+      </p>
+      {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
+    </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <section className="space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
       {warnings.slice(0, 2).map((item) => {
         const key = warningKey(item);
@@ -103,15 +121,6 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
         </button>
       </li>)}</ul>
     </section>}
-    {damsStatus === "ready" && dams ? <>
-      <p className="flex flex-wrap items-center gap-2">
-        <span className="map-water-badge">{t("สังเกต")}</span>
-        <span>{dams.dataDate
-          ? t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: formatFullDate(`${dams.dataDate}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })
-          : t("ข้อมูลกรมชลประทาน")}</span>
-      </p>
-      {dams.stale && <p className="map-warning text-xs"><span aria-hidden="true">⚠ </span>{t("ข้อมูลอาจไม่เป็นปัจจุบัน")}</p>}
-    </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {nearby.length > 0 && <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-nearest-dams">
       <h2 id="map-nearest-dams" className="font-semibold">{t("เขื่อนใกล้ฉัน")}{place.source !== "gps" && <span className="map-muted ml-2 text-xs font-normal">{t("ใกล้{name}", { name: placeName })}</span>}</h2>
       <ul className="mt-2 space-y-1">{nearby.map(({ dam, km }) => <li key={dam.id}>

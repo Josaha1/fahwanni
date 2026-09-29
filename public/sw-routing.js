@@ -5,7 +5,9 @@ self.fahRoute = function fahRoute(request, origin) {
   if (url.origin === "https://maps.gstatic.com") {
     return url.pathname.startsWith("/weather/") ? "static" : null;
   }
-  if (url.origin !== origin || url.pathname.startsWith("/api/")) return null;
+  if (url.origin !== origin) return null;
+  if (["/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
+  if (url.pathname.startsWith("/api/")) return null;
   if (url.pathname.startsWith("/_next/static/")) return "static";
   if (url.pathname.startsWith("/vendor/maplibre/")) return "static";
   if (/^\/map\/relief-(?:light|dark)\.webp$/.test(url.pathname)) return "static";

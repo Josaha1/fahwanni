@@ -358,6 +358,7 @@ export const common: Record<string, string> = {
   "สังเกต": "Observed",
   "ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}": "Royal Irrigation Department data · {date}",
   "ข้อมูลกรมชลประทาน": "Royal Irrigation Department data",
+  "ข้อมูลออฟไลน์ เมื่อ {time} น.": "Offline data from {time}",
   "กำลังโหลดข้อมูลเขื่อน…": "Loading dam data…",
   "แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ": "Tap a dam on the map for details and where its water flows",
   "อากาศ": "Weather",
