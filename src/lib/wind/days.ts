@@ -61,16 +61,20 @@ export function buildDays(locations: unknown[]): ForecastDay[] {
 
   const dates = [...new Set(times.map((time) => time.slice(0, 10)))];
   if (dates.length !== 7 || times.length !== 168) return [];
+  let lastDataIndex = times.length - 1;
+  while (lastDataIndex >= 0 && rows.every((row) => keys.every((key) => row[key][lastDataIndex] === null))) lastDataIndex--;
   const days: ForecastDay[] = [];
   for (const [day, date] of dates.entries()) {
-    const indices = times.map((time, index) => time.startsWith(`${date}T`) ? index : -1).filter((index) => index >= 0);
-    if (indices.length !== 24 || indices[0] !== day * 24) continue;
+    const allIndices = times.map((time, index) => time.startsWith(`${date}T`) ? index : -1).filter((index) => index >= 0);
+    if (allIndices.length !== 24 || allIndices[0] !== day * 24) continue;
+    const indices = allIndices.filter((index) => index <= lastDataIndex);
+    if (indices.length === 0) continue;
     const hours = indices.map((index) => thaiIso(times[index]));
     if (hours.some((hour) => hour === null) ||
       hours.some((hour, index) => hour !== new Date(Date.parse(hours[0]!) + index * 3_600_000).toISOString())) continue;
     const fields = { u: [] as number[][], v: [] as number[][], precip: [] as number[][],
       prob: [] as number[][], temp: [] as number[][], feels: [] as number[][] };
-    for (let hour = 0; hour < 24; hour++) {
+    for (let hour = 0; hour < indices.length; hour++) {
       for (const field of Object.keys(fields) as (keyof typeof fields)[]) fields[field].push([]);
     }
     let valid = true;
@@ -78,7 +82,7 @@ export function buildDays(locations: unknown[]): ForecastDay[] {
       const values = keys.map((key) => fill(indices.map((index) => row[key][index])));
       if (values.some((value) => value === null)) { valid = false; break; }
       const [speed, direction, precipitation, probability, temperature, apparent] = values as number[][];
-      for (let hour = 0; hour < 24; hour++) {
+      for (let hour = 0; hour < indices.length; hour++) {
         const { u, v } = toUV(speed[hour], direction[hour]);
         fields.u[hour].push(round(u));
         fields.v[hour].push(round(v));

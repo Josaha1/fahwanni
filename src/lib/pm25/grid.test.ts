@@ -6,15 +6,15 @@ import { gridPoints, WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 const locations = () => gridPoints().map((_, index) => fixture[index % fixture.length]);
 
 describe("buildPm25Grid", () => {
-  it("keeps 24 hourly values in grid order from the real fixture", () => {
+  it("keeps 24 hourly values in grid order from the seven-day fixture", () => {
     const grid = buildPm25Grid(locations())!;
     expect(grid).toMatchObject({
       bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY, source: "open-meteo-cams",
       attribution: { text: "Air quality: Open-Meteo.com (CAMS, CC BY 4.0)", url: "https://open-meteo.com" },
     });
     expect(grid.hours).toHaveLength(24);
-    expect(grid.hours[0]).toBe("2026-09-28T15:00:00.000Z");
-    expect(grid.hours[23]).toBe("2026-09-29T14:00:00.000Z");
+    expect(grid.hours[0]).toBe("2026-09-27T17:00:00.000Z");
+    expect(grid.hours[23]).toBe("2026-09-28T16:00:00.000Z");
     expect(grid.pm25).toHaveLength(24);
     expect(grid.pm25[0]).toHaveLength(361);
     expect(grid.pm25[0].slice(0, 4)).toEqual([44.4, 4.1, 6.6, 44.4]);

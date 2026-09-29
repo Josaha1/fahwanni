@@ -19,7 +19,7 @@ const locationSchema = z.object({
   }),
 });
 
-const toIso = (time: string) => new Date(/Z|[+-]\d\d:\d\d$/.test(time) ? time : `${time}Z`).toISOString();
+const toIso = (time: string) => new Date(/Z|[+-]\d\d:\d\d$/.test(time) ? time : `${time}+07:00`).toISOString();
 const round = (n: number) => Math.round(n * 10) / 10 || 0;
 
 /** Open-Meteo returns locations in request order; its snapped coordinates are not used. */

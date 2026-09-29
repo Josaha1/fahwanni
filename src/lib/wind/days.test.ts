@@ -39,6 +39,33 @@ describe("buildDays", () => {
     expect(days[1].temp[1][0]).toBe(days[1].temp[0][0]);
   });
 
+  it("keeps internal gaps but removes hours where every point has no data at the end", () => {
+    const rows = locations();
+    rows[0].hourly.temperature_2m[150] = null as unknown as number;
+    for (const row of rows) {
+      for (const key of ["wind_speed_10m", "wind_direction_10m", "precipitation",
+        "precipitation_probability", "temperature_2m", "apparent_temperature"] as const) {
+        row.hourly[key].fill(null as unknown as number, 163);
+      }
+    }
+    const days = buildDays(rows);
+    expect(days).toHaveLength(7);
+    expect(days[6].hours).toHaveLength(19);
+    expect(days[6].hours.at(-1)).toBe(new Date(`${rows[0].hourly.time[162]}+07:00`).toISOString());
+    for (const field of ["u", "v", "precip", "prob", "temp", "feels"] as const) {
+      expect(days[6][field]).toHaveLength(19);
+    }
+    expect(days[6].temp[6][0]).toBe(days[6].temp[5][0]);
+
+    for (const row of rows) {
+      for (const key of ["wind_speed_10m", "wind_direction_10m", "precipitation",
+        "precipitation_probability", "temperature_2m", "apparent_temperature"] as const) {
+        row.hourly[key].fill(null as unknown as number, 144);
+      }
+    }
+    expect(buildDays(rows).map(({ day }) => day)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
   it("drops a day when a point has no value for one variable that day", () => {
     const rows = locations();
     rows[0].hourly.apparent_temperature.fill(null as unknown as number, 24, 48);

@@ -67,6 +67,7 @@ Verified facts:
     `npm run verify:deploy https://fahwanni.vercel.app`, live check.
 
 ## Risks
+- PM2.5 (CAMS) มีข้อมูล ~5 วัน — ชั้น PM2.5 จึงสั้นกว่า 7 วัน (Claude ตรวจ 2026-09-29)
 - Mobile payload: 7 days ≈ 400 KB gz total → chunking and lazy loading are required.
 - Quota: chunks must share one upstream fetch per variable set.
 - Seam at "now" (radar vs model disagree) — expected; badge makes the source explicit.
