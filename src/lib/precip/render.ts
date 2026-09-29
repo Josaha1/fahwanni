@@ -43,10 +43,13 @@ const RAIN_STOPS = [0.3, 1, 4, 10] as const;
 const RADAR_COLORS = RAIN_RAMP.slice(1).map(radarFilteredColor);
 const TRANSPARENT: Rgba = [0, 0, 0, 0];
 
-/** Probability outlook: one radar-matched blue with three chance bands. */
+/**
+ * Probability outlook: one radar-matched blue whose opacity rises smoothly from 15 % at the 40 % floor to
+ * 50 % at certainty — stepped bands left hard edges and a heavy blue sheet over the whole country.
+ */
 export function probabilityRgba(probPct: number): Rgba {
   if (probPct < MAP_MIN_PROB) return [...TRANSPARENT];
-  const alpha = probPct < 60 ? 0.4 : probPct < 80 ? 0.6 : 0.8;
+  const alpha = 0.15 + Math.min(1, (probPct - MAP_MIN_PROB) / (100 - MAP_MIN_PROB)) * 0.35;
   return [...RADAR_COLORS[1], Math.round(alpha * 255)];
 }
 

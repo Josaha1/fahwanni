@@ -92,4 +92,17 @@ describe("continuous timeline time", () => {
         .toEqual({ key: "ข้อมูลย้อนหลังไม่มีในชั้นนี้", params: {} });
     }
   });
+
+  it("labels the radar handoff only for rain in the first forecast hour", () => {
+    const now = bangkok(29, 12, 26);
+    const domain = makeDomain(now);
+    const radarTime = now - 7.6 * MINUTE;
+    const handoff = { key: "เรดาร์ล่าสุด ({n} นาทีก่อน) · กำลังเปลี่ยนเป็นพยากรณ์", params: { n: 8 } };
+    expect(timeBadge(now + MINUTE, domain, { radarTime, onModelHour: false, primary: "rain" })).toEqual(handoff);
+    expect(timeBadge(now + 60 * MINUTE, domain, { radarTime, onModelHour: true, primary: "rain" })).toEqual(handoff);
+    expect(timeBadge(now + 61 * MINUTE, domain, { radarTime, onModelHour: false, primary: "rain" }))
+      .toEqual({ key: "พยากรณ์ · ค่าประมาณระหว่างชั่วโมง", params: {} });
+    expect(timeBadge(now + MINUTE, domain, { radarTime, onModelHour: false, primary: "temp" }))
+      .toEqual({ key: "พยากรณ์ · ค่าประมาณระหว่างชั่วโมง", params: {} });
+  });
 });

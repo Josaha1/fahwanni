@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { translator } from "../../i18n/core";
 import { damBandColor } from "../dams/bands";
+import { probabilityRgba } from "../precip/render";
 import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 import { damLegendStrip, legendFor, legendGradient, overlayLegend } from "./legend";
+
+const cssColor = (probability: number) => {
+  const [r, g, b, a] = probabilityRgba(probability);
+  return `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+};
 
 describe("legendFor", () => {
   it("describes rain with radar colours, Thai keys, and numeric rates", () => {
@@ -12,6 +18,25 @@ describe("legendFor", () => {
       { color: RAIN_RAMP[3], label: "ฝนหนัก", value: "4–10" },
       { color: RAIN_RAMP[4], label: "ฝนหนักมาก", value: "10+" },
     ] });
+  });
+
+  it("describes forecast intensity and probability with the model note", () => {
+    const note = "พยากรณ์จากแบบจำลอง ~100 กม. · ไม่ใช่เรดาร์";
+    expect(legendFor("rain", "blend")).toEqual({ ...legendFor("rain"), note });
+    expect(legendFor("rain", "intensity")).toEqual({ ...legendFor("rain"), note });
+    const probability = legendFor("rain", "probability");
+    expect(probability).toEqual({ title: "โอกาสฝน", unit: "%", note, steps: [
+      { color: cssColor(40), label: "มีโอกาส", value: "40–60" },
+      { color: cssColor(60), label: "ค่อนข้างมาก", value: "60–80" },
+      { color: cssColor(80), label: "สูง", value: "80+" },
+    ] });
+    expect(legendGradient("rain", "probability"))
+      .toBe(`linear-gradient(to right, ${probability.steps.map((step) => step.color).join(", ")})`);
+    const en = translator("en");
+    for (const key of [probability.title, probability.note, ...probability.steps.map((step) => step.label)]) {
+      if (!key) continue;
+      expect(en(key)).not.toBe(key);
+    }
   });
 
   it("describes temperature at all stops", () => {

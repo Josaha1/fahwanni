@@ -309,6 +309,7 @@ export const common: Record<string, string> = {
   "{day} {time}": "{day} {time}",
   "{day} {date} {month}": "{day} {date} {month}",
   "เรดาร์ {time}": "Radar {time}",
+  "เรดาร์ล่าสุด ({n} นาทีก่อน) · กำลังเปลี่ยนเป็นพยากรณ์": "Latest radar ({n} min ago) · transitioning to forecast",
   "ไม่มีภาพเรดาร์ช่วงนี้": "No radar image for this time",
   "ข้อมูลย้อนหลังไม่มีในชั้นนี้": "Historical data is unavailable for this layer",
   "พยากรณ์ {time}": "Forecast {time}",

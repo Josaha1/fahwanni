@@ -1,5 +1,6 @@
 import { DATA, PM25_COLORS, RAIN_RAMP, TEMP_STOPS, windColor } from "./palette";
 import { damBandColor, damBandWord } from "../dams/bands";
+import { probabilityRgba, type RainMode } from "../precip/render";
 
 export type PrimaryLayer = "rain" | "temp" | "pm25";
 export type Legend = { title: string; unit: string; note?: string; steps: { color: string; label: string; value: string }[] };
@@ -56,16 +57,29 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
   return sections;
 }
 
-export function legendFor(primary: PrimaryLayer): Legend {
+export function legendFor(primary: PrimaryLayer, rainMode?: RainMode): Legend {
   switch (primary) {
-    case "rain": return {
-      title: "ฝน", unit: "มม./ชม.", steps: [
-        { color: RAIN_RAMP[1], label: "ฝนเบา", value: "0.3–1" },
-        { color: RAIN_RAMP[2], label: "ฝนปานกลาง", value: "1–4" },
-        { color: RAIN_RAMP[3], label: "ฝนหนัก", value: "4–10" },
-        { color: RAIN_RAMP[4], label: "ฝนหนักมาก", value: "10+" },
-      ],
-    };
+    case "rain": {
+      const note = rainMode === undefined ? {} : { note: "พยากรณ์จากแบบจำลอง ~100 กม. · ไม่ใช่เรดาร์" };
+      if (rainMode === "probability") return {
+        title: "โอกาสฝน", unit: "%", ...note, steps: ([
+          [40, "มีโอกาส", "40–60"],
+          [60, "ค่อนข้างมาก", "60–80"],
+          [80, "สูง", "80+"],
+        ] as const).map(([probability, label, value]) => {
+          const [r, g, b, a] = probabilityRgba(probability);
+          return { color: `rgba(${r}, ${g}, ${b}, ${a / 255})`, label, value };
+        }),
+      };
+      return {
+        title: "ฝน", unit: "มม./ชม.", ...note, steps: [
+          { color: RAIN_RAMP[1], label: "ฝนเบา", value: "0.3–1" },
+          { color: RAIN_RAMP[2], label: "ฝนปานกลาง", value: "1–4" },
+          { color: RAIN_RAMP[3], label: "ฝนหนัก", value: "4–10" },
+          { color: RAIN_RAMP[4], label: "ฝนหนักมาก", value: "10+" },
+        ],
+      };
+    }
     case "temp": return {
       title: "อุณหภูมิ", unit: "°C", steps: TEMP_STOPS.map(([, color], index) => ({
         color, label: ["หนาว", "เย็น", "สบาย", "อบอุ่น", "ร้อน", "ร้อนจัด"][index],
@@ -84,8 +98,8 @@ export function legendFor(primary: PrimaryLayer): Legend {
   }
 }
 
-export function legendGradient(primary: PrimaryLayer): string {
-  return `linear-gradient(to right, ${legendFor(primary).steps.map((step) => step.color).join(", ")})`;
+export function legendGradient(primary: PrimaryLayer, rainMode?: RainMode): string {
+  return `linear-gradient(to right, ${legendFor(primary, rainMode).steps.map((step) => step.color).join(", ")})`;
 }
 
 /** Compact dam-band key for the water-mode sheet strip (the full words live in the legend dialog). */

@@ -1,5 +1,8 @@
 export const weather: Record<string, string> = {
   "ฝน": "Rain",
+  "พยากรณ์จากแบบจำลอง ~100 กม. · ไม่ใช่เรดาร์": "Model forecast ~100 km · not radar",
+  "มีโอกาส": "Possible",
+  "ค่อนข้างมาก": "Likely",
   "มม./ชม.": "mm/h",
   "ฝนเบา": "Light rain",
   "ฝนปานกลาง": "Moderate rain",

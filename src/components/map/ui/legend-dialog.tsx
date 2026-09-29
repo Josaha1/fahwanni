@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { useT } from "@/i18n/client";
 import { legendFor, overlayLegend, type PrimaryLayer, type Swatch } from "@/lib/map/legend";
+import type { RainMode } from "@/lib/precip/render";
 
 function SwatchView({ swatch }: { swatch: Swatch }) {
   switch (swatch.kind) {
@@ -16,15 +17,16 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
   }
 }
 
-export function LegendDialog({ mode, primary, active, dialogRef, triggerRef }: {
+export function LegendDialog({ mode, primary, rainMode, active, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primary: PrimaryLayer;
+  rainMode?: RainMode;
   active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rainRisk: boolean; rainAccum: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
   const t = useT();
-  const legend = legendFor(primary);
+  const legend = legendFor(primary, rainMode);
   return <dialog ref={dialogRef} className="map-panel map-legend-dialog" aria-labelledby="map-legend-title"
     onClose={() => triggerRef.current?.focus()}>
     <div className="flex items-center justify-between gap-3">

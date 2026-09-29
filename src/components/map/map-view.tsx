@@ -16,6 +16,7 @@ import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
+import { rainModeAt } from "@/lib/precip/render";
 import { windMotion } from "@/lib/wind/particles";
 import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
@@ -136,6 +137,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   // Rain can be shown when there is radar for the past or model rain for the future.
   const radarAvailable = frames.length > 0 || Boolean(windSeries?.grids.precip);
   const rainSource = rainSourceAt(effectiveTime, frames.map((frame) => Date.parse(frame.time)), nowMs);
+  const hasRadarFrame = rainSource.kind === "radar" || rainSource.kind === "blend";
+  const legendRainMode = rainSource.kind === "radar" || rainSource.kind === "none" ? undefined
+    : rainSource.kind === "blend" ? "blend" : rainModeAt(effectiveTime - nowMs);
   // Always the newest frame: "where is the rain now", independent of the scrubber.
   const radarSummary = useRadarSummary(frames.at(-1), place.lon, place.lat);
   const series = useMemo(() => placeSeries(windSeries, nowMs, place, scalarGrid, radarSummary ?? undefined),
@@ -163,8 +167,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = terrainAvailable(device.deviceMemory);
   const rainImageSize = terrainOn || (device.deviceMemory !== undefined && device.deviceMemory < 4) ? 256 : 512;
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, rainSource.kind === "radar" ? rainSource.index : -1, rainVisible && rainSource.kind === "radar", 0.7);
-  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainSource.kind === "model", series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: rainImageSize });
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, hasRadarFrame ? rainSource.index : -1,
+    rainVisible && hasRadarFrame, rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
+  useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && (rainSource.kind === "model" || (rainSource.kind === "blend" && rainSource.modelOpacity > 0)), series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: rainSource.kind === "blend" ? rainSource.modelOpacity : 1, size: rainImageSize });
   useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
@@ -416,7 +421,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <TimeBar domain={domain} t={effectiveTime} onChange={(value) => { dispatch({ type: "stop" }); dispatch({ type: "setTime", t: value }); }}
       onTogglePlay={() => { if (!reducedMotion) dispatch({ type: "togglePlay" }); }}
       radarStart={frames[0] ? Date.parse(frames[0].time) : undefined}
-      radarTime={rainSource.kind === "radar" ? rainSource.frameTime : undefined} primary={primary}
+      radarTime={hasRadarFrame ? rainSource.frameTime : undefined} primary={primary}
       lastAvailable={primary === "pm25" && pm25LoadedDays.includes(4) ? pm25LastAvailable ?? undefined : undefined}
       mode={isDesktop ? "fit" : "scroll"} />
     {!isDesktop && <button type="button" aria-expanded={visibleSheetPosition === "half"} aria-controls="map-timeline-details"
@@ -474,8 +479,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {quakes.length > 0 && <button type="button" aria-pressed={quakesOn} onClick={() => dispatch({ type: "toggleOverlay", key: "quakes" })} className="map-chip text-sm">{t("แผ่นดินไหว")} ({quakes.length})</button>}
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={close} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} rainRisk={rainRisk}
+    probe={probe} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} rainRisk={rainRisk}
     watch={watch} onToggleWatch={toggleDamWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
@@ -507,7 +512,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <button type="button" className="map-chip text-sm" onClick={shareView}>{t("แชร์มุมมองนี้")}</button>
   </>;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
-    legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} /> : null}
+    legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} primaryPicker={primaryPicker} layers={layers} card={card} water={waterPanel || null} more={isDesktop ? null : more}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
@@ -519,8 +524,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {mapInstance && wind && windOn && !water && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
-    {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
+    {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}

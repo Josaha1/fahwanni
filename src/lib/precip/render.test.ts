@@ -43,7 +43,7 @@ describe("map rain alpha", () => {
   it("uses one blue hue with three probability alpha steps", () => {
     const blue = radarFilteredColor(RAIN_RAMP[2]);
     expect(probabilityRgba(39.99)).toEqual([0, 0, 0, 0]);
-    for (const [chance, alpha] of [[40, 0.4], [59, 0.4], [60, 0.6], [79, 0.6], [80, 0.8], [100, 0.8]]) {
+    for (const [chance, alpha] of [[40, 0.15], [70, 0.325], [100, 0.5], [120, 0.5]]) {
       expect(probabilityRgba(chance)).toEqual([...blue, Math.round(alpha * 255)]);
       expect(rainRgba(0, chance, "probability")).toEqual(probabilityRgba(chance));
     }
