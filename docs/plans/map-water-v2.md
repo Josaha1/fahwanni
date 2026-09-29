@@ -1,6 +1,6 @@
 # Plan: map UX v2 — "อากาศ | น้ำ" modes, route bug fix, licence-clean water data
 
-Status: APPROVED (2026-09-29)
+Status: DONE — all tasks shipped 2026-09-29 (live at fahwanni.vercel.app, verify:deploy 16/16)
 
 ## Context
 User (2026-09-29): "ปรับ UI หน้าแผนที่ใหม่ … กดทิศทางน้ำแล้วซ่อน UI ไป ทิศทางน้ำหายไปด้วย … เพิ่มปริมาณน้ำไหลผ่าน,
