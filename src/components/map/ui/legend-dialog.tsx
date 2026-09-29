@@ -22,7 +22,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean; imerg: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
@@ -35,13 +35,13 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
       <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิด")} onClick={() => dialogRef.current?.close()}>✕</button>
     </div>
     {mode === "weather" && <section className="mt-4">
-      <h3 className="text-sm font-semibold">{t(legend.title)} · {t(legend.unit)}</h3>
+      <h3 className="text-sm font-semibold">{t(legend.title)}{legend.unit && ` · ${t(legend.unit)}`}</h3>
       {legend.note && <p className="map-muted mt-1 text-xs">{t(legend.note)}</p>}
       <ul className="mt-2 space-y-2 text-sm">
         {legend.steps.map((step) => <li key={step.label} className="flex items-center gap-3">
           <span className="h-4 w-4 shrink-0 rounded" style={{ backgroundColor: step.color }} aria-hidden="true" />
           <span className="min-w-0 flex-1">{t(step.label)}</span>
-          <span className="shrink-0">{step.value} {t(legend.unit)}</span>
+          {step.value && <span className="shrink-0">{step.value} {t(legend.unit)}</span>}
         </li>)}
       </ul>
     </section>}
@@ -55,7 +55,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
         </li>)}
       </ul>
     </section>)}
-    {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS")}</p>}
+    {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS, Himawari (JMA) via NASA GIBS, IMERG (NASA GPM)")}</p>}
     {mode === "water" && <p className="map-muted mt-4 text-xs">{t("ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · ปริมาณน้ำไหลผ่าน: GloFAS ผ่าน Open-Meteo (CC BY 4.0) · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
   </dialog>;
 }

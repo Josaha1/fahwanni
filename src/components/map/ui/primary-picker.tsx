@@ -15,12 +15,12 @@ export function PrimaryPicker({ primary, tempAvailable, cloudAvailable, pm25Load
 }) {
   const t = useT();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-  const options: PrimaryLayer[] = variant === "grid" ? ["rain", "temp", "heat", "pm25", "cloud"] : [
-    "rain", ...(tempAvailable ? ["temp", "heat"] as const : []), "pm25", ...(cloudAvailable ? ["cloud"] as const : []),
+  const options: PrimaryLayer[] = variant === "grid" ? ["rain", "temp", "heat", "pm25", "cloud", "satellite"] : [
+    "rain", ...(tempAvailable ? ["temp", "heat"] as const : []), "pm25", ...(cloudAvailable ? ["cloud"] as const : []), "satellite",
   ];
   const available = (option: PrimaryLayer) => option === "temp" || option === "heat" ? tempAvailable
     : option === "cloud" ? cloudAvailable : true;
-  const labels: Record<PrimaryLayer, string> = { rain: "ฝน", temp: "อุณหภูมิ", heat: "ดัชนีความร้อน", pm25: "ฝุ่น PM2.5", cloud: "เมฆ" };
+  const labels: Record<PrimaryLayer, string> = { rain: "ฝน", temp: "อุณหภูมิ", heat: "ดัชนีความร้อน", pm25: "ฝุ่น PM2.5", cloud: "เมฆ", satellite: "ดาวเทียม" };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight"
       && (variant !== "grid" || (event.key !== "ArrowUp" && event.key !== "ArrowDown"))) return;

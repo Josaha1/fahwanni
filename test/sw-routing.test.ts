@@ -64,6 +64,10 @@ describe("service worker routing", () => {
     expect(route("/manifest.json")).toBeNull();
   });
 
+  it("caches the satellite time manifest as data", () => {
+    expect(route("/api/satellite")).toBe("data");
+  });
+
   it("does not cache OpenFreeMap styles or tiles", () => {
     for (const url of [
       "https://tiles.openfreemap.org/styles/positron",

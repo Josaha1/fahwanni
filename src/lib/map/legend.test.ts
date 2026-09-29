@@ -12,6 +12,17 @@ const cssColor = (probability: number) => {
 };
 
 describe("legendFor", () => {
+  it("explains infrared cloud tops and the satellite rain overlay", () => {
+    const satellite = legendFor("satellite");
+    expect(satellite.title).toBe("ภาพดาวเทียมอินฟราเรด (Himawari · NASA GIBS)");
+    expect(satellite.note).toContain("ยอดเมฆเย็นจัด");
+    const imerg = overlayLegend({ wind: false, storms: false, quakes: false, dams: false, imerg: true }).at(-1)!;
+    expect(imerg).toMatchObject({ title: "ฝนจากดาวเทียม (IMERG)", note: "ล่าช้า ~6 ชม." });
+    const en = translator("en");
+    for (const key of [satellite.title, satellite.note!, ...satellite.steps.map((step) => step.label), imerg.title, imerg.note!, imerg.rows[0].label]) {
+      expect(en(key)).not.toBe(key);
+    }
+  });
   it("describes rain with radar colours, Thai keys, and numeric rates", () => {
     expect(legendFor("rain")).toEqual({ title: "ฝน", unit: "มม./ชม.", steps: [
       { color: RAIN_RAMP[1], label: "ฝนเบา", value: "0.3–1" },

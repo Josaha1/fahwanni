@@ -5,7 +5,7 @@ import { riverColors } from "../rivers/colors";
 import { statusWord } from "../rivers/status";
 import type { RiverStatus } from "../rivers/types";
 
-export type PrimaryLayer = "rain" | "temp" | "pm25" | "heat" | "cloud";
+export type PrimaryLayer = "rain" | "temp" | "pm25" | "heat" | "cloud" | "satellite";
 export type Legend = { title: string; unit: string; note?: string; steps: { color: string; label: string; value: string }[] };
 export type Swatch =
   | { kind: "line"; color: string; dashed?: boolean }
@@ -18,7 +18,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; note?: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean; imerg?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -65,11 +65,20 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
   if (active.satFlood) sections.push({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
     { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
   ] });
+  if (active.imerg) sections.push({ title: "ฝนจากดาวเทียม (IMERG)", note: "ล่าช้า ~6 ชม.", rows: [
+    { swatch: { kind: "fill", color: "#7b2cbf", opacity: 0.7 }, label: "อัตราฝนจากดาวเทียม" },
+  ] });
   return sections;
 }
 
 export function legendFor(primary: PrimaryLayer, rainMode?: RainMode): Legend {
   switch (primary) {
+    case "satellite": return { title: "ภาพดาวเทียมอินฟราเรด (Himawari · NASA GIBS)", unit: "", note: "เทา–ขาว = เมฆ · สีฟ้า–เขียว–เหลือง–แดง = ยอดเมฆเย็นจัด มักเป็นพายุฝนฟ้าคะนอง", steps: [
+      { color: "#252525", label: "พื้นผิวอุ่น / เมฆต่ำ", value: "" },
+      { color: "#ffffff", label: "ยอดเมฆสูง / เย็น", value: "" },
+      { color: "#2fb34a", label: "ยอดเมฆเย็นจัด (พายุ)", value: "" },
+      { color: "#e53b2c", label: "เย็นที่สุด (พายุแรง)", value: "" },
+    ] };
     case "rain": {
       const note = rainMode === undefined ? {} : { note: "พยากรณ์จากแบบจำลอง ~100 กม. · ไม่ใช่เรดาร์" };
       if (rainMode === "probability") return {

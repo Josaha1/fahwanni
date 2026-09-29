@@ -14,7 +14,7 @@ describe("map shortcuts", () => {
   });
 
   it("restricts layer keys to weather mode", () => {
-    for (const [key, primary] of [["1", "rain"], ["2", "temp"], ["3", "heat"], ["4", "pm25"], ["5", "cloud"]]) {
+    for (const [key, primary] of [["1", "rain"], ["2", "temp"], ["3", "heat"], ["4", "pm25"], ["5", "cloud"], ["6", "satellite"]]) {
       expect(mapShortcut({ key }, { mode: "weather" })).toEqual({ type: "setPrimary", primary });
       expect(mapShortcut({ key }, { mode: "water" })).toBeNull();
     }

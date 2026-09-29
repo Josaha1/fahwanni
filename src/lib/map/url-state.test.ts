@@ -22,6 +22,7 @@ describe("map URL view", () => {
     expect(parseUrlView("?lat=-5&lon=130&z=12&layer=pm25")).toEqual({ lat: -5, lon: 130, z: 12, layer: "pm25" });
     expect(parseUrlView("?lat=-5.01&lon=130.01&z=12.1&layer=other&t=not-a-date")).toEqual({});
     expect(parseUrlView("?lat=30&lon=80&z=3&layer=rain")).toEqual({ lat: 30, lon: 80, z: 3, layer: "rain" });
+    expect(parseUrlView("?layer=satellite")).toEqual({ layer: "satellite" });
   });
 
   it("ignores malformed numbers and unknown overlays", () => {

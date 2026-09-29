@@ -22,11 +22,12 @@ const FILTERS: { filter: DamFilter; label: string }[] = [
   { filter: "release", label: "ระบายมาก" }, { filter: "watched", label: "ติดตาม" },
 ];
 
-export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terrain, fullscreen, onFullscreen,
+export function LayersDialog({ mode, primaryPicker, overlays, imerg, waterLayers, terrain, fullscreen, onFullscreen,
   onOpenLegend, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primaryPicker: ReactNode;
   overlays: SwitchRow[];
+  imerg: SwitchRow;
   waterLayers: WaterLayers;
   terrain: SwitchRow | null;
   fullscreen: boolean;
@@ -56,6 +57,7 @@ export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terra
       <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-overlays-title">
         <h3 id="map-overlays-title" className="mb-2 text-sm font-semibold">{t("ซ้อนทับ")}</h3>
         {overlays.map(switchButton)}
+        {switchButton(imerg)}
       </section>
     </>}
     {mode === "water" && <>

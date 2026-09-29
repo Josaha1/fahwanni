@@ -17,13 +17,14 @@ export function coverCrop(sourceWidth: number, sourceHeight: number, targetWidth
   return { x: (sourceWidth - width) / 2, y: (sourceHeight - height) / 2, width, height };
 }
 
-export function mapSourceLine({ water, primary, radar, rainRisk, rainAccum }: {
-  water: boolean; primary: PrimaryLayer; radar: boolean; rainRisk: boolean; rainAccum: boolean;
+export function mapSourceLine({ water, primary, radar, rainRisk, rainAccum, imerg = false }: {
+  water: boolean; primary: PrimaryLayer; radar: boolean; rainRisk: boolean; rainAccum: boolean; imerg?: boolean;
 }): string[] {
   if (water) return ["GloFAS ผ่าน Open-Meteo (CC BY 4.0)", "กรมชลประทาน", ...(rainRisk ? ["กรมอุตุนิยมวิทยา"] : []),
     ...(rainAccum ? ["Open-Meteo"] : []), ...(radar ? ["RainViewer"] : [])];
-  if (primary === "rain") return radar ? ["RainViewer", "Open-Meteo"] : ["Open-Meteo"];
-  return ["Open-Meteo"];
+  if (primary === "satellite") return ["Himawari (JMA) via NASA GIBS", ...(imerg ? ["IMERG (NASA GPM)"] : [])];
+  if (primary === "rain") return [...(radar ? ["RainViewer", "Open-Meteo"] : ["Open-Meteo"]), ...(imerg ? ["IMERG (NASA GPM)"] : [])];
+  return ["Open-Meteo", ...(imerg ? ["IMERG (NASA GPM)"] : [])];
 }
 
 export type MapShareLegend = { title: string; unit: string; gradient?: { color: string; label: string }[];

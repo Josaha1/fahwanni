@@ -29,4 +29,9 @@ describe("data freshness", () => {
     expect(row).toEqual({ key: "sat-flood", label: "น้ำท่วมจากดาวเทียม", source: "NASA LANCE / GIBS",
       time: Date.parse("2026-09-28T00:00:00Z"), daily: true });
   });
+  it("shows both satellite weather sources, including unavailable observations", () => {
+    const rows = freshnessRows({ himawariTime: "2026-09-29T13:20:00Z", imergTime: null });
+    expect(rows.find((row) => row.key === "himawari")).toMatchObject({ source: "Himawari (JMA) via NASA GIBS", time: Date.parse("2026-09-29T13:20:00Z"), daily: false });
+    expect(rows.find((row) => row.key === "imerg")).toMatchObject({ source: "IMERG (NASA GPM)", time: null, daily: false });
+  });
 });

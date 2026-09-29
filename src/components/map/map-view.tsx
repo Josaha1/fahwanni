@@ -43,6 +43,7 @@ import { filterDams, type DamFilter } from "@/lib/water/find";
 import { useAllRoutesLayer } from "./layers/use-all-routes-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useSatelliteFloodLayer } from "./layers/use-satellite-flood-layer";
+import { useGibsWeatherLayer } from "./layers/use-gibs-weather-layer";
 import { floodDate } from "@/lib/map/gibs";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
@@ -123,6 +124,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(true);
   const [satFloodOn, setSatFloodOn] = useState(true);
+  const [imergOn, setImergOn] = useState(false);
+  const [satelliteTimes, setSatelliteTimes] = useState<{ himawari: string | null; imerg: string | null }>({ himawari: null, imerg: null });
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
@@ -157,6 +160,16 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const radarAge = minutesSinceNewest(frames, nowIso);
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const nowMs = Date.parse(nowIso);
+  useEffect(() => {
+    if (water || (primary !== "satellite" && !imergOn)) return;
+    const controller = new AbortController();
+    const load = () => fetch("/api/satellite", { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error("satellite unavailable"); return response.json() as Promise<{ himawari: string | null; imerg: string | null }>; })
+      .then(setSatelliteTimes).catch(() => {});
+    void load();
+    const refresh = window.setInterval(load, 10 * 60_000);
+    return () => { controller.abort(); window.clearInterval(refresh); };
+  }, [water, primary, imergOn]);
   const domain = useMemo(() => makeDomain(nowMs), [nowMs]);
   const effectiveTime = timeMs ?? nowMs;
   const { series: windSeries, fetchedAt: modelFetchedAt } = useForecastDays({ source: "wind", enabled: true, focusTime: effectiveTime, nowMs });
@@ -206,6 +219,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useTimeImageLayer(mapInstance, { id: "heat", enabled: !water && primary === "heat", series: windSeries, timeMs: effectiveTime, nowMs, kind: "heat", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useTimeImageLayer(mapInstance, { id: "cloud", enabled: !water && primary === "cloud", series: windSeries, timeMs: effectiveTime, nowMs, kind: "cloud", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
+  useGibsWeatherLayer(mapInstance, "himawari", satelliteTimes.himawari, !water && primary === "satellite");
+  useGibsWeatherLayer(mapInstance, "imerg", satelliteTimes.imerg, !water && imergOn);
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
@@ -479,9 +494,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         })();
       const waterLabel = formatFullDate(`${waterDate(nowMs, waterDay)}T12:00:00+07:00`, "Asia/Bangkok", t.locale);
       const time = water ? (waterDay > 0 ? t("{date} (พยากรณ์)", { date: waterLabel }) : waterLabel)
-        : timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary,
+        : timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari,
           lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined });
-      const sources = mapSourceLine({ water, primary, radar: water ? waterRadar : hasRadarFrame,
+      const sources = mapSourceLine({ water, primary, radar: water ? waterRadar : hasRadarFrame, imerg: !water && imergOn,
         rainRisk: water && rainRiskStatus === "ready", rainAccum: water && rainAccumOn });
       const blob = await renderMapShareImage({ mapBlob,
         windCanvas: !water && windOn ? document.querySelector<HTMLCanvasElement>("[data-wind-canvas]") : null,
@@ -527,6 +542,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onTogglePlay={() => { if (!reducedMotion) dispatch({ type: "togglePlay" }); }}
       radarStart={frames[0] ? Date.parse(frames[0].time) : undefined}
       radarTime={hasRadarFrame ? rainSource.frameTime : undefined} primary={primary}
+      satelliteTime={satelliteTimes.himawari}
       lastAvailable={primary === "pm25" && pm25LoadedDays.includes(4) ? pm25LastAvailable ?? undefined : undefined}
       mode={isDesktop ? "fit" : "scroll"} />
     {!isDesktop && <button type="button" aria-expanded={visibleSheetPosition === "half"} aria-controls="map-timeline-details"
@@ -594,7 +610,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   ];
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} waterDay={waterDay}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
@@ -673,6 +689,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
       satFloodDate: water && satFloodOn ? floodDate(nowMs) : undefined,
+      himawariTime: !water && primary === "satellite" ? satelliteTimes.himawari : undefined,
+      imergTime: !water && imergOn ? satelliteTimes.imerg : undefined,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
 
@@ -685,9 +703,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn }}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn, imerg: !water && imergOn }}
       dialogRef={legendDialog} triggerRef={legendTrigger} />
     <LayersDialog mode={mode} primaryPicker={primaryPicker} overlays={layerOverlays}
+      imerg={{ label: "ฝนจากดาวเทียม (ล่าช้า ~6 ชม.)", checked: imergOn, onChange: () => setImergOn((on) => !on) }}
       waterLayers={{
         dams: damsStatus === "ready" ? dams?.dams ?? null : null, watch, damFilter, onDamFilter: setDamFilter,
         routes: { label: "เส้นทางน้ำทุกเขื่อน", checked: allRoutes, onChange: () => dispatch({ type: "toggleAllRoutes" }) },

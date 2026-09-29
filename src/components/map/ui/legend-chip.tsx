@@ -18,17 +18,17 @@ export function LegendChip({ primary, rainMode, variant, buttonRef, onOpen }: {
     aria-haspopup="dialog" aria-label={label} onClick={onOpen}>
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="flex min-w-0 items-center gap-2">
-        <span className="shrink-0 text-xs font-semibold">{t(legend.title)} · {t(legend.unit)}</span>
-        <span className="shrink-0 text-[11px]">{legend.steps[0].value}</span>
+        <span className="shrink-0 text-xs font-semibold">{t(legend.title)}{legend.unit && ` · ${t(legend.unit)}`}</span>
+        {legend.steps[0].value && <span className="shrink-0 text-[11px]">{legend.steps[0].value}</span>}
         <span className="h-2 min-w-0 flex-1 rounded-full" style={{ background: legendGradient(primary, rainMode) }} aria-hidden="true" />
-        <span className="shrink-0 text-[11px]">{legend.steps.at(-1)?.value}</span>
+        {legend.steps.at(-1)?.value && <span className="shrink-0 text-[11px]">{legend.steps.at(-1)?.value}</span>}
       </span>
       {legend.note && <span className="map-muted truncate text-[10px] leading-3">{t(legend.note)}</span>}
     </span>
   </button>;
   return <button ref={buttonRef} type="button" className="map-panel map-legend-chip text-left"
     aria-haspopup="dialog" aria-label={label} onClick={onOpen}>
-    <span className="block text-xs font-semibold">{t(legend.title)} · {t(legend.unit)}</span>
+    <span className="block text-xs font-semibold">{t(legend.title)}{legend.unit && ` · ${t(legend.unit)}`}</span>
     <span className="mt-1.5 block h-2 rounded-full" style={{ background: legendGradient(primary, rainMode) }} aria-hidden="true" />
     <span className="mt-1 flex justify-between gap-2 text-[11px]">
       <span>{legend.steps[0].value}</span><span>{legend.steps.at(-1)?.value}</span>

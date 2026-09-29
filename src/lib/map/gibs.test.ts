@@ -13,4 +13,10 @@ describe("GIBS flood tiles", () => {
         `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/2026-09-28/GoogleMapsCompatible_Level9/6/29/50.png`);
     }
   });
+  it("builds time-specific level-6 weather tiles", () => {
+    expect(gibsTileUrl("Himawari_AHI_Band13_Clean_Infrared", "2026-09-29T13:20:00Z", { z: "{z}", y: "{y}", x: "{x}" }, "GoogleMapsCompatible_Level6")).toBe(
+      "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Himawari_AHI_Band13_Clean_Infrared/default/2026-09-29T13:20:00Z/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png");
+    expect(gibsTileUrl("IMERG_Precipitation_Rate_30min", "2026-09-29T08:30:00Z", { z: 5, y: 14, x: 25 }, "GoogleMapsCompatible_Level6")).toContain(
+      "/IMERG_Precipitation_Rate_30min/default/2026-09-29T08:30:00Z/GoogleMapsCompatible_Level6/5/14/25.png");
+  });
 });

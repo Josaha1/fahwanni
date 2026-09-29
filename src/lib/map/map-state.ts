@@ -4,7 +4,7 @@ export type MapState = {
   waterDay: number;
   /** Water mode: every dam's downstream route drawn faintly (overview). */
   allRoutes: boolean;
-  primary: "rain" | "temp" | "pm25" | "heat" | "cloud";
+  primary: "rain" | "temp" | "pm25" | "heat" | "cloud" | "satellite";
   rainOn: boolean;
   overlays: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; terrain: boolean };
   /** Selected time in epoch ms; null follows "now". */

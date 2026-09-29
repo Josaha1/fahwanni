@@ -28,6 +28,6 @@ export function mapShortcut(event: ShortcutEvent, context: { mode: MapState["mod
     case "?": return { type: "help" };
   }
   if (context.mode !== "weather") return null;
-  const primary = ({ "1": "rain", "2": "temp", "3": "heat", "4": "pm25", "5": "cloud" } as const)[event.key as "1" | "2" | "3" | "4" | "5"];
+  const primary = ({ "1": "rain", "2": "temp", "3": "heat", "4": "pm25", "5": "cloud", "6": "satellite" } as const)[event.key as "1" | "2" | "3" | "4" | "5" | "6"];
   return primary ? { type: "setPrimary", primary } : null;
 }

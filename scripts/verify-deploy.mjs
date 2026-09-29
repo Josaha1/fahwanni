@@ -21,6 +21,7 @@ const paths = [
   "/map",
   "/api/weather?lat=13.75&lon=100.5&lang=th",
   "/api/radar",
+  "/api/satellite",
   "/api/wind",
   "/api/pm25",
   "/api/dams",

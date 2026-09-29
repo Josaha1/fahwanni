@@ -6,7 +6,7 @@ self.fahRoute = function fahRoute(request, origin) {
     return url.pathname.startsWith("/weather/") ? "static" : null;
   }
   if (url.origin !== origin) return null;
-  if (["/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
+  if (["/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/satellite", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
   if (url.pathname.startsWith("/api/")) return null;
   if (url.pathname.startsWith("/_next/static/")) return "static";
   if (url.pathname.startsWith("/vendor/maplibre/")) return "static";
