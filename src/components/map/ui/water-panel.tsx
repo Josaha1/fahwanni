@@ -3,6 +3,7 @@ import { useT } from "@/i18n/client";
 import { damBandColor } from "@/lib/dams/bands";
 import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, waterSummary } from "@/lib/dams/summary";
+import { watchRows, type DamWatch } from "@/lib/dams/watchlist";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate, formatTime } from "@/lib/format";
 import type { Place } from "@/lib/place";
@@ -20,10 +21,11 @@ function readDismissed(): string[] {
   } catch { return []; }
 }
 
-export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
+export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain,
   legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
+  watch: DamWatch;
   rainRisk: RainRisk | null;
   rainRiskStatus: "idle" | "loading" | "ready" | "error";
   tmdWarnings: TmdWarnings | null;
@@ -46,6 +48,7 @@ export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, tmdWarn
   };
   const summary = damsStatus === "ready" && dams ? waterSummary(dams.dams, rainRiskStatus === "ready" && rainRisk ? rainRisk.stations : null) : null;
   const nearby = damsStatus === "ready" && dams ? nearestDams(dams.dams, place) : [];
+  const watched = damsStatus === "ready" && dams ? watchRows(watch, dams.dams) : [];
   const rainProvinces = [...new Map([...(rainRisk?.stations ?? [])].reverse().map((station) => [station.provinceTh, station])).values()]
     .sort((a, b) => b.rainMm - a.rainMm);
   const percent = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
@@ -76,6 +79,18 @@ export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, tmdWarn
     </section>}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
     {summary && <p className="text-xs leading-relaxed">{t("เขื่อนน้ำมาก (เกิน 80%)")} <strong>{summary.over80}</strong> · {t("เกินความจุ")} <strong>{summary.over100}</strong> · {t("ระบายน้ำมาก")} <strong>{summary.highRelease}</strong>{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} <strong>{summary.heavyRain}</strong></>}</p>}
+    {watched.length > 0 && <section aria-labelledby="map-watched-dams">
+      <h2 id="map-watched-dams" className="font-semibold">{t("เขื่อนที่ติดตาม")}</h2>
+      <ul className="mt-2 space-y-1">{watched.map(({ dam, change, since }) => <li key={dam.id}>
+        <button type="button" className="map-chip flex w-full flex-wrap items-center justify-between gap-1 text-left" onClick={() => onSelectDam(dam.id)}>
+          <span className="min-w-0 truncate">{t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh}</span>
+          <span>{percent.format(dam.storagePct)}%</span>
+          {change !== null && since && <span className="map-muted text-xs">{change > 0 ? "▲ " : change < 0 ? "▼ " : ""}{t("{change}% จากวันที่ {date}", {
+            change: `${change > 0 ? "+" : ""}${percent.format(change)}`, date: formatFullDate(`${since}T12:00:00+07:00`, "Asia/Bangkok", t.locale),
+          })}</span>}
+        </button>
+      </li>)}</ul>
+    </section>}
     {damsStatus === "ready" && dams ? <>
       <p className="flex flex-wrap items-center gap-2">
         <span className="map-water-badge">{t("สังเกต")}</span>

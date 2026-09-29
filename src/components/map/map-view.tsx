@@ -38,6 +38,8 @@ import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
+import { readWatch, refreshWatch, toggleWatch, writeWatch } from "@/lib/dams/watchlist";
+import type { Dam } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
@@ -89,6 +91,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { manifest, wind, dams, damsStatus, loadDams, rainRisk, rainRiskStatus, loadRainRisk, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
+  const [watch, setWatch] = useState(readWatch);
+  const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, dam));
+  useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
   const { mode, timeMs, playing, primary, rainOn, overlays } = mapState;
@@ -217,6 +222,15 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setOverlay", key: "dams", enabled: false });
     });
   }, [damsOn, damsStatus, loadDams, t]);
+
+  useEffect(() => {
+    if (!water || damsStatus !== "ready" || !dams) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setWatch((current) => refreshWatch(current, dams.dams));
+    });
+    return () => { active = false; };
+  }, [water, damsStatus, dams]);
 
   useEffect(() => {
     if (!water || rainRiskStatus !== "idle") return;
@@ -454,6 +468,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} onClose={close} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} rainRisk={rainRisk}
+    watch={watch} onToggleWatch={toggleDamWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
@@ -461,7 +476,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dispatch({ type: "setPrimary", primary: next });
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
-  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings}
+  const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
     onSelectDam={(id) => {

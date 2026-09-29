@@ -22,6 +22,8 @@ import type { WindField } from "@/lib/wind/field";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
+import type { Dam } from "@/lib/dams/types";
+import type { DamWatch } from "@/lib/dams/watchlist";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import type { Downstream } from "@/lib/dams/paths";
 import { provinces } from "@/lib/provinces";
@@ -38,7 +40,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, rainRisk,
-  downstream, pathActive, pathLoading, onTogglePath }: {
+  watch, onToggleWatch, downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
@@ -55,6 +57,8 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   storms: Storm[];
   quakes: Quake[];
   dams: DamsPayload | null;
+  watch: DamWatch;
+  onToggleWatch: (dam: Dam) => void;
   rainRisk: RainRisk | null;
   downstream: Downstream | null;
   pathActive: boolean;
@@ -113,7 +117,12 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">
       <h2 ref={heading} tabIndex={-1} className="text-lg font-semibold">{title}</h2>
-      <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
+      <div className="flex shrink-0 gap-1">
+        {dam && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, dam.id)}
+          aria-label={t(Object.hasOwn(watch, dam.id) ? "เลิกติดตามเขื่อนนี้" : "ติดตามเขื่อนนี้")}
+          onClick={() => onToggleWatch(dam)}>{Object.hasOwn(watch, dam.id) ? "★" : "☆"}</button>}
+        <button type="button" className="map-icon-btn" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
+      </div>
     </div>
     {point && province && <>
       <p className="map-muted text-xs">{t("ข้อมูล ณ {time}", { time: timeLabel })}</p>
