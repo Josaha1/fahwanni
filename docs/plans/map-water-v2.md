@@ -196,3 +196,32 @@ Verify: `npx vitest run src/lib/map` ; `npm run typecheck && npm run lint && nod
 headless (Claude): toggle to น้ำ → dam markers visible, no time bar, no wind canvas, URL has `mode=water`;
 reload `/map?mode=water` → water mode; `/map?ov=dams&dam=200101` → water mode + route; back to อากาศ → rain
 layer and time bar return, URL has no `mode`.
+
+### Task 4 — declutter (detailed)
+Goal on phones (<1024px): floating items = search pill, mode switch, ONE rail button (ชั้นข้อมูล), focus chip
+(only while a route is shown), sheet. Desktop (≥1024px) keeps today's rail and floating legend chip.
+Files: src/components/map/ui/action-rail.tsx, src/components/map/ui/legend-chip.tsx, src/components/map/ui/map-panel-content.tsx,
+src/components/map/map-view.tsx, src/lib/map/legend.ts (+ .test.ts), src/app/globals.css, src/i18n/en/*.ts.
+1. ActionRail: new prop `compact: boolean` (map-view passes `!isDesktop`). When compact render only the
+   ชั้นข้อมูล button. Desktop unchanged.
+2. "เพิ่มเติม" row: new `more` ReactNode prop on MapPanelContent, rendered (only when `!compact`) as
+   `<section aria-labelledby="map-more"><h2 id="map-more">เพิ่มเติม</h2>` + a flex row of `map-chip` buttons:
+   `แผนที่ 3 มิติ` (aria-pressed, only when terrainOk), `เต็มจอ`/`ออกจากเต็มจอ` (aria-pressed), `แชร์มุมมองนี้`.
+   Shown in BOTH modes (in water mode after the water panel). Phones only: map-view passes `more={isDesktop ? null : …}`.
+3. Legend strip in the sheet (phones only; desktop keeps the floating LegendChip):
+   - LegendChip gets `variant: "floating" | "strip"`. `strip` = a full-width button (class `map-legend-strip`,
+     not absolutely positioned, min-height 32px): title · unit on the left, the gradient bar (h-2) and
+     min/max values in one row; same aria-label / onOpen. map-view renders the floating chip only on desktop, and
+     on phones passes the strip into MapPanelContent as a new `legend` prop shown right after `timeline`.
+   - Water mode strip: new `damLegendStrip()` in src/lib/map/legend.ts returning the 5 band colours with short
+     labels `≤30`, `31–50`, `51–80`, `81–100`, `>100` (unit `% ความจุ`) (test it). Rendered as a button
+     `map-legend-strip` (5 dots + labels, title `เขื่อน (% ความจุ)`) that opens the legend dialog, placed FIRST in
+     the water panel. Remove the old `อ่านแผนที่` chip from the water panel.
+4. CSS: `.map-sheet[data-position="peek"] { max-height: 152px }` so the time bar AND the strip (weather) or the
+   strip AND the source line (water) fit in the peek. Remove the mobile `.map-legend-chip` absolute rule's
+   mobile top (the chip is desktop-only now); keep the desktop rule.
+5. i18n for every new string.
+Verify: `npx vitest run src/lib/map` ; `npm run typecheck && npm run lint && node scripts/i18n-check.mjs` ;
+headless (Claude): at 390×844 in both modes and both themes, count visible floating elements outside the sheet
+(search pill, mode switch, rail buttons, legend chip, focus chip) ≤ 4 + sheet; legend strip visible in the peek;
+3D/fullscreen/share reachable from the half sheet; desktop 1280×800 screenshot unchanged apart from the mode switch.
