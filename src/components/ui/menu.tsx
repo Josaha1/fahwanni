@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 export type MenuItem = { label: string; onSelect: () => void; disabled?: boolean };
 
-export function Menu({ label, items, align = "start" }: { label: string; items: MenuItem[]; align?: "start" | "end" }) {
+export function Menu({ label, items, align = "start", triggerContent, triggerClassName }: {
+  label: string; items: MenuItem[]; align?: "start" | "end"; triggerContent?: ReactNode; triggerClassName?: string;
+}) {
   const wrapper = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -45,9 +47,9 @@ export function Menu({ label, items, align = "start" }: { label: string; items: 
   }
 
   return <div ref={wrapper} className="relative">
-    <button ref={trigger} type="button" aria-haspopup="menu" aria-expanded={open} onClick={toggle}
-      className="min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given">
-      {label} <span aria-hidden="true">⌄</span>
+    <button ref={trigger} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={label} onClick={toggle}
+      className={triggerClassName ?? "min-h-11 rounded-xl border border-border bg-card px-4 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given"}>
+      {triggerContent ?? <>{label} <span aria-hidden="true">⌄</span></>}
     </button>
     <dialog ref={dialog} role="menu" aria-label={label} onKeyDown={onMenuKeyDown}
       onClose={() => { setOpen(false); trigger.current?.focus(); }}

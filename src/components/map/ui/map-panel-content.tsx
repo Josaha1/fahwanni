@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "./map-search-pill";
 
-export function MapPanelContent({ placeName, compact, desktop, timeline, legend, details, card, water, freshness, onProbeCenter }: {
+export function MapPanelContent({ placeName, compact, desktop, timeline, legend, details, card, water, riverFooter, freshness, onProbeCenter }: {
   placeName: string;
   compact: boolean;
   desktop: boolean;
@@ -13,6 +13,7 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, legend,
   card: ReactNode;
   /** Water-mode content; when set it replaces the weather timeline and details. */
   water: ReactNode;
+  riverFooter: boolean;
   /** "ข้อมูลล่าสุด" panel, shown in both modes when the panel is open. */
   freshness: ReactNode;
   onProbeCenter: (trigger: HTMLButtonElement) => void;
@@ -30,6 +31,7 @@ export function MapPanelContent({ placeName, compact, desktop, timeline, legend,
         {!compact && details}
       </>}
       {!compact && freshness}
+      {riverFooter && <p className="map-muted mt-3 text-xs">{t("ข้อมูลแม่น้ำเป็นแบบจำลอง GloFAS · ไม่ใช่ค่าวัดจริง · ไม่ใช่แผนที่น้ำท่วม")}</p>}
     </>
   );
 }

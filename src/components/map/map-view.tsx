@@ -666,7 +666,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const showLegend = mapState.primary !== "rain" || rainOn;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
-    details={details} card={card} water={waterPanel || null}
+    details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
@@ -692,7 +692,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
           startDate: waterDate(nowMs, waterDay), onChange: () => setRainAccumOn((on) => !on) },
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
-      fullscreen={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage}
+      fullscreen={immersive} onFullscreen={toggleFullscreen}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
     <ShortcutsDialog dialogRef={shortcutsDialog} triggerRef={shortcutsTrigger} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} mode={mode} onPositionChange={setPosition}>{panelContent}</MapSheet>}

@@ -1,7 +1,8 @@
 import { useT } from "@/i18n/client";
+import { Menu } from "@/components/ui/menu";
 
 export function ActionRail({ compact, onLayers, layersButton, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage, onShortcuts, shortcutsButton }: {
-  /** Phones: the layers dialog holds map and sharing controls. */
+  /** Phones keep layers and sharing on the rail. */
   compact: boolean;
   onLayers: () => void;
   layersButton: (element: HTMLButtonElement | null) => void;
@@ -39,18 +40,15 @@ export function ActionRail({ compact, onLayers, layersButton, terrainOk, terrain
             {immersive ? <><path d="M9 3v6H3M15 3v6h6M3 15h6v6M21 15h-6v6" /></> : <><path d="M9 3H3v6M15 3h6v6M3 15v6h6M21 15v6h-6" /></>}
           </svg>
         </button>
-        <button type="button" className="map-icon-btn" onClick={onShare} aria-label={t("แชร์มุมมองนี้")} title={t("แชร์มุมมองนี้")}>
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
-          </svg>
-        </button>
-        <button type="button" className="map-icon-btn disabled:opacity-60" onClick={onShareImage} disabled={makingImage}
-          aria-label={t("แชร์ภาพแผนที่")} title={t("แชร์ภาพแผนที่")}>
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m3 17 5-5 4 4 3-3 6 6" />
-          </svg>
-        </button>
       </>}
+      <Menu label={t("แชร์")} align="end" triggerClassName="map-icon-btn" triggerContent={
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
+        </svg>
+      } items={[
+        { label: t("แชร์มุมมองนี้"), onSelect: onShare },
+        { label: t("แชร์ภาพแผนที่"), onSelect: onShareImage, disabled: makingImage },
+      ]} />
     </div>
   );
 }

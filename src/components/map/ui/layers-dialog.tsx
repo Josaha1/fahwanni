@@ -21,8 +21,8 @@ const FILTERS: { filter: DamFilter; label: string }[] = [
   { filter: "release", label: "ระบายมาก" }, { filter: "watched", label: "ติดตาม" },
 ];
 
-export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terrain, fullscreen, onFullscreen, onShare, onShareImage,
-  makingImage, onOpenLegend, dialogRef, triggerRef }: {
+export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terrain, fullscreen, onFullscreen,
+  onOpenLegend, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primaryPicker: ReactNode;
   overlays: SwitchRow[];
@@ -30,9 +30,6 @@ export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terra
   terrain: SwitchRow | null;
   fullscreen: boolean;
   onFullscreen: () => void;
-  onShare: () => void;
-  onShareImage: () => void;
-  makingImage: boolean;
   onOpenLegend: () => void;
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
@@ -87,8 +84,6 @@ export function LayersDialog({ mode, primaryPicker, overlays, waterLayers, terra
       <h3 id="map-controls-title" className="mb-2 text-sm font-semibold">{t("แผนที่")}</h3>
       {terrain && switchButton(terrain)}
       {switchButton({ label: "เต็มจอ", checked: fullscreen, onChange: onFullscreen })}
-      <button type="button" className="map-layer-action" onClick={onShare}>{t("แชร์มุมมองนี้")}</button>
-      <button type="button" className="map-layer-action" onClick={onShareImage} disabled={makingImage}>{t("แชร์ภาพแผนที่")}</button>
     </section>
     <button type="button" className="map-layer-action mt-3 font-semibold" onClick={onOpenLegend}>{t("อ่านแผนที่")} ›</button>
   </dialog>;

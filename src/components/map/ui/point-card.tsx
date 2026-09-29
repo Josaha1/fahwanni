@@ -207,12 +207,6 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         </div>
         <p className="mt-1 font-semibold">{percent.format(dam.storagePct)}% · {t(damBandWord(dam.band))}</p>
         <p className="map-muted">{t("{storage} / {capacity} ล้าน ลบ.ม.", { storage: number.format(dam.storageMcm), capacity: number.format(dam.capacityMcm) })}</p>
-        {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
-        {damTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} color={damBandColor(dam.band)} />}
-        {historyRows.length > 0 && <div className="mt-2 space-y-1">
-          {historyRows.map((row) => <p key={row.label}>{t(row.label, { date: damDate(row.date, t.locale), pct: percent.format(row.value), change: row.change })}</p>)}
-          <p className="map-muted text-xs">{t("ปริมาณน้ำในเขื่อนอย่างเดียวไม่ได้บอกว่าจะท่วม")}</p>
-        </div>}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
@@ -226,12 +220,28 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
           <p className="map-muted text-xs">{dam.inflowMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.inflowMcmDay) })}</p>
         </div>
       </div>
-      {dam.spilledMcmDay !== null && dam.spilledMcmDay > 0 && <p className="map-warning">{t("น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.spilledMcmDay) })}</p>}
       <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>
       {pathActive && downstream && <DownstreamDetails downstream={downstream} />}
       <p className="map-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })} · {t("ที่มา: กรมชลประทาน")}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
+      <details className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+        <summary className="cursor-pointer font-semibold">{t("รายละเอียดเพิ่มเติม")}</summary>
+        <div className="mt-2 space-y-3">
+          {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
+          {damTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} color={damBandColor(dam.band)} />}
+          {historyRows.length > 0 && <div className="space-y-1">
+            {historyRows.map((row) => <p key={row.label}>{t(row.label, { date: damDate(row.date, t.locale), pct: percent.format(row.value), change: row.change })}</p>)}
+            <p className="map-muted text-xs">{t("ปริมาณน้ำในเขื่อนอย่างเดียวไม่ได้บอกว่าจะท่วม")}</p>
+          </div>}
+          {dam.spilledMcmDay !== null && dam.spilledMcmDay > 0 && <p className="map-warning">{t("น้ำล้นทางระบายน้ำล้น {value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.spilledMcmDay) })}</p>}
+          {pathActive && downstream && <>
+            <p>{t("น้ำที่ระบายจะไหลไปตามลำน้ำนี้ ระดับน้ำท้ายเขื่อนอาจสูงขึ้นในช่วง 1–3 วัน ติดตามประกาศจากกรมชลประทาน/ปภ. ในพื้นที่")}</p>
+            <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")} · {t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
+          </>}
+          {pathActive && downstream && <DamFailureDetails />}
+        </div>
+      </details>
     </div>}
     {rainStation && <div className="mt-2 space-y-2 text-sm">
       <p className="map-muted">{rainStation.provinceTh === "กรุงเทพมหานคร" ? t.locale === "en" ? "Bangkok" : rainStation.provinceTh : t("จ.{province}", { province: t.locale === "en" ? provinces.find((item) => item.th === rainStation.provinceTh)?.en ?? rainStation.provinceTh : rainStation.provinceTh })}</p>
@@ -242,7 +252,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
       <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
-    {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
+    {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers={false} waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
     {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;
 }
@@ -280,33 +290,33 @@ function DownstreamDetails({ downstream }: { downstream: Downstream }) {
   const provinceById = new Map(provinces.map((province) => [province.id, province]));
   // Provinces along the route (no river stations: no source with published terms).
   const items = [...downstream.provinces].sort((a, b) => a.km - b.km);
-  return <div className="space-y-3">
-    <p>{t("น้ำที่ระบายจะไหลไปตามลำน้ำนี้ ระดับน้ำท้ายเขื่อนอาจสูงขึ้นในช่วง 1–3 วัน ติดตามประกาศจากกรมชลประทาน/ปภ. ในพื้นที่")}</p>
-    <div>
-      <h3 className="font-semibold">{t("ลำน้ำท้ายเขื่อน ({km} กม.)", { km: number.format(downstream.km) })}</h3>
-      <ol className="mt-2 space-y-2">
-        {(showAll ? items : items.slice(0, 12)).map((item) => {
-          const province = provinceById.get(item.id);
-          if (!province) return null;
-          return <li key={`province-${item.id}`} className="flex justify-between gap-2">
-            {/* Bangkok is not a จังหวัด, so it has no "จ." prefix. */}
-            <strong>{item.id === "bangkok" ? (t.locale === "en" ? province.en : province.th)
-              : t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
-            <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
-          </li>;
-        })}
-      </ol>
-      {!showAll && items.length > 12 && <button type="button" className="map-chip mt-2 w-full" onClick={() => setShowAll(true)}>
-        {t("แสดงทั้งหมด ({n})", { n: items.length })}
-      </button>}
-    </div>
-    <details className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
-      <summary className="cursor-pointer font-semibold">{t("กรณีเขื่อนแตก (สมมติ)")}</summary>
-      <p className="mt-2">{t("แอปนี้ไม่มีข้อมูลจำลองเขื่อนแตก หากมีประกาศเตือน ให้ปฏิบัติตามคำสั่งอพยพของทางราชการทันที ขึ้นที่สูง ออกห่างจากลำน้ำ")}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {EMERGENCY_NUMBERS.slice(0, 2).map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t("โทร {name}", { name: t(label) })}</a>)}
-      </div>
-    </details>
-    <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")} · {t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
+  return <div>
+    <h3 className="font-semibold">{t("ลำน้ำท้ายเขื่อน ({km} กม.)", { km: number.format(downstream.km) })}</h3>
+    <ol className="mt-2 space-y-2">
+      {(showAll ? items : items.slice(0, 12)).map((item) => {
+        const province = provinceById.get(item.id);
+        if (!province) return null;
+        return <li key={`province-${item.id}`} className="flex justify-between gap-2">
+          {/* Bangkok is not a จังหวัด, so it has no "จ." prefix. */}
+          <strong>{item.id === "bangkok" ? (t.locale === "en" ? province.en : province.th)
+            : t("จ.{province}", { province: t.locale === "en" ? province.en : province.th })}</strong>
+          <span className="map-muted shrink-0">{t("{km} กม.", { km: number.format(item.km) })}</span>
+        </li>;
+      })}
+    </ol>
+    {!showAll && items.length > 12 && <button type="button" className="map-chip mt-2 w-full" onClick={() => setShowAll(true)}>
+      {t("แสดงทั้งหมด ({n})", { n: items.length })}
+    </button>}
   </div>;
+}
+
+function DamFailureDetails() {
+  const t = useT();
+  return <details className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
+    <summary className="cursor-pointer font-semibold">{t("กรณีเขื่อนแตก (สมมติ)")}</summary>
+    <p className="mt-2">{t("แอปนี้ไม่มีข้อมูลจำลองเขื่อนแตก หากมีประกาศเตือน ให้ปฏิบัติตามคำสั่งอพยพของทางราชการทันที ขึ้นที่สูง ออกห่างจากลำน้ำ")}</p>
+    <div className="mt-2 flex flex-wrap gap-2">
+      {EMERGENCY_NUMBERS.slice(0, 2).map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t("โทร {name}", { name: t(label) })}</a>)}
+    </div>
+  </details>;
 }
