@@ -71,6 +71,20 @@ Verified by Claude/Explore (2026-09-29):
 - S4 Mobile perf: 36 animated dashed routes at 4× CPU throttle (frame time).
 If S1 or S3 fails → Status BLOCKED, re-plan that part.
 
+**Spike results (Claude, 2026-09-29):**
+- S1 ✅ RID `dam/public`: 35 dams, 7 KB, `Access-Control-Allow-Origin: *`; fields id, name, owner
+  (การไฟฟ้า / กรมชลประทาน), capacity, storage, active_storage, dead_storage, volume, percent_storage,
+  inflow (35/35), outflow (27/35); units = million m³/day (matches the old source for the same dams);
+  history `…/dam/public/YYYY-MM-DD` documented. No licence text on the docs page.
+- S2 ✅ coordinates for all 35 in `scripts/dams/registry-sources.json`: 30 from Wikidata (CC0), 5 from
+  OpenStreetMap (ODbL) — ห้วยหลวง (Wikidata matched a different reservoir, 342 km off), รัชชประภา (Wikidata =
+  reservoir centre, OSM dam wall used), คลองสียัด (OSM reservoir centre), ประแสร์ and นฤบดินทรจินดา (OSM dam
+  walls). Attribution needed: "© OpenStreetMap contributors" (already shown for the basemap).
+- S3 ✅ TMD `https://data.tmd.go.th/api/WeatherToday/V2/?uid=api&ukey=api12345&format=json`: 124 stations,
+  lat/lon, `Observation.Rainfall` (24 h to 07:00), header "CopyRight: Thai Meteorological Department";
+  today 6 stations ≥ 35.1 mm, 0 ≥ 90.1 mm. Attribution "ข้อมูล: กรมอุตุนิยมวิทยา".
+- S4 ⏳ measured in task 9.
+
 ## Tasks (1 Codex dispatch each; Claude verifies diff + Verify + headless Chrome)
 1. Focus state for the dam route (map-state `focus`, reducer + tests; route layer reads focus; focus chip).
    Verify: vitest + headless: open route → ✕ card, tap map, Escape → route still drawn; chip ✕ clears.

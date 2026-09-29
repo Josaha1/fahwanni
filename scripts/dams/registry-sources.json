@@ -1,0 +1,250 @@
+{
+ "note": "Dam coordinates: Wikidata (CC0) or OpenStreetMap (ODbL, © OpenStreetMap contributors). RID ids from app.rid.go.th/reservoir/api/dam/public. Built by Claude 2026-09-29.",
+ "dams": [
+  {
+   "ridId": "100104",
+   "nameTh": "แม่กวงอุดมธารา",
+   "lon": 99.1254,
+   "lat": 18.9267,
+   "source": "wikidata:Q31349503"
+  },
+  {
+   "ridId": "100105",
+   "nameTh": "กิ่วลม",
+   "lon": 99.624722222,
+   "lat": 18.523611111,
+   "source": "wikidata:Q13024512"
+  },
+  {
+   "ridId": "100106",
+   "nameTh": "กิ่วคอหมา",
+   "lon": 99.644141111,
+   "lat": 18.808795,
+   "source": "wikidata:Q13024509"
+  },
+  {
+   "ridId": "100107",
+   "nameTh": "แควน้อยบำรุงแดน",
+   "lon": 100.411952777,
+   "lat": 17.181830555,
+   "source": "wikidata:Q27898537"
+  },
+  {
+   "ridId": "100108",
+   "nameTh": "แม่มอก",
+   "lon": 99.409722222,
+   "lat": 17.323611111,
+   "source": "wikidata:Q34874567"
+  },
+  {
+   "ridId": "200101",
+   "nameTh": "ภูมิพล",
+   "lon": 98.972222222,
+   "lat": 17.242777777,
+   "source": "wikidata:Q855098"
+  },
+  {
+   "ridId": "200102",
+   "nameTh": "สิริกิติ์",
+   "lon": 100.563611111,
+   "lat": 17.764722222,
+   "source": "wikidata:Q339848"
+  },
+  {
+   "ridId": "200103",
+   "nameTh": "แม่งัดสมบูรณ์ชล",
+   "lon": 99.039841111,
+   "lat": 19.161398888,
+   "source": "wikidata:Q13024525"
+  },
+  {
+   "ridId": "100201",
+   "nameTh": "ห้วยหลวง",
+   "lon": 102.5959,
+   "lat": 17.2914,
+   "source": "osm:way/423650406"
+  },
+  {
+   "ridId": "100202",
+   "nameTh": "น้ำอูน",
+   "lon": 103.755833333,
+   "lat": 17.303888888,
+   "source": "wikidata:Q16307416"
+  },
+  {
+   "ridId": "100206",
+   "nameTh": "ลำปาว",
+   "lon": 103.416430555,
+   "lat": 16.609388888,
+   "source": "wikidata:Q13024517"
+  },
+  {
+   "ridId": "100207",
+   "nameTh": "ลำตะคอง",
+   "lon": 101.560277777,
+   "lat": 14.864722222,
+   "source": "wikidata:Q6480695"
+  },
+  {
+   "ridId": "100208",
+   "nameTh": "ลำพระเพลิง",
+   "lon": 101.839444444,
+   "lat": 14.594166666,
+   "source": "wikidata:Q6480676"
+  },
+  {
+   "ridId": "100209",
+   "nameTh": "มูลบน",
+   "lon": 102.147669444,
+   "lat": 14.48405,
+   "source": "wikidata:Q34856590"
+  },
+  {
+   "ridId": "100210",
+   "nameTh": "ลำแชะ",
+   "lon": 102.268669444,
+   "lat": 14.421561111,
+   "source": "wikidata:Q34856495"
+  },
+  {
+   "ridId": "100211",
+   "nameTh": "ลำนางรอง",
+   "lon": 102.76617,
+   "lat": 14.27231,
+   "source": "wikidata:Q25389357"
+  },
+  {
+   "ridId": "200203",
+   "nameTh": "น้ำพุง",
+   "lon": 103.980555555,
+   "lat": 16.973333333,
+   "source": "wikidata:Q17389925"
+  },
+  {
+   "ridId": "200204",
+   "nameTh": "จุฬาภรณ์",
+   "lon": 101.65003611,
+   "lat": 16.53626667,
+   "source": "wikidata:Q3249165"
+  },
+  {
+   "ridId": "200205",
+   "nameTh": "อุบลรัตน์",
+   "lon": 102.61916667,
+   "lat": 16.77416667,
+   "source": "wikidata:Q2472809"
+  },
+  {
+   "ridId": "200212",
+   "nameTh": "สิรินธร",
+   "lon": 105.42915556,
+   "lat": 15.20633889,
+   "source": "wikidata:Q7530308"
+  },
+  {
+   "ridId": "100301",
+   "nameTh": "ป่าสักชลสิทธิ์",
+   "lon": 101.06611111,
+   "lat": 14.86138889,
+   "source": "wikidata:Q4923211"
+  },
+  {
+   "ridId": "100302",
+   "nameTh": "ทับเสลา",
+   "lon": 99.447469444,
+   "lat": 15.535838888,
+   "source": "wikidata:Q34856773"
+  },
+  {
+   "ridId": "100303",
+   "nameTh": "กระเสียว",
+   "lon": 99.664258888,
+   "lat": 14.837066944,
+   "source": "wikidata:Q13024506"
+  },
+  {
+   "ridId": "200401",
+   "nameTh": "ศรีนครินทร์",
+   "lon": 99.128333333,
+   "lat": 14.409444444,
+   "source": "wikidata:Q638635"
+  },
+  {
+   "ridId": "200402",
+   "nameTh": "วชิราลงกรณ",
+   "lon": 98.59694444,
+   "lat": 14.79944444,
+   "source": "wikidata:Q1337253"
+  },
+  {
+   "ridId": "100501",
+   "nameTh": "ขุนด่านปราการชล",
+   "lon": 101.320935,
+   "lat": 14.311931944,
+   "source": "wikidata:Q16140439"
+  },
+  {
+   "ridId": "100502",
+   "nameTh": "คลองสียัด",
+   "lon": 101.673,
+   "lat": 13.426,
+   "source": "osm:reservoir centroid (nominatim)"
+  },
+  {
+   "ridId": "100503",
+   "nameTh": "บางพระ",
+   "lon": 100.979444444,
+   "lat": 13.21,
+   "source": "wikidata:Q34869721"
+  },
+  {
+   "ridId": "100504",
+   "nameTh": "หนองปลาไหล",
+   "lon": 101.262777777,
+   "lat": 12.949444444,
+   "source": "wikidata:Q34875440"
+  },
+  {
+   "ridId": "100505",
+   "nameTh": "ประแสร์",
+   "lon": 101.5672,
+   "lat": 12.9794,
+   "source": "osm:way/163718903"
+  },
+  {
+   "ridId": "100514",
+   "nameTh": "นฤบดินทรจินดา",
+   "lon": 102.027,
+   "lat": 14.0914,
+   "source": "osm:waterway=dam (nominatim)"
+  },
+  {
+   "ridId": "100602",
+   "nameTh": "ปราณบุรี",
+   "lon": 99.793319444,
+   "lat": 12.463988888,
+   "source": "wikidata:Q34856699"
+  },
+  {
+   "ridId": "200601",
+   "nameTh": "แก่งกระจาน",
+   "lon": 99.599,
+   "lat": 12.902,
+   "source": "wikidata:Q13024523"
+  },
+  {
+   "ridId": "200603",
+   "nameTh": "รัชชประภา",
+   "lon": 98.8058,
+   "lat": 8.9721,
+   "source": "osm:dam Chiao Lan Dam (nominatim)"
+  },
+  {
+   "ridId": "200604",
+   "nameTh": "บางลาง",
+   "lon": 101.273611111,
+   "lat": 6.155555555,
+   "source": "wikidata:Q806442"
+  }
+ ]
+}
