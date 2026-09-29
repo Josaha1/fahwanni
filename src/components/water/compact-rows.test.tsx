@@ -38,6 +38,18 @@ describe("compact water rows", () => {
     expect(map).toContain("GloFAS model estimate at 5 km resolution");
   });
 
+  it("shows a dated observed range only when a gauge exists, in both languages", () => {
+    const withGauge: RiverRow = { ...point, gauge: { code: "011", name: "River, North", lat: 13, lon: 100, km: 1,
+      month: "2026-07", levelMsl: { min: 1, mean: 2, max: 3 }, bankMsl: 5,
+      days: { from: "2026-07-01", to: "2026-07-31", count: 31 } } };
+    expect(render("th", <RiverDetails point={point} />)).not.toContain("ระดับน้ำที่สถานีจริง");
+    const thai = render("th", <RiverDetails point={withGauge} />);
+    expect(thai).toContain("ระดับน้ำที่สถานีจริง River, North เดือน ก.ค. 2569");
+    expect(thai).toContain("(ตลิ่ง 5 ม.รทก.)");
+    expect(render("en", <RiverDetails point={withGauge} />)).toContain("Observed water level at River, North, Jul 2026");
+    expect(render("en", <RiverDetails point={{ ...withGauge, gauge: { ...withGauge.gauge!, bankMsl: null } }} />)).not.toContain("bank 5");
+  });
+
   it("formats dam storage and renders expanded flow, date and map link", () => {
     expect(damRowPercentLabel(91.47, "en")).toBe("91.5%");
     const html = render("en", <DamRowHeader dam={dam} km={4} expanded onToggle={() => {}} />);

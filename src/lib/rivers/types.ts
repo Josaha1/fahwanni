@@ -24,6 +24,18 @@ export interface RiverPoint {
   value2554: Record<number, number | null>;
 }
 
+export interface RiverGauge {
+  code: string;
+  name: string;
+  lat: number;
+  lon: number;
+  km: number;
+  month: string;
+  levelMsl: { min: number; mean: number; max: number };
+  bankMsl: number | null;
+  days: { from: string; to: string; count: number };
+}
+
 export interface RiverForecastDay {
   date: string;
   value: number;

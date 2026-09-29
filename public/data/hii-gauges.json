@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-09-29T15:55:04.100Z",
+  "source": "สถาบันสารสนเทศทรัพยากรน้ำ (HII) open data · CC BY-NC",
+  "month": "2026-07",
+  "gauges": {
+    "yom-sukhothai": {
+      "code": "YOM012",
+      "name": "เมืองสุโขทัย",
+      "lat": 17.02126,
+      "lon": 99.81971,
+      "km": 1.3,
+      "levelMsl": {
+        "min": 43.27,
+        "mean": 45.29,
+        "max": 46.53
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "chaophraya-nakhonsawan": {
+      "code": "CPY001",
+      "name": "สะพานเดชาติวงศ์",
+      "lat": 15.6885,
+      "lon": 100.12388,
+      "km": 1.3,
+      "levelMsl": {
+        "min": 17.19,
+        "mean": 17.64,
+        "max": 18.22
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "chaophraya-chainat": {
+      "code": "ATG111",
+      "name": "เหนือปตร.มหาราช",
+      "lat": 15.15893,
+      "lon": 100.17328,
+      "km": 0.7,
+      "levelMsl": {
+        "min": 15.1,
+        "mean": 15.88,
+        "max": 16.41
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "chaophraya-ayutthaya": {
+      "code": "CPY012",
+      "name": "บางปะอิน",
+      "lat": 14.3045,
+      "lon": 100.56649,
+      "km": 5.3,
+      "levelMsl": {
+        "min": 0,
+        "mean": 0.18,
+        "max": 0.39
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "tapi-suratthani": {
+      "code": "TPI001",
+      "name": "พุนพิน 1",
+      "lat": 9.131316,
+      "lon": 99.25879,
+      "km": 7.8,
+      "levelMsl": {
+        "min": -0.2,
+        "mean": 0.01,
+        "max": 0.21
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "pattani-yala": {
+      "code": "VLGE42",
+      "name": "ชุมชนบ้านควน 2",
+      "lat": 6.5763373,
+      "lon": 101.199104,
+      "km": 9.4,
+      "levelMsl": {
+        "min": 36.87,
+        "mean": 37.07,
+        "max": 37.14
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    }
+  }
+}

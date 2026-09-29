@@ -1,8 +1,10 @@
 import { after } from "next/server";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import pointsData from "../../../../public/data/river-points.json";
 import { fetchRiverForecasts } from "@/lib/rivers/client";
 import { summarizeRiver } from "@/lib/rivers/status";
-import type { RiverPoint } from "@/lib/rivers/types";
+import type { RiverGauge, RiverPoint } from "@/lib/rivers/types";
 import { WeatherCache } from "@/lib/weather/cache";
 
 const points = pointsData.points as RiverPoint[];
@@ -16,8 +18,19 @@ type RiversPayload = {
   source: string;
   points: Array<Pick<RiverPoint, "id" | "nameTh" | "nameEn" | "river" | "provinceId" | "lat" | "lon" | "downstreamOfDam" | "upstreamDams"> & {
     summary: ReturnType<typeof summarizeRiver>;
+    gauge?: RiverGauge;
   }>;
 };
+
+async function readGauges(): Promise<Record<string, RiverGauge>> {
+  try {
+    const data = JSON.parse(await readFile(join(process.cwd(), "public/data/hii-gauges.json"), "utf8"));
+    return Object.fromEntries(Object.entries(data.gauges ?? {}).map(([id, gauge]) => [id, { ...(gauge as Omit<RiverGauge, "month">), month: data.month }]));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+}
 
 function bangkokToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -26,7 +39,7 @@ function bangkokToday(): string {
 }
 
 function refresh(): Promise<RiversPayload | null> {
-  refreshing ??= fetchRiverForecasts().then((forecasts) => {
+  refreshing ??= Promise.all([fetchRiverForecasts(), readGauges()]).then(([forecasts, gauges]) => {
     if (!forecasts) return null;
     const today = bangkokToday();
     const byId = new Map(forecasts.map((forecast) => [forecast.id, forecast]));
@@ -42,6 +55,7 @@ function refresh(): Promise<RiversPayload | null> {
         id: point.id, nameTh: point.nameTh, nameEn: point.nameEn, river: point.river,
         provinceId: point.provinceId, lat: point.lat, lon: point.lon,
         downstreamOfDam: point.downstreamOfDam, upstreamDams: point.upstreamDams ?? [], summary: summaries[index],
+        ...(gauges[point.id] ? { gauge: gauges[point.id] } : {}),
       })),
     };
     cache.set(today, payload);

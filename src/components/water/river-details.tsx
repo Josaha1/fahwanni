@@ -6,11 +6,12 @@ import type { Dam } from "@/lib/dams/types";
 import { formatFullDate } from "@/lib/format";
 import { riverColors } from "@/lib/rivers/colors";
 import { rareLevelWord, riverAtDay, statusWord } from "@/lib/rivers/status";
-import type { RareLevel, RiverStatus, RiverTrend } from "@/lib/rivers/types";
+import type { RareLevel, RiverGauge, RiverStatus, RiverTrend } from "@/lib/rivers/types";
 import { RiverChart, type RiverChartDay } from "./river-chart";
 
 export type RiverRow = {
   id: string; nameTh: string; nameEn: string; lat: number; lon: number; downstreamOfDam: string | null;
+  gauge?: RiverGauge;
   upstreamDams?: { damId: string; km: number }[];
   summary: null | { today: { date: string; value: number; status: RiverStatus }; trend: RiverTrend | null;
     peak: { date: string; value: number } | null; rare: RareLevel | null;
@@ -76,6 +77,9 @@ export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, e
   const selected = riverAtDay(detail, waterDay);
   if (!selected) return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded}><p className={mapCard ? "map-muted text-sm" : "text-muted text-sm"}>{t("ข้อมูลจุดนี้ไม่พร้อมใช้งาน")}</p></div>;
   const muted = mapCard ? "map-muted" : "text-muted";
+  const gauge = point.gauge;
+  const gaugeNumber = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 2 });
+  const gaugeMonth = gauge && new Intl.DateTimeFormat(t.intl, { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${gauge.month}-01T00:00:00Z`));
   const next = riverAtDay(detail, Math.min(7, waterDay + 1));
   const trend = waterDay === 0 ? detail.trend : next && next.value > selected.value * 1.1 ? "rising" : next && next.value < selected.value * 0.9 ? "falling" : "steady";
   return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded} className="mt-1 space-y-1 text-sm">
@@ -83,6 +87,13 @@ export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, e
     {showDate && <p className={`${muted} text-xs`}>{waterDay > 0 ? t("{date} (พยากรณ์)", { date: riverDateLabel(selected.date, t.locale) }) : t("ข้อมูลวันที่ {date}", { date: riverDateLabel(selected.date, t.locale) })}</p>}
     <RiverChart days={detail.days} color={riverColors[selected.status]} selectedIndex={waterDay > 0 ? waterDay - 1 : undefined} />
     <p className={`${muted} text-xs`}>{t("เส้น: ปริมาณน้ำไหลผ่านแบบจำลอง · แถบ: ช่วงปกติ p25–p75")}</p>
+    {gauge && <p className={`${muted} text-xs`}>
+      {t("ระดับน้ำที่สถานีจริง {name} เดือน {month}: {min}–{max} ม.รทก. (เฉลี่ย {mean})", {
+        name: gauge.name, month: gaugeMonth ?? gauge.month, min: gaugeNumber.format(gauge.levelMsl.min),
+        max: gaugeNumber.format(gauge.levelMsl.max), mean: gaugeNumber.format(gauge.levelMsl.mean),
+      })}{gauge.bankMsl !== null && ` ${t("(ตลิ่ง {bank} ม.รทก.)", { bank: gaugeNumber.format(gauge.bankMsl) })}`}
+      {` · ${t("ข้อมูลย้อนหลังจาก สสน. · CC BY-NC")}`}
+    </p>}
     {detail.peak && <p>{t("สูงสุดใน 7 วัน {value} วันที่ {date}", { value: number.format(detail.peak.value), date: riverDateLabel(detail.peak.date, t.locale) })}</p>}
     {waterDay === 0 && detail.rare && <p>{t(rareLevelWord(detail.rare))}</p>}
     {upstream && <p>{t("ปริมาณจริงขึ้นกับการระบายของเขื่อน{name} (ระบาย {release} ลบ.ม./วินาที)", { name: t.locale === "en" ? upstream.nameEn || upstream.nameTh : upstream.nameTh, release: upstream.releaseCms === null ? "—" : number.format(upstream.releaseCms) })}</p>}
