@@ -8,9 +8,14 @@ import type { Pm25Grid } from "@/lib/pm25/grid";
 import type { Storm } from "@/lib/storms/normalize";
 import type { Quake } from "@/lib/quakes/usgs";
 import { buildTimeline, defaultIndex } from "@/lib/timeline/frames";
+import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
+
+type DataKey = "radar" | "wind" | "storms" | "quakes" | "pm25";
+type FetchTimes = Record<DataKey, number | null>;
 
 export function useMapData() {
   const [manifest, setManifest] = useState<RadarManifest | null>(null);
+  const [radarFetchedAt, setRadarFetchedAt] = useState<number | null>(null);
   const [initialIndex, setInitialIndex] = useState(0);
   const [wind, setWind] = useState<WindGrid | null>(null);
   const [windSettled, setWindSettled] = useState(false);
@@ -18,49 +23,121 @@ export function useMapData() {
   const [pm25Status, setPm25Status] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const pm25Request = useRef<Promise<void> | null>(null);
   const pm25Controller = useRef<AbortController | null>(null);
+  const pm25Loaded = useRef(false);
+  const lastFetched = useRef<FetchTimes>({ radar: null, wind: null, storms: null, quakes: null, pm25: null });
   const [storms, setStorms] = useState<Storm[]>([]);
   const [quakes, setQuakes] = useState<Quake[]>([]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/radar", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("radar unavailable"); return response.json() as Promise<RadarManifest>; })
-      .then((data) => {
-        const radarTimes = lastRadarFrames(data.provider === "rainviewer" ? data.frames : []).map((frame) => frame.time);
-        setInitialIndex(defaultIndex(buildTimeline(radarTimes, [], new Date().toISOString())));
-        setManifest(data);
-      })
-      .catch(() => { if (!controller.signal.aborted) setManifest(null); });
-    fetch("/api/wind", { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
-      .then(setWind)
-      .catch(() => { if (!controller.signal.aborted) setWind(null); })
-      .finally(() => { if (!controller.signal.aborted) setWindSettled(true); });
-    fetch("/api/storms", { signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ storms?: Storm[] }> : { storms: [] })
-      .then((data) => setStorms(data.storms ?? []))
-      .catch(() => {});
-    fetch("/api/quakes", { signal: controller.signal })
-      .then((response) => response.ok ? response.json() as Promise<{ quakes?: Quake[] }> : { quakes: [] })
-      .then((data) => setQuakes(data.quakes ?? []))
-      .catch(() => {});
-    return () => { controller.abort(); pm25Controller.current?.abort(); };
-  }, []);
-
-  const loadPm25 = useCallback((): Promise<void> => {
-    if (pm25) return Promise.resolve();
-    if (pm25Request.current) return pm25Request.current;
+  const loadPm25 = useCallback((refresh = false): Promise<void> => {
+    if (!refresh && pm25Loaded.current) return Promise.resolve();
+    if (!refresh && pm25Request.current) return pm25Request.current;
+    pm25Controller.current?.abort();
     const controller = new AbortController();
     pm25Controller.current = controller;
-    setPm25Status("loading");
+    if (!pm25Loaded.current) setPm25Status("loading");
     const request = fetch("/api/pm25", { signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("pm25 unavailable"); return response.json() as Promise<Pm25Grid>; })
-      .then((data) => { setPm25(data); setPm25Status("ready"); })
-      .catch((error: unknown) => { if (!controller.signal.aborted) setPm25Status("error"); throw error; })
-      .finally(() => { pm25Request.current = null; pm25Controller.current = null; });
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        lastFetched.current.pm25 = Date.now();
+        pm25Loaded.current = true;
+        setPm25(data);
+        setPm25Status("ready");
+      })
+      .catch((error: unknown) => { if (!controller.signal.aborted && !pm25Loaded.current) setPm25Status("error"); throw error; })
+      .finally(() => {
+        if (pm25Controller.current === controller) {
+          pm25Request.current = null;
+          pm25Controller.current = null;
+        }
+      });
     pm25Request.current = request;
     return request;
-  }, [pm25]);
+  }, []);
 
-  return { manifest, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex };
+  useEffect(() => {
+    const controllers: Partial<Record<Exclude<DataKey, "pm25">, AbortController>> = {};
+    const replaceController = (key: Exclude<DataKey, "pm25">) => {
+      controllers[key]?.abort();
+      const controller = new AbortController();
+      controllers[key] = controller;
+      return controller;
+    };
+    const loadRadar = () => {
+      const controller = replaceController("radar");
+      fetch("/api/radar", { signal: controller.signal })
+        .then((response) => { if (!response.ok) throw new Error("radar unavailable"); return response.json() as Promise<RadarManifest>; })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          const fetchedAt = Date.now();
+          if (lastFetched.current.radar === null) {
+            const radarTimes = lastRadarFrames(data.provider === "rainviewer" ? data.frames : []).map((frame) => frame.time);
+            setInitialIndex(defaultIndex(buildTimeline(radarTimes, [], new Date(fetchedAt).toISOString())));
+          }
+          lastFetched.current.radar = fetchedAt;
+          setRadarFetchedAt(fetchedAt);
+          setManifest((previous) => previous && previous.provider === data.provider && previous.frames.at(-1)?.time === data.frames.at(-1)?.time ? previous : data);
+        })
+        .catch(() => { if (!controller.signal.aborted && lastFetched.current.radar === null) setManifest(null); });
+    };
+    const loadWind = () => {
+      const controller = replaceController("wind");
+      fetch("/api/wind", { signal: controller.signal })
+        .then((response) => { if (!response.ok) throw new Error("wind unavailable"); return response.json() as Promise<WindGrid>; })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          lastFetched.current.wind = Date.now();
+          setWind(data);
+        })
+        .catch(() => { if (!controller.signal.aborted && lastFetched.current.wind === null) setWind(null); })
+        .finally(() => { if (!controller.signal.aborted) setWindSettled(true); });
+    };
+    const loadStorms = () => {
+      const controller = replaceController("storms");
+      fetch("/api/storms", { signal: controller.signal })
+        .then((response) => { if (!response.ok) throw new Error("storms unavailable"); return response.json() as Promise<{ storms?: Storm[] }>; })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          lastFetched.current.storms = Date.now();
+          setStorms(data.storms ?? []);
+        })
+        .catch(() => {});
+    };
+    const loadQuakes = () => {
+      const controller = replaceController("quakes");
+      fetch("/api/quakes", { signal: controller.signal })
+        .then((response) => { if (!response.ok) throw new Error("quakes unavailable"); return response.json() as Promise<{ quakes?: Quake[] }>; })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          lastFetched.current.quakes = Date.now();
+          setQuakes(data.quakes ?? []);
+        })
+        .catch(() => {});
+    };
+    const refreshOnReturn = () => {
+      const now = Date.now();
+      if (shouldRefresh(lastFetched.current.radar, now, REFRESH.radar)) loadRadar();
+      if (lastFetched.current.wind !== null && shouldRefresh(lastFetched.current.wind, now, REFRESH.slow)) loadWind();
+      if (lastFetched.current.storms !== null && shouldRefresh(lastFetched.current.storms, now, REFRESH.slow)) loadStorms();
+      if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
+      if (lastFetched.current.pm25 !== null && shouldRefresh(lastFetched.current.pm25, now, REFRESH.slow)) loadPm25(true).catch(() => {});
+    };
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
+    loadRadar();
+    loadWind();
+    loadStorms();
+    loadQuakes();
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") loadRadar(); }, REFRESH.radar);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("online", refreshOnReturn);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("online", refreshOnReturn);
+      Object.values(controllers).forEach((controller) => controller.abort());
+      pm25Controller.current?.abort();
+    };
+  }, [loadPm25]);
+
+  return { manifest, radarFetchedAt, wind, windSettled, pm25, pm25Status, loadPm25, storms, quakes, initialIndex };
 }

@@ -11,7 +11,7 @@ import { renderPm25Image, renderTempImage } from "@/lib/raster/render-scalar";
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
-import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLabelKey, windHourFor } from "@/lib/timeline/frames";
+import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLabelKey, windHourFor, type TimelineStop } from "@/lib/timeline/frames";
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { windMotion } from "@/lib/wind/particles";
@@ -85,6 +85,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
   const pendingTime = useRef(urlView.t);
+  const previousTimeline = useRef<{ manifest: typeof manifest; stops: TimelineStop[]; defaultIdx: number; primary: typeof primary } | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
@@ -191,8 +192,32 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [urlView.layer, pm25Status, loadPm25, t]);
 
   useEffect(() => {
-    if (manifest && !pendingTime.current && primary === "rain") dispatch({ type: "resetIndex", index: initialIndex });
-  }, [manifest, initialIndex, primary]);
+    const previous = previousTimeline.current;
+    if (!manifest || previous?.manifest === manifest || pendingTime.current || primary !== "rain") return;
+    if (!previous?.manifest || previous.primary !== primary) {
+      dispatch({ type: "resetIndex", index: initialIndex });
+      return;
+    }
+    const oldStop = previous.stops[Math.min(activeIndex, previous.stops.length - 1)];
+    if (!oldStop) return;
+    if (!playing && activeIndex === previous.defaultIdx) {
+      dispatch({ type: "resetIndex", index: defaultIdx });
+      return;
+    }
+    let nearest = stops.findIndex((stop) => stop.time === oldStop.time && stop.kind === oldStop.kind);
+    if (nearest < 0) nearest = stops.findIndex((stop) => stop.time === oldStop.time);
+    if (nearest < 0) {
+      nearest = 0;
+      stops.forEach((stop, index) => {
+        if (Math.abs(Date.parse(stop.time) - Date.parse(oldStop.time)) < Math.abs(Date.parse(stops[nearest].time) - Date.parse(oldStop.time))) nearest = index;
+      });
+    }
+    if (stops.length && nearest !== activeIndex) dispatch({ type: "resetIndex", index: nearest });
+  }, [manifest, initialIndex, primary, activeIndex, playing, defaultIdx, stops]);
+
+  useEffect(() => {
+    previousTimeline.current = { manifest, stops, defaultIdx, primary };
+  });
 
   useEffect(() => {
     if (!pendingTime.current || !stops.length || (primary === "rain" && !windSettled)) return;
@@ -226,7 +251,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowIso(new Date().toISOString()), 60_000);
-    return () => window.clearInterval(timer);
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") setNowIso(new Date().toISOString()); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
   }, []);
 
   useEffect(() => {
