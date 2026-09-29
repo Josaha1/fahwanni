@@ -3,6 +3,7 @@ import { useT } from "@/i18n/client";
 import { damBandColor } from "@/lib/dams/bands";
 import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, waterSummary } from "@/lib/dams/summary";
+import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate, formatTime } from "@/lib/format";
 import type { Place } from "@/lib/place";
 import { provinces } from "@/lib/provinces";
@@ -68,6 +69,12 @@ export function WaterPanel({ dams, damsStatus, rainRisk, rainRiskStatus, place, 
         {rainRisk.observedAt && <p className="map-muted mt-2 text-xs">{t("ข้อมูลถึง {time} น. · กรมอุตุนิยมวิทยา", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
       </> : <p className="map-muted mt-2" role="status">{t(rainRiskStatus === "error" ? "ข้อมูลฝนหนักไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลฝนหนัก…")}</p>}
     </section>
+    <details className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }}>
+      <summary className="cursor-pointer font-semibold">{t("เบอร์ฉุกเฉิน")}</summary>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {EMERGENCY_NUMBERS.map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t(label)}</a>)}
+      </div>
+    </details>
     <p className="map-muted text-xs">{t("แตะเขื่อนบนแผนที่เพื่อดูรายละเอียดและทิศทางน้ำ")}</p>
   </section>;
 }

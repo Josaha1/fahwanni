@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
+import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { pm25Level } from "@/lib/air";
 import { type HourlySeries } from "@/lib/timeline/store";
 import { modelRainLevelAt, seriesValueAt } from "@/lib/timeline/values";
@@ -227,8 +228,7 @@ function DownstreamDetails({ downstream }: { downstream: Downstream }) {
       <summary className="cursor-pointer font-semibold">{t("กรณีเขื่อนแตก (สมมติ)")}</summary>
       <p className="mt-2">{t("แอปนี้ไม่มีข้อมูลจำลองเขื่อนแตก หากมีประกาศเตือน ให้ปฏิบัติตามคำสั่งอพยพของทางราชการทันที ขึ้นที่สูง ออกห่างจากลำน้ำ")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <a className="map-chip inline-flex items-center" href="tel:1784">{t("โทร ปภ. 1784")}</a>
-        <a className="map-chip inline-flex items-center" href="tel:1460">{t("โทร กรมชลประทาน 1460")}</a>
+        {EMERGENCY_NUMBERS.slice(0, 2).map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t("โทร {name}", { name: t(label) })}</a>)}
       </div>
     </details>
     <p className="map-muted text-xs">{t("เส้นนี้คือแนวลำน้ำท้ายเขื่อน ไม่ใช่ขอบเขตน้ำท่วม ฟ้าวันนี้ไม่พยากรณ์พื้นที่น้ำท่วม")} · {t("เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>
