@@ -161,6 +161,13 @@ body:has(.map-shell--immersive) .bottom-nav { display: none; }
 .map-sheet[data-position="peek"] { max-height: 112px; overflow: hidden; }
 .map-sheet[data-position="peek"] > .map-probe-center { display: none; }
 .map-sheet-handle { display: block; width: 36px; height: 4px; margin: 0 auto 10px; border-radius: 999px; background: var(--map-muted); }
+/* Route focus chip: above the phone sheet, at the top of the map area on desktop. */
+.map-focus-chip { position: absolute; z-index: 6; left: 50%; transform: translateX(-50%); bottom: calc(var(--map-sheet-h, 112px) + 24px); display: flex; align-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px 4px 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.map-focus-chip-body { display: flex; min-width: 0; min-height: 36px; align-items: center; gap: 8px; }
+.map-focus-chip-line { flex: none; width: 18px; height: 4px; border-radius: 999px; background: #2563eb; }
+.map-focus-chip-clear { flex: none; display: grid; width: 32px; height: 32px; place-items: center; border-radius: 999px; }
+.map-focus-chip-clear:hover { background: var(--map-panel-border); }
+@media (min-width: 1024px) { .map-focus-chip { top: 16px; bottom: auto; left: calc(50% + 196px); } }
 .map-side-panel { position: absolute; z-index: 5; top: 16px; left: 16px; bottom: 16px; width: 360px; overflow-y: auto; }
 .map-action-rail { position: absolute; z-index: 5; right: 12px; top: calc(12px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 8px; }
 .map-chip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--map-panel-border); background: var(--map-panel); color: var(--map-label); font-weight: 600; }

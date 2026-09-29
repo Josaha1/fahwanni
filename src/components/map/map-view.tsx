@@ -35,6 +35,7 @@ import { useStormLayer } from "./layers/use-storm-layer";
 import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
+import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
 import type { RiverStation } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
@@ -89,7 +90,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { probe, select, close, probeCenter } = useProbe(mapInstance);
   const { manifest, wind, dams, damsStatus, loadDams, storms, quakes } = useMapData();
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => {
-    const initial = initialMapState({ primary: view.layer, overlays: view.ov, timeMs: view.t });
+    const initial = initialMapState({ primary: view.layer, overlays: view.ov, timeMs: view.t,
+      focus: view.dam ? { kind: "damRoute", damId: view.dam } : null });
     if (view.dam) initial.overlays.dams = true;
     return initial;
   });
@@ -114,9 +116,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     try { localStorage.setItem("fah-map-play-speed", String(next)); } catch { /* Keep the speed for this visit only. */ }
     return next;
   });
-  const [pathRequestedId, setPathRequestedId] = useState<string | null>(urlView.dam ?? null);
   const [pathData, setPathData] = useState<{ id: string; path: DamPath; downstream: Downstream } | null>(null);
-  const [pathLoading, setPathLoading] = useState(Boolean(urlView.dam));
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
   const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
   const radarAge = minutesSinceNewest(frames, nowIso);
@@ -166,8 +166,16 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   const selectDam = useCallback((id: string, trigger: HTMLElement) => select({ kind: "dam", id }, trigger), [select]);
   useDamsLayer(mapInstance, dams, damsOn, selectDam);
-  const activePathId = damsOn && probe?.kind === "dam" && pathRequestedId === probe.id ? probe.id : null;
+  // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
+  const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
   const activePath = activePathId && pathData?.id === activePathId ? pathData : null;
+  const pathLoading = Boolean(activePathId) && pathData?.id !== activePathId;
+  const focusDamName = activePathId
+    ? (() => {
+      const dam = dams?.dams.find((item) => item.id === activePathId) ?? (dams?.barrage?.id === activePathId ? dams.barrage : undefined);
+      return dam ? (t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh) : "";
+    })()
+    : "";
   useDamPathLayer(mapInstance, activePath?.path ?? null, activePath?.downstream ?? null, dams?.stations ?? emptyStations, isDesktop, reducedMotion);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
 
@@ -184,14 +192,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       if (!path || !details) throw new Error("Dam path missing");
       if (active) setPathData({ id: activePathId, path, downstream: details });
     }).catch(() => {
-      if (active) { toast.error(t("โหลดเส้นทางน้ำไม่สำเร็จ")); setPathRequestedId(null); }
-    }).finally(() => { if (active) setPathLoading(false); });
+      if (active) { toast.error(t("โหลดเส้นทางน้ำไม่สำเร็จ")); dispatch({ type: "setFocus", focus: null }); }
+    });
     return () => { active = false; };
   }, [activePathId, pathData?.id, t]);
 
   const togglePath = () => {
-    if (activePathId) { setPathRequestedId(null); setPathLoading(false); }
-    else if (probe?.kind === "dam") { setPathLoading(pathData?.id !== probe.id); setPathRequestedId(probe.id); }
+    if (probe?.kind !== "dam") return;
+    dispatch({ type: "setFocus", focus: activePathId === probe.id ? null : { kind: "damRoute", damId: probe.id } });
   };
 
   useEffect(() => {
@@ -423,7 +431,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <button type="button" aria-pressed={damsOn} aria-busy={damsStatus === "loading"} className="map-chip text-sm"
       onClick={() => {
         dispatch({ type: "toggleOverlay", key: "dams" });
-        if (damsOn) { setPathRequestedId(null); setPathLoading(false); }
         if (!damsOn && damsStatus === "error") loadDams().catch((error: unknown) => {
           if (error instanceof DOMException && error.name === "AbortError") return;
           toast.error(t("ข้อมูลเขื่อนไม่พร้อมใช้งาน"));
@@ -434,9 +441,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
+    probe={probe} onClose={close} frame={rainSource.kind === "radar" ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: rainSource.kind === "radar" ? rainSource.frameTime : undefined, primary, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams}
-    downstream={activePath?.downstream ?? null} pathActive={Boolean(activePathId)} pathLoading={pathLoading && Boolean(activePathId)} onTogglePath={togglePath} />;
+    downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
+    pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
     pm25Loading={pm25Loading} onChange={(next) => {
       dispatch({ type: "setPrimary", primary: next });
@@ -456,6 +464,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition}>{panelContent}</MapSheet>}
     {isDesktop && <div className="map-panel map-time-floating">{timeline}</div>}
+    {activePathId && focusDamName && <FocusChip damName={focusDamName} loading={pathLoading}
+      onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
     <ActionRail onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
       immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} />

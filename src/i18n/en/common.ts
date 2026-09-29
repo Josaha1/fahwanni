@@ -1,4 +1,6 @@
 export const common: Record<string, string> = {
+  "ลำน้ำจากเขื่อน{name}": "River from {name} Dam",
+  "เปิดข้อมูลเขื่อน{name}": "Open {name} Dam details",
   "ข้อมูล ณ {time}": "Data for {time}",
   "ฝน (พยากรณ์)": "Rain (forecast)",
   "ฝน (เรดาร์)": "Rain (radar)",

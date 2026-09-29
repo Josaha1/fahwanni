@@ -6,7 +6,7 @@ describe("map state", () => {
     expect(initialMapState()).toEqual({
       primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
-      timeMs: null, playing: false,
+      timeMs: null, playing: false, focus: null,
     });
   });
 
@@ -18,7 +18,7 @@ describe("map state", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
       primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
-      timeMs: null, playing: false,
+      timeMs: null, playing: false, focus: null,
     });
   });
 
@@ -65,6 +65,20 @@ describe("map state", () => {
     expect(playing.playing).toBe(true);
     expect(mapReducer(playing, { type: "togglePlay" }).playing).toBe(false);
     expect(mapReducer(playing, { type: "stop" }).playing).toBe(false);
+  });
+
+  it("keeps a dam route until it is cleared or dams are turned off", () => {
+    const damsOn = mapReducer(initialMapState(), { type: "toggleOverlay", key: "dams" });
+    const focused = mapReducer(damsOn, { type: "setFocus", focus: { kind: "damRoute", damId: "200101" } });
+    expect(focused.focus).toEqual({ kind: "damRoute", damId: "200101" });
+    // Unrelated changes (time, playback, other overlays) leave the route alone.
+    expect(mapReducer(focused, { type: "setTime", t: 60_000 }).focus).toEqual(focused.focus);
+    expect(mapReducer(focused, { type: "toggleOverlay", key: "wind" }).focus).toEqual(focused.focus);
+    expect(mapReducer(focused, { type: "setFocus", focus: null }).focus).toBeNull();
+    expect(mapReducer(focused, { type: "toggleOverlay", key: "dams" }).focus).toBeNull();
+    expect(mapReducer(focused, { type: "setOverlay", key: "dams", enabled: false }).focus).toBeNull();
+    expect(mapReducer(focused, { type: "setOverlay", key: "dams", enabled: true }).focus).toEqual(focused.focus);
+    expect(initialMapState({ focus: { kind: "damRoute", damId: "1" } }).focus).toEqual({ kind: "damRoute", damId: "1" });
   });
 
   it("does not mutate the current state or overlays", () => {
