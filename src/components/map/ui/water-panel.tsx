@@ -29,7 +29,7 @@ function subscribeOnline(onChange: () => void) {
 }
 
 export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, onSelectRain, waterDay, rainStartDate,
-  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, rainAccumOn, rainAccumStatus, onToggleRainAccum }: {
+  legendButton, onOpenLegend, showAllRainProvinces, onShowAllRainProvinces, allRoutes, onToggleAllRoutes, rainAccumOn, rainAccumStatus, onToggleRainAccum }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
@@ -46,6 +46,8 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onOpenLegend: () => void;
   showAllRainProvinces: boolean;
   onShowAllRainProvinces: () => void;
+  allRoutes: boolean;
+  onToggleAllRoutes: () => void;
   rainAccumOn: boolean;
   rainAccumStatus: "loading" | "shown" | "none" | "unavailable";
   onToggleRainAccum: () => void;
@@ -81,6 +83,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
     </> : <p className="map-muted" role="status">{t("กำลังโหลดข้อมูลเขื่อน…")}</p>}
     {warnings.length > 0 && <TmdWarningList items={warnings} limit={2} onDismiss={dismissWarning} onMap />}
     <DamLegendStrip buttonRef={legendButton} onOpen={onOpenLegend} />
+    <button type="button" className="map-chip text-sm" aria-pressed={allRoutes} onClick={onToggleAllRoutes}>{t("เส้นทางน้ำทุกเขื่อน")}</button>
     <section className="border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-label={t("ฝนสะสม 3 วัน")}>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="map-chip text-sm" aria-pressed={rainAccumOn} onClick={onToggleRainAccum}>{t("ฝนสะสม 3 วัน")}</button>

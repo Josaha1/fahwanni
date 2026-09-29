@@ -455,4 +455,6 @@ export const common: Record<string, string> = {
   "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)": "Moving dashes = direction of flow (thicker = larger release)",
   "{mm} มม.": "{mm} mm",
   "ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน": "This number alone does not tell whether flooding will occur; 2011 flooded through rain, full dams and timing together",
+  "เส้นทางน้ำทุกเขื่อน": "All dam routes",
+  "เส้นทางน้ำท้ายเขื่อนทุกแห่ง (หนา = ระบายมาก)": "Downstream routes of every dam (thicker = larger release)",
 };

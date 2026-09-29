@@ -17,7 +17,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -47,6 +47,7 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
       { swatch: { kind: "ring", color: "#e5484d" }, label: "ระบายน้ำมาก" },
       { swatch: { kind: "line", color: "#2563eb" }, label: "แนวลำน้ำท้ายเขื่อน — ไม่ใช่พื้นที่น้ำท่วม" },
       { swatch: { kind: "line", color: "#2563eb", dashed: true }, label: "เส้นประที่เคลื่อนที่ = ทิศทางน้ำไหล (เส้นหนา = ระบายมาก)" },
+      ...(active.allRoutes ? [{ swatch: { kind: "line" as const, color: "#2563eb80" }, label: "เส้นทางน้ำท้ายเขื่อนทุกแห่ง (หนา = ระบายมาก)" }] : []),
     ] });
   }
   if (active.rivers) sections.push({ title: "ปริมาณน้ำไหลผ่าน (แบบจำลอง)", rows: (["low", "normal", "high", "veryHigh"] as RiverStatus[])

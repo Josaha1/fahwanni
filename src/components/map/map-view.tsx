@@ -37,6 +37,7 @@ import { useQuakeLayer } from "./layers/use-quake-layer";
 import { useDamsLayer } from "./layers/use-dams-layer";
 import { useRainRiskLayer } from "./layers/use-rain-risk-layer";
 import { useRiverLayer } from "./layers/use-river-layer";
+import { useAllRoutesLayer } from "./layers/use-all-routes-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
@@ -103,12 +104,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   };
   useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
-    primary: view.layer, overlays: view.ov, timeMs: view.t, waterDay: view.wd, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
-  const { mode, timeMs, playing, primary, rainOn, overlays, waterDay } = mapState;
+    primary: view.layer, overlays: view.ov, timeMs: view.t, waterDay: view.wd, allRoutes: view.routes, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
+  const { mode, timeMs, playing, primary, rainOn, overlays, waterDay, allRoutes } = mapState;
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(true);
-  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water });
+  const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
+  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = !water && primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
@@ -186,6 +188,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0);
   useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
   useRiverLayer(mapInstance, rivers, water, waterDay);
+  useAllRoutesLayer(mapInstance, dams, water && allRoutes);
   const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs, waterDay);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
@@ -358,9 +361,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     const center = mapInstance.getCenter();
     const query = formatUrlView({ lat: center.lat, lon: center.lng, z: mapInstance.getZoom(), layer: primary,
       t: timeMs === null ? undefined : effectiveTime, ov: overlays, dam: activePathId ?? undefined,
-      river: probe?.kind === "river" ? probe.id : undefined, mode, wd: waterDay });
+      river: probe?.kind === "river" ? probe.id : undefined, mode, wd: waterDay, routes: allRoutes });
     return query;
-  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode, waterDay]);
+  }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode, waterDay, allRoutes]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -538,7 +541,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     }} />;
   const openLegend = () => legendDialog.current?.showModal();
   const waterPanel = water && <WaterPanel dams={dams} damsStatus={damsStatus} watch={watch} rainRisk={rainRisk} rainRiskStatus={rainRiskStatus} tmdWarnings={tmdWarnings} waterDay={waterDay} rainStartDate={waterDate(nowMs, waterDay)}
-    rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
+    allRoutes={allRoutes} onToggleAllRoutes={() => dispatch({ type: "toggleAllRoutes" })} rainAccumOn={rainAccumOn} rainAccumStatus={rainAccumStatus} onToggleRainAccum={() => setRainAccumOn((on) => !on)}
     place={place} placeName={placeName} legendButton={legendButton} onOpenLegend={openLegend}
     showAllRainProvinces={showAllRainProvinces} onShowAllRainProvinces={() => setShowAllRainProvinces(true)}
     onSelectDam={(id) => {
@@ -573,7 +576,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn }}
       dialogRef={legendDialog} triggerRef={legendButton} />
     {isDesktop ? <MapSidePanel>{panelContent}</MapSidePanel> : <MapSheet position={visibleSheetPosition} onPositionChange={setPosition}>{panelContent}</MapSheet>}
     {isDesktop && !water && <div className="map-panel map-time-floating">{timeline}</div>}

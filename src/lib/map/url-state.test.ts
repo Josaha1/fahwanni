@@ -78,4 +78,12 @@ describe("map URL view", () => {
     for (const value of ["0", "8", "2.5", "-1", "foo"]) expect(parseUrlView(`?mode=water&wd=${value}`).wd).toBeUndefined();
     expect(parseUrlView("?wd=3").wd).toBeUndefined();
   });
+
+  it("keeps the all-routes overview in water links only", () => {
+    const base = { lat: 15, lon: 101, z: 6, layer: "rain" as const, ov: { wind: false, storms: false, quakes: false, dams: true, terrain: false } };
+    expect(formatUrlView({ ...base, mode: "water", routes: true })).toContain("routes=1");
+    expect(formatUrlView({ ...base, mode: "weather", routes: true })).not.toContain("routes");
+    expect(parseUrlView("?mode=water&routes=1").routes).toBe(true);
+    expect(parseUrlView("?routes=1").routes).toBeUndefined();
+  });
 });

@@ -4,7 +4,7 @@ import { initialMapState, mapReducer } from "./map-state";
 describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
     expect(initialMapState()).toEqual({
-      mode: "weather", waterDay: 0, primary: "rain", rainOn: true,
+      mode: "weather", waterDay: 0, allRoutes: false, primary: "rain", rainOn: true,
       overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false },
       timeMs: null, playing: false, focus: null,
     });
@@ -16,7 +16,7 @@ describe("map state", () => {
 
   it("uses URL layer and overlay overrides without changing other defaults", () => {
     expect(initialMapState({ primary: "temp", overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true } })).toEqual({
-      mode: "weather", waterDay: 0, primary: "temp", rainOn: true,
+      mode: "weather", waterDay: 0, allRoutes: false, primary: "temp", rainOn: true,
       overlays: { wind: false, storms: false, quakes: true, dams: true, terrain: true },
       timeMs: null, playing: false, focus: null,
     });
@@ -106,5 +106,15 @@ describe("map state", () => {
     expect(mapReducer(water, { type: "setWaterDay", day: 8 })).toBe(water);
     expect(mapReducer(initialMapState(), { type: "setWaterDay", day: 3 }).waterDay).toBe(0);
     expect(mapReducer(water, { type: "setMode", mode: "weather" }).waterDay).toBe(0);
+  });
+
+  it("toggles the all-routes overview only in water mode and drops it when leaving", () => {
+    expect(mapReducer(initialMapState(), { type: "toggleAllRoutes" }).allRoutes).toBe(false);
+    const water = mapReducer(initialMapState(), { type: "setMode", mode: "water" });
+    const on = mapReducer(water, { type: "toggleAllRoutes" });
+    expect(on.allRoutes).toBe(true);
+    expect(mapReducer(on, { type: "setMode", mode: "weather" }).allRoutes).toBe(false);
+    expect(initialMapState({ allRoutes: true }).allRoutes).toBe(false);
+    expect(initialMapState({ mode: "water", allRoutes: true }).allRoutes).toBe(true);
   });
 });

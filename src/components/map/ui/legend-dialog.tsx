@@ -21,7 +21,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers: boolean; rainRisk: boolean; rainAccum: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
