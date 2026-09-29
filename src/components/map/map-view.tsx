@@ -8,7 +8,7 @@ import { formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { sampleSeries } from "@/lib/timeline/store";
-import { lerpGrid } from "@/lib/timeline/time";
+import { lerpGrid, MINUTE, roundTo } from "@/lib/timeline/time";
 import { pm25Level } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 import { sampleGrid } from "@/lib/map/probe";
@@ -16,6 +16,7 @@ import { buildLayerTimeline, defaultIndexFor, playDelayMs, segmentShares, stopLa
 import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { windMotion } from "@/lib/wind/particles";
+import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
 import { formatUrlView, parseUrlView, type UrlView } from "@/lib/map/url-state";
@@ -146,6 +147,11 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
   });
   const motion = windMotion({ reducedMotion, ...device });
   const windHour = wind ? windHourFor(activeStop, wind.hours, nowIso) : 0;
+  const windMinute = roundTo(timeMs ?? Date.parse(nowIso), MINUTE);
+  // Keep the field stable while unrelated map state changes; the compiler cannot track windMinute's origin.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
+  const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = terrainAvailable(device.deviceMemory);
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, !rainModel && activeStop?.kind === "radar" ? activeStop.index : -1, rainVisible && !rainModel);
   useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && rainModel, series: windSeries, timeMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: 1 });
@@ -465,7 +471,7 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     </button>
   </>;
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} pm25Series={pm25Series} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
+    probe={probe} onClose={() => { close(); setPathRequestedId(null); }} frame={frames.at(-1)} wind={wind} windHour={windHour} windField={windField} pm25Series={pm25Series} primary={primary} activeStop={activeStop} nowIso={nowIso} storms={storms} quakes={quakes} dams={dams}
     downstream={activePath?.downstream ?? null} pathActive={Boolean(activePathId)} pathLoading={pathLoading && Boolean(activePathId)} onTogglePath={togglePath} />;
   const primaryPicker = <PrimaryPicker primary={primary} tempAvailable={Boolean(windSeries?.grids.temp?.length)}
     pm25Loading={pm25Loading} onChange={(next) => {
@@ -479,7 +485,7 @@ function MapScreen({ container, urlView, initialFocus }: { container: RefObject<
     "--map-label": BASE[theme].label, "--map-muted": BASE[theme].labelMuted, "--map-accent": DATA.pin,
   } as CSSProperties}>
     <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
-    {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} grid={wind} hourIndex={windHour} animate={motion.animate} count={motion.count} />}
+    {mapInstance && wind && windOn && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     {(mapState.primary !== "rain" || rainOn) && <LegendChip primary={mapState.primary} buttonRef={legendButton} onOpen={() => legendDialog.current?.showModal()} />}
     <LegendDialog primary={mapState.primary} active={{ wind: windOn && Boolean(wind), storms: stormsOn && storms.length > 0, quakes: quakesOn && quakes.length > 0, dams: damsOn && damsStatus === "ready" && Boolean(dams) }}

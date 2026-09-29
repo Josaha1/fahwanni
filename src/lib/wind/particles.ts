@@ -1,5 +1,4 @@
 import { windColor } from "../map/palette";
-import { sampleAt, type WindGrid } from "./grid";
 
 export interface Particle {
   lon: number;
@@ -27,15 +26,15 @@ export function windMotion(env: MotionEnv): { animate: boolean; count: number } 
 export type Bounds = readonly [west: number, south: number, east: number, north: number];
 
 /** The part of the viewport covered by the grid; the whole grid when they do not overlap. */
-export function spawnArea(grid: WindGrid, view?: Bounds): Bounds {
-  const [gw, gs, ge, gn] = grid.bbox;
-  if (!view) return grid.bbox;
+export function spawnArea(bbox: Bounds, view?: Bounds): Bounds {
+  const [gw, gs, ge, gn] = bbox;
+  if (!view) return bbox;
   const area: Bounds = [Math.max(gw, view[0]), Math.max(gs, view[1]), Math.min(ge, view[2]), Math.min(gn, view[3])];
-  return area[0] < area[2] && area[1] < area[3] ? area : grid.bbox;
+  return area[0] < area[2] && area[1] < area[3] ? area : bbox;
 }
 
 /** Spawns within `area` so particle density follows the zoom level. */
-export function spawnParticle(grid: WindGrid, random: () => number = Math.random, area: Bounds = grid.bbox): Particle {
+export function spawnParticle(bbox: Bounds, random: () => number = Math.random, area: Bounds = bbox): Particle {
   const [west, south, east, north] = area;
   return {
     lon: west + random() * (east - west),
@@ -47,11 +46,11 @@ export function spawnParticle(grid: WindGrid, random: () => number = Math.random
 
 /** Advances one particle by one frame; respawns it when it ages out or leaves the grid. */
 export function stepParticle(
-  p: Particle, grid: WindGrid, hourIndex: number,
-  random: () => number = Math.random, area: Bounds = grid.bbox, zoom = 6,
+  p: Particle, sample: (lon: number, lat: number) => { u: number; v: number } | undefined,
+  random: () => number, area: Bounds, zoom = 6,
 ): Particle {
-  const wind = p.age < MAX_AGE ? sampleAt(grid, hourIndex, p.lon, p.lat) : undefined;
-  if (!wind) return { ...spawnParticle(grid, random, area), age: 0 };
+  const wind = p.age < MAX_AGE ? sample(p.lon, p.lat) : undefined;
+  if (!wind) return { ...spawnParticle(area, random), age: 0 };
   const cosLat = Math.max(Math.cos((p.lat * Math.PI) / 180), 0.2);
   // Same on-screen drift at every zoom: halve the step per zoom level in.
   const step = DEG_PER_MS * 2 ** (6 - zoom);

@@ -9,7 +9,7 @@ import { pm25Level } from "@/lib/air";
 import { sampleSeries, type HourlySeries } from "@/lib/timeline/store";
 import { lerpGrid } from "@/lib/timeline/time";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
-import { modelRainAt, sampleGrid, windAt } from "@/lib/map/probe";
+import { modelRainAt, sampleGrid, windAt, windAtField } from "@/lib/map/probe";
 import type { PrimaryLayer } from "@/lib/map/legend";
 import type { TimelineStop } from "@/lib/timeline/frames";
 import { nearestProvince, pointPlace } from "@/lib/map/nearest";
@@ -19,6 +19,7 @@ import type { RadarFrame } from "@/lib/radar/types";
 import { distanceKm, type Storm } from "@/lib/storms/normalize";
 import { bearingWord, stormCategoryLabel } from "@/lib/storms/present";
 import type { WindGrid } from "@/lib/wind/grid";
+import type { WindField } from "@/lib/wind/field";
 import { pm25LevelWord, windWord } from "@/lib/words";
 import type { Probe } from "../use-probe";
 import type { DamsPayload } from "@/lib/dams/client";
@@ -36,13 +37,14 @@ function damDate(value: string, locale: "th" | "en") {
   }).format(new Date(iso));
 }
 
-export function PointCard({ probe, onClose, frame, wind, windHour, pm25Series, primary, activeStop, nowIso, storms, quakes, dams,
+export function PointCard({ probe, onClose, frame, wind, windHour, windField, pm25Series, primary, activeStop, nowIso, storms, quakes, dams,
   downstream, pathActive, pathLoading, onTogglePath }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
   wind: WindGrid | null;
   windHour: number;
+  windField: WindField | null;
   pm25Series: HourlySeries | null;
   primary: PrimaryLayer;
   activeStop?: TimelineStop;
@@ -71,7 +73,8 @@ export function PointCard({ probe, onClose, frame, wind, windHour, pm25Series, p
   const barrage = probe.kind === "dam" && probe.id === dams?.barrage?.id ? dams.barrage : null;
   const selectedDam = dam ?? barrage;
   const rain = probe.kind === "point" && wind ? modelRainAt(wind, probe.lon, probe.lat) : null;
-  const breeze = probe.kind === "point" && wind ? windAt(wind, windHour, probe.lon, probe.lat) : null;
+  const breeze = probe.kind === "point" ? windField ? windAtField(windField, probe.lon, probe.lat)
+    : wind ? windAt(wind, windHour, probe.lon, probe.lat) : null : null;
   const currentTempHour = wind?.tempHours?.findLastIndex((hour) => Date.parse(hour) <= Date.parse(nowIso)) ?? -1;
   const tempHour = primary === "temp" && activeStop ? wind?.tempHours?.indexOf(activeStop.time) ?? -1 : currentTempHour;
   const temp = probe.kind === "point" && wind && tempHour >= 0 && wind.temp?.[tempHour] && wind.feels?.[tempHour]

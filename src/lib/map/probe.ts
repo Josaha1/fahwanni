@@ -1,5 +1,6 @@
 import { MIN_PROB, precipLevel } from "../precip/render";
 import type { WindGrid } from "../wind/grid";
+import { sampleField, type WindField } from "../wind/field";
 
 export function sampleGrid(grid: Pick<WindGrid, "bbox" | "nx" | "ny">, values: ArrayLike<number>, lon: number, lat: number): number | null {
   const [west, south, east, north] = grid.bbox;
@@ -19,6 +20,15 @@ export function windAt(grid: WindGrid, hourIndex: number, lon: number, lat: numb
   if (!us || !vs) return null;
   const u = sampleGrid(grid, us, lon, lat), v = sampleGrid(grid, vs, lon, lat);
   if (u === null || v === null) return null;
+  return windReading(u, v);
+}
+
+export function windAtField(field: WindField, lon: number, lat: number): { speedKmh: number; fromDeg: number } | null {
+  const wind = sampleField(field, lon, lat);
+  return wind ? windReading(wind.u, wind.v) : null;
+}
+
+function windReading(u: number, v: number): { speedKmh: number; fromDeg: number } {
   return { speedKmh: Math.round(Math.hypot(u, v) * 3.6), fromDeg: Math.round((Math.atan2(-u, -v) * 180 / Math.PI + 360) % 360) % 360 };
 }
 

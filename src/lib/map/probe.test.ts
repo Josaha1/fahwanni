@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { modelRainAt, sampleGrid, windAt } from "./probe";
+import { modelRainAt, sampleGrid, windAt, windAtField } from "./probe";
 import type { WindGrid } from "../wind/grid";
+import { windFieldAt } from "../wind/field";
 
 const grid = { bbox: [0, 0, 1, 1] as const, nx: 2, ny: 2 };
 const wind = { ...grid, hours: ["2026-09-28T00:00:00Z"], u: [[1, 1, 1, 1]], v: [[0, 0, 0, 0]], source: "open-meteo" as const, attribution: { text: "", url: "" } } satisfies WindGrid;
@@ -17,6 +18,15 @@ describe("map probe", () => {
   });
   it("converts eastward m/s to wind from west in km/h", () => {
     expect(windAt(wind, 0, 0.5, 0.5)).toEqual({ speedKmh: 4, fromDeg: 270 });
+  });
+  it("reads the same interpolated wind as the particles", () => {
+    const start = Date.parse(wind.hours[0]);
+    const field = windFieldAt({ times: [start, start + 3_600_000], grids: {
+      u: [new Float32Array([1, 1, 1, 1]), new Float32Array([3, 3, 3, 3])],
+      v: [new Float32Array(4), new Float32Array(4)],
+    } }, start + 30 * 60_000, grid)!;
+    expect(windAtField(field, 0.5, 0.5)).toEqual({ speedKmh: 7, fromDeg: 270 });
+    expect(windAtField(field, 2, 0.5)).toBeNull();
   });
   it("selects earliest highest rain level after the probability threshold", () => {
     const rainy = { ...wind, precip: [[5, 5, 5, 5], [1, 1, 1, 1], [5, 5, 5, 5]], prob: [[20, 20, 20, 20], [80, 80, 80, 80], [80, 80, 80, 80]] };

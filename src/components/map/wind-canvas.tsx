@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import type { Map } from "maplibre-gl";
-import { sampleAt, type WindGrid } from "@/lib/wind/grid";
+import { sampleField, type WindField } from "@/lib/wind/field";
+import { WIND_BBOX } from "@/lib/wind/grid";
 import { spawnArea, spawnParticle, speedColor, stepParticle, type Bounds, type Particle } from "@/lib/wind/particles";
 
 interface Props {
   map: Map;
-  grid: WindGrid;
-  hourIndex: number;
+  field: WindField | null;
   animate: boolean;
   count: number;
 }
@@ -17,8 +17,15 @@ interface Props {
  * Canvas-2D wind overlay. Particles live in lon/lat and are projected every frame,
  * so they stay glued to the map; drawing pauses while the map moves.
  */
-export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
+export function WindCanvas({ map, field, animate, count }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const fieldRef = useRef(field);
+  const redraw = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    fieldRef.current = field;
+    if (!animate) redraw.current?.();
+  }, [field, animate]);
 
   useEffect(() => {
     const el = canvas.current;
@@ -27,13 +34,18 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let frame = 0;
     let moving = false;
-    let area: Bounds = grid.bbox;
+    let area: Bounds = fieldRef.current?.bbox ?? WIND_BBOX;
     let zoom = map.getZoom();
+    const sample = (lon: number, lat: number) => {
+      const current = fieldRef.current;
+      return current ? sampleField(current, lon, lat) : undefined;
+    };
     const respawn = () => {
       const b = map.getBounds();
-      area = spawnArea(grid, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+      const bbox = fieldRef.current?.bbox ?? WIND_BBOX;
+      area = spawnArea(bbox, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
       zoom = map.getZoom();
-      particles = Array.from({ length: count }, () => spawnParticle(grid, Math.random, area));
+      particles = Array.from({ length: count }, () => spawnParticle(bbox, Math.random, area));
     };
     let particles: Particle[] = [];
     respawn();
@@ -50,11 +62,13 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
 
     const drawArrows = () => {
       clear();
+      const current = fieldRef.current;
+      if (!current) return;
       ctx.lineWidth = 1.5;
-      const [west, south, east, north] = grid.bbox;
+      const [west, south, east, north] = current.bbox;
       for (let lat = south; lat <= north; lat += 2) {
         for (let lon = west; lon <= east; lon += 2) {
-          const wind = sampleAt(grid, hourIndex, lon, lat);
+          const wind = sampleField(current, lon, lat);
           if (!wind) continue;
           const speed = Math.hypot(wind.u, wind.v);
           if (speed < 0.5) continue;
@@ -84,9 +98,9 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
       ctx.globalCompositeOperation = "source-over";
       ctx.lineWidth = 1.2;
       particles = particles.map((p) => {
-        const next = stepParticle(p, grid, hourIndex, Math.random, area, zoom);
+        const next = stepParticle(p, sample, Math.random, area, zoom);
         if (next.age === 0) return next;
-        const wind = sampleAt(grid, hourIndex, p.lon, p.lat);
+        const wind = sample(p.lon, p.lat);
         const from = map.project([p.lon, p.lat]);
         const to = map.project([next.lon, next.lat]);
         ctx.strokeStyle = speedColor(wind ? Math.hypot(wind.u, wind.v) : 0);
@@ -103,6 +117,7 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
     const onResize = () => { resize(); onMoveEnd(); };
 
     resize();
+    redraw.current = drawArrows;
     map.on("movestart", onMoveStart);
     map.on("moveend", onMoveEnd);
     map.on("resize", onResize);
@@ -114,9 +129,10 @@ export function WindCanvas({ map, grid, hourIndex, animate, count }: Props) {
       map.off("movestart", onMoveStart);
       map.off("moveend", onMoveEnd);
       map.off("resize", onResize);
+      redraw.current = null;
       clear();
     };
-  }, [map, grid, hourIndex, animate, count]);
+  }, [map, animate, count]);
 
   return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true" />;
 }

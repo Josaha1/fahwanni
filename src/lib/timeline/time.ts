@@ -50,7 +50,7 @@ export function bracket(t: number, times: number[]): { i: number; f: number } | 
   return { i, f: (t - times[i]) / (times[i + 1] - times[i]) };
 }
 
-export function lerpGrid(a: ArrayLike<number>, b: ArrayLike<number>, f: number, out = new Float32Array(a.length)): Float32Array {
+export function lerpGrid(a: ArrayLike<number>, b: ArrayLike<number>, f: number, out: Float32Array = new Float32Array(a.length)): Float32Array {
   for (let i = 0; i < a.length; i++) {
     const left = a[i], right = b[i];
     out[i] = !Number.isFinite(left) ? (Number.isFinite(right) ? right : NaN)
