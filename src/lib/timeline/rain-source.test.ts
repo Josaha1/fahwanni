@@ -21,8 +21,31 @@ describe("rain source at the radar/model seam", () => {
     expect(rainSourceAt(now - MINUTE, [], now)).toEqual({ kind: "none" });
   });
 
-  it("uses model after now and radar exactly at now", () => {
-    expect(rainSourceAt(now + 45 * MINUTE, radarTimes, now)).toEqual({ kind: "model" });
+  it("blends the newest radar frame into the model over the first hour", () => {
+    for (const [lead, radarOpacity, modelOpacity] of [
+      [1, 0.7 - 0.5 / 45, 0],
+      [15, 0.7 - 0.5 * 15 / 45, 0],
+      [30, 0.7 - 0.5 * 30 / 45, 1 / 3],
+      [45, 0.2, 2 / 3],
+      [46, 0, 31 / 45],
+      [60, 0, 1],
+    ]) {
+      const source = rainSourceAt(now + lead * MINUTE, radarTimes, now);
+      expect(source.kind).toBe("blend");
+      if (source.kind !== "blend") continue;
+      expect(source.index).toBe(5);
+      expect(source.frameTime).toBe(now - 10 * MINUTE);
+      expect(source.radarOpacity).toBeCloseTo(radarOpacity);
+      expect(source.modelOpacity).toBeCloseTo(modelOpacity);
+    }
+  });
+
+  it("uses the model when there is no radar frame or the first hour has passed", () => {
+    expect(rainSourceAt(now + MINUTE, [], now)).toEqual({ kind: "model" });
+    expect(rainSourceAt(now + 61 * MINUTE, radarTimes, now)).toEqual({ kind: "model" });
+  });
+
+  it("uses radar exactly at now", () => {
     expect(rainSourceAt(now, radarTimes, now))
       .toEqual({ kind: "radar", index: 5, frameTime: now - 10 * MINUTE });
   });
