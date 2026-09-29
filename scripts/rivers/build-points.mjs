@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { DAM_REGISTRY } from "../../src/lib/dams/registry.ts";
 import { provinces } from "../../src/lib/provinces.ts";
 import { buildClimatology, chooseSnap } from "./climatology.mjs";
+import { upstreamDamsOf } from "./upstream.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const output = join(root, "public/data/river-points.json");
@@ -59,6 +60,9 @@ function validate(data) {
       if (!Number.isFinite(point?.[key])) fail(where, `invalid ${key}`);
     }
     if (point.downstreamOfDam != null && !damIds.has(point.downstreamOfDam)) fail(where, "unknown downstreamOfDam");
+    if (!Array.isArray(point.upstreamDams) || point.upstreamDams.some((dam) => !damIds.has(dam?.damId) || !Number.isFinite(dam?.km))) {
+      fail(where, "invalid upstreamDams");
+    }
     // A tributary cell shows up as a tiny typical flow; dry-season lows on a real river are fine.
     const typical = typicalFlow(point.doy);
     if (!(typical >= 20)) fail(where, `median seasonal p50 ${typical} < 20 m³/s (tributary cell?)`);
@@ -135,6 +139,8 @@ function dailyRows(data, label) {
 }
 
 async function build() {
+  const routes = JSON.parse(await readFile(join(root, "public/data/dam-paths.geojson"), "utf8")).features
+    .map((feature) => ({ damId: feature.properties.damId, coordinates: feature.geometry.coordinates }));
   const built = [];
   for (const point of points) {
     const cells = [];
@@ -167,7 +173,8 @@ async function build() {
       console.warn(`${point.id}: dropped because its typical flow is below 20 m³/s (tributary cell?)`);
       continue;
     }
-    built.push({ ...point, snappedLat: snap.lat, snappedLon: snap.lon,
+    const upstreamDams = upstreamDamsOf({ ...point, snappedLat: snap.lat, snappedLon: snap.lon }, routes);
+    built.push({ ...point, snappedLat: snap.lat, snappedLon: snap.lon, upstreamDams,
       meanDischarge: Math.round(snap.meanDischarge * 10) / 10, ...climatology,
       value2554: { ...climatology.value2554, 60: null } });
     console.log(`${point.id}: ${snap.lat}, ${snap.lon}; mean ${snap.meanDischarge.toFixed(1)} m³/s`);

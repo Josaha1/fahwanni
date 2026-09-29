@@ -36,6 +36,7 @@ it("returns summaries for every point from one upstream request and caches them 
     nameEn: pointsData.points[0].nameEn, river: pointsData.points[0].river,
     provinceId: pointsData.points[0].provinceId, lat: pointsData.points[0].lat,
     lon: pointsData.points[0].lon, downstreamOfDam: pointsData.points[0].downstreamOfDam,
+    upstreamDams: pointsData.points[0].upstreamDams,
     summary: expect.objectContaining({ id: pointsData.points[0].id, today: expect.objectContaining({ date: "2026-09-29" }) }),
   });
   expect(JSON.stringify(payload)).not.toMatch(/"(?:doy|value2554)":/);

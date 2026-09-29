@@ -17,6 +17,8 @@ export interface RiverPoint {
   snappedLon: number;
   meanDischarge: number;
   downstreamOfDam: string | null;
+  /** Dams whose downstream route passes this point, nearest (by river km from the dam) first. */
+  upstreamDams: { damId: string; km: number }[];
   doy: Record<number, RiverBand>;
   annualMax: { p50: number; p80: number };
   value2554: Record<number, number | null>;

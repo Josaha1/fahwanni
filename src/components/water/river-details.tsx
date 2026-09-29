@@ -10,6 +10,7 @@ import { RiverChart, type RiverChartDay } from "./river-chart";
 
 export type RiverRow = {
   id: string; nameTh: string; nameEn: string; lat: number; lon: number; downstreamOfDam: string | null;
+  upstreamDams?: { damId: string; km: number }[];
   summary: null | { today: { date: string; value: number; status: RiverStatus }; trend: RiverTrend | null;
     peak: { date: string; value: number } | null; rare: RareLevel | null;
     value2554Today: number | null; days: (RiverChartDay & { status: RiverStatus })[] };
@@ -20,7 +21,11 @@ export function riverDateLabel(date: string, locale: "th" | "en") {
   return formatFullDate(`${date}T12:00:00+07:00`, "Asia/Bangkok", locale);
 }
 
-export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0 }: { point: RiverRow; upstream?: Dam; mapCard?: boolean; waterDay?: number }) {
+/** `dams` resolves upstream dam ids; `onSelectDam` (map) or `damHref` (pages) makes each row open that dam. */
+export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, dams = [], onSelectDam, damHref }: {
+  point: RiverRow; upstream?: Dam; mapCard?: boolean; waterDay?: number;
+  dams?: Dam[]; onSelectDam?: (id: string) => void; damHref?: (id: string) => string;
+}) {
   const t = useT();
   const detail = point.summary;
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
@@ -38,8 +43,37 @@ export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0 }:
     {detail.peak && <p>{t("สูงสุดใน 7 วัน {value} วันที่ {date}", { value: number.format(detail.peak.value), date: riverDateLabel(detail.peak.date, t.locale) })}</p>}
     {waterDay === 0 && detail.rare && <p>{t(rareLevelWord(detail.rare))}</p>}
     {upstream && <p>{t("ปริมาณจริงขึ้นกับการระบายของเขื่อน{name} (ระบาย {release} ลบ.ม./วินาที)", { name: t.locale === "en" ? upstream.nameEn || upstream.nameTh : upstream.nameTh, release: upstream.releaseCms === null ? "—" : number.format(upstream.releaseCms) })}</p>}
+    <UpstreamDams point={point} dams={dams} muted={muted} onSelectDam={onSelectDam} damHref={damHref} />
     {detail.value2554Today !== null && <p>{t("วันนี้ปี 2554: {value} ลบ.ม./วินาที", { value: number.format(detail.value2554Today) })}</p>}
     {detail.value2554Today !== null && <p className={`${muted} text-xs`}>{t("ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน")}</p>}
     {mapCard && <p className={`${muted} pt-2 text-xs`}>{t("ประมาณการจากแบบจำลอง GloFAS ความละเอียด 5 กม. · ไม่ใช่ค่าที่วัดจริงจากสถานี · ไม่ใช่แผนที่น้ำท่วม")}</p>}
+  </div>;
+}
+
+function UpstreamDams({ point, dams, muted, onSelectDam, damHref }: {
+  point: RiverRow; dams: Dam[]; muted: string; onSelectDam?: (id: string) => void; damHref?: (id: string) => string;
+}) {
+  const t = useT();
+  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
+  const byId = new Map(dams.map((dam) => [dam.id, dam]));
+  const rows = (point.upstreamDams ?? []).flatMap(({ damId, km }) => {
+    const dam = byId.get(damId);
+    return dam ? [{ dam, km }] : [];
+  });
+  if (!rows.length) return null;
+  const shown = rows.slice(0, 3);
+  return <div className="pt-1">
+    <p className="font-semibold">{t("เขื่อนเหนือจุดนี้")}</p>
+    <ul className="mt-1 space-y-1">{shown.map(({ dam, km }) => {
+      const label = t("{name} · ห่างตามลำน้ำ {km} กม. · ระบาย {release} ลบ.ม./วินาที", {
+        name: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh, km: number.format(km),
+        release: dam.releaseCms === null ? "—" : number.format(dam.releaseCms),
+      });
+      return <li key={dam.id}>
+        {onSelectDam ? <button type="button" className="text-left underline underline-offset-2" onClick={() => onSelectDam(dam.id)}>{label}</button>
+          : damHref ? <a className="underline underline-offset-2" href={damHref(dam.id)}>{label}</a> : label}
+      </li>;
+    })}</ul>
+    {rows.length > shown.length && <p className={`${muted} text-xs`}>{t("และอีก {n} เขื่อน", { n: rows.length - shown.length })}</p>}
   </div>;
 }

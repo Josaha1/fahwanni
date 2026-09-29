@@ -14,7 +14,7 @@ type RiversPayload = {
   fetchedAt: string;
   today: string;
   source: string;
-  points: Array<Pick<RiverPoint, "id" | "nameTh" | "nameEn" | "river" | "provinceId" | "lat" | "lon" | "downstreamOfDam"> & {
+  points: Array<Pick<RiverPoint, "id" | "nameTh" | "nameEn" | "river" | "provinceId" | "lat" | "lon" | "downstreamOfDam" | "upstreamDams"> & {
     summary: ReturnType<typeof summarizeRiver>;
   }>;
 };
@@ -41,7 +41,7 @@ function refresh(): Promise<RiversPayload | null> {
       points: points.map((point, index) => ({
         id: point.id, nameTh: point.nameTh, nameEn: point.nameEn, river: point.river,
         provinceId: point.provinceId, lat: point.lat, lon: point.lon,
-        downstreamOfDam: point.downstreamOfDam, summary: summaries[index],
+        downstreamOfDam: point.downstreamOfDam, upstreamDams: point.upstreamDams ?? [], summary: summaries[index],
       })),
     };
     cache.set(today, payload);

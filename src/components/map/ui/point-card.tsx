@@ -43,7 +43,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
-  rivers, riversStatus, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath }: {
+  rivers, riversStatus, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
   probe: Probe;
   onClose: () => void;
   frame?: RadarFrame;
@@ -73,6 +73,8 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
   pathActive: boolean;
   pathLoading: boolean;
   onTogglePath: () => void;
+  /** Opens a dam listed on a river card (upstream dams). */
+  onSelectDam?: (id: string) => void;
 }) {
   const t = useT();
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
@@ -236,7 +238,7 @@ export function PointCard({ probe, onClose, frame, wind, windHour, windField, wi
       <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
-    {river && <RiverDetails point={river} upstream={upstream} mapCard waterDay={waterDay} />}
+    {river && <RiverDetails point={river} upstream={upstream} mapCard waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
     {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;
 }

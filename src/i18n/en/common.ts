@@ -457,4 +457,7 @@ export const common: Record<string, string> = {
   "ตัวเลขนี้อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน": "This number alone does not tell whether flooding will occur; 2011 flooded through rain, full dams and timing together",
   "เส้นทางน้ำทุกเขื่อน": "All dam routes",
   "เส้นทางน้ำท้ายเขื่อนทุกแห่ง (หนา = ระบายมาก)": "Downstream routes of every dam (thicker = larger release)",
+  "เขื่อนเหนือจุดนี้": "Dams upstream of this point",
+  "{name} · ห่างตามลำน้ำ {km} กม. · ระบาย {release} ลบ.ม./วินาที": "{name} · {km} km upstream · release {release} m³/s",
+  "และอีก {n} เขื่อน": "and {n} more dams",
 };

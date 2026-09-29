@@ -143,7 +143,8 @@ export function WaterPage() {
               <div><h3 className="font-semibold">{t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh}</h3><p className="text-muted text-xs">{t("{km} กม.", { km: number.format(km) })}</p></div>
               {detail && <button type="button" className="min-h-11 min-w-11 text-xl" aria-label={t(watchedNow ? "เลิกติดตามแม่น้ำนี้" : "ติดตามแม่น้ำนี้")} aria-pressed={watchedNow} onClick={() => changeWatch({ kind: "river", id: point.id, value: detail.today.value, unit: "cms", date: detail.today.date })}>{watchedNow ? "★" : "☆"}</button>}
             </div>
-            <RiverDetails point={point} upstream={upstream} />
+            <RiverDetails point={point} upstream={upstream} dams={dams.data?.dams ?? []}
+              damHref={(id) => `/map?mode=water&dam=${encodeURIComponent(id)}`} />
             <Link className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-given underline underline-offset-2" href={`/map?mode=water&river=${encodeURIComponent(point.id)}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t("ดูบนแผนที่")}</Link>
           </li>;
         })}</ul>
