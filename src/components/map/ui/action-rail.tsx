@@ -1,6 +1,6 @@
 import { useT } from "@/i18n/client";
 
-export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare }: {
+export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain, immersive, onFullscreen, onShare, onShareImage, makingImage }: {
   /** Phones: only the layers button; 3D, fullscreen and share move to the sheet's "เพิ่มเติม" row. */
   compact: boolean;
   onLayers: () => void;
@@ -10,6 +10,8 @@ export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain,
   immersive: boolean;
   onFullscreen: () => void;
   onShare: () => void;
+  onShareImage: () => void;
+  makingImage: boolean;
 }) {
   const t = useT();
   const terrainLabel = terrainOn ? t("ปิดแผนที่ 3 มิติ") : t("เปิดแผนที่ 3 มิติ");
@@ -32,6 +34,12 @@ export function ActionRail({ compact, onLayers, terrainOk, terrainOn, onTerrain,
         <button type="button" className="map-icon-btn" onClick={onShare} aria-label={t("แชร์มุมมองนี้")} title={t("แชร์มุมมองนี้")}>
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" />
+          </svg>
+        </button>
+        <button type="button" className="map-icon-btn disabled:opacity-60" onClick={onShareImage} disabled={makingImage}
+          aria-label={t("แชร์ภาพแผนที่")} title={t("แชร์ภาพแผนที่")}>
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m3 17 5-5 4 4 3-3 6 6" />
           </svg>
         </button>
       </>}

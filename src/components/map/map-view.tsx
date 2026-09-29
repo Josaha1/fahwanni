@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type Ref
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
-import { formatTime } from "@/lib/format";
+import { formatFullDate, formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
 import { sampleSeries } from "@/lib/timeline/store";
@@ -68,6 +68,8 @@ import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
 import { ModeSwitch } from "./ui/mode-switch";
 import { useProbe } from "./use-probe";
+import { captureMapBlob, mapSourceLine, renderMapShareImage } from "@/components/share/render-map-share";
+import { damLegendStrip, legendFor } from "@/lib/map/legend";
 
 function initialSheetPosition(): SheetPosition {
   try {
@@ -126,6 +128,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const legendButton = useRef<HTMLButtonElement>(null);
   const legendDialog = useRef<HTMLDialogElement>(null);
   const [immersive, setImmersive] = useState(false);
+  const [makingImage, setMakingImage] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
@@ -447,6 +450,51 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     }
   };
 
+  const shareMapImage = async () => {
+    if (!mapInstance || makingImage || status !== "ready") return;
+    setMakingImage(true);
+    const toastId = toast.loading(t("กำลังสร้างภาพ…"));
+    try {
+      const mapBlob = await captureMapBlob(mapInstance);
+      const legend = water
+        ? (() => {
+          const strip = damLegendStrip();
+          return { title: t(strip.title), unit: t(strip.unit), swatches: strip.steps.map((step) => ({ color: step.color, label: step.label })) };
+        })()
+        : (() => {
+          const strip = legendFor(primary, legendRainMode);
+          return { title: t(strip.title), unit: t(strip.unit), gradient: strip.steps.map((step) => ({ color: step.color, label: step.value })),
+            note: strip.note ? t(strip.note) : undefined };
+        })();
+      const waterLabel = formatFullDate(`${waterDate(nowMs, waterDay)}T12:00:00+07:00`, "Asia/Bangkok", t.locale);
+      const time = water ? (waterDay > 0 ? t("{date} (พยากรณ์)", { date: waterLabel }) : waterLabel)
+        : timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary,
+          lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined });
+      const sources = mapSourceLine({ water, primary, radar: water ? waterRadar : hasRadarFrame,
+        rainRisk: water && rainRiskStatus === "ready", rainAccum: water && rainAccumOn });
+      const blob = await renderMapShareImage({ mapBlob,
+        windCanvas: !water && windOn ? document.querySelector<HTMLCanvasElement>("[data-wind-canvas]") : null,
+        title: placeName, subtitle: t(water ? "สถานการณ์น้ำ" : "อากาศ"), legend, time,
+        sourceLine: sources.map((source) => t(source)), t });
+      const file = new File([blob], "fahwanni-map.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); }
+        catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) throw error; }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = Object.assign(document.createElement("a"), { href: url, download: file.name });
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        toast.success(t("บันทึกรูปแล้ว"));
+      }
+    } catch {
+      toast.error(t("สร้างรูปไม่สำเร็จ"));
+    } finally {
+      toast.dismiss(toastId);
+      setMakingImage(false);
+    }
+  };
+
   useEffect(() => {
     if (!focusLayers.current || (!isDesktop && visibleSheetPosition !== "half")) return;
     const frame = window.requestAnimationFrame(() => {
@@ -595,6 +643,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onClick={() => dispatch({ type: "toggleOverlay", key: "terrain" })}>{t("แผนที่ 3 มิติ")}</button>}
     <button type="button" className="map-chip text-sm" aria-pressed={immersive} onClick={toggleFullscreen}>{immersive ? t("ออกจากเต็มจอ") : t("เต็มจอ")}</button>
     <button type="button" className="map-chip text-sm" onClick={shareView}>{t("แชร์มุมมองนี้")}</button>
+    <button type="button" className="map-chip text-sm disabled:opacity-60" onClick={shareMapImage} disabled={makingImage}>{t("แชร์ภาพแผนที่")}</button>
   </>;
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline} waterStepper={!isDesktop && water ? waterStepper : null}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
@@ -621,7 +670,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onOpen={() => select({ kind: "dam", id: activePathId })} onClear={() => dispatch({ type: "setFocus", focus: null })} />}
     <ActionRail compact={!isDesktop} onLayers={openLayers} terrainOk={terrainOk} terrainOn={terrainOn}
       onTerrain={() => dispatch({ type: "toggleOverlay", key: "terrain" })}
-      immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} />
+      immersive={immersive} onFullscreen={toggleFullscreen} onShare={shareView} onShareImage={shareMapImage} makingImage={makingImage} />
     {status !== "ready" && <div className="absolute inset-0 z-20 grid place-items-center" style={{ backgroundColor: BASE[theme].bg, color: BASE[theme].label }} role="status">
       {status === "error" ? <div className="text-center"><p>{t("โหลดแผนที่ไม่สำเร็จ")}</p><button type="button" className="install-action mt-3" onClick={retry}>{t("ลองใหม่")}</button></div>
         : t("กำลังโหลดแผนที่…")}

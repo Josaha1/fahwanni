@@ -134,5 +134,5 @@ export function WindCanvas({ map, field, animate, count }: Props) {
     };
   }, [map, animate, count]);
 
-  return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true" />;
+  return <canvas ref={canvas} data-wind-canvas className="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true" />;
 }
