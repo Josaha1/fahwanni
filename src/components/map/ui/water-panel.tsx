@@ -10,7 +10,7 @@ import type { Place } from "@/lib/place";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { visibleWarnings, type TmdWarnings } from "@/lib/tmd";
 import { DamLegendStrip } from "./legend-chip";
-import { findWater } from "@/lib/water/find";
+import { findWater, type WaterPointHit } from "@/lib/water/find";
 import { TmdWarningList } from "@/components/water/tmd-warnings";
 
 const DISMISSED_KEY = "fah-tmd-dismissed";
@@ -104,7 +104,7 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   </section>;
 }
 
-/** Name search over dams and river points. */
+/** Name search over rivers, their dams and individual river points. */
 function WaterFinder({ dams, riverPoints, onSelectDam, onSelectRiver }: {
   dams: Dam[];
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
@@ -113,17 +113,37 @@ function WaterFinder({ dams, riverPoints, onSelectDam, onSelectRiver }: {
   const t = useT();
   const [query, setQuery] = useState("");
   const hits = findWater(query, dams, riverPoints, t.locale);
+  const chip = (hit: WaterPointHit) => <li key={`${hit.kind}:${hit.id}`}>
+    <button type="button" className="map-chip flex w-full justify-between gap-2 text-left text-sm"
+      onClick={() => { setQuery(""); if (hit.kind === "dam") onSelectDam(hit.id); else onSelectRiver(hit.id); }}>
+      <span>{hit.name}</span><span className="map-muted text-xs">{t(hit.kind === "dam" ? "เขื่อน" : "แม่น้ำ")}</span>
+    </button>
+  </li>;
   return <section className="space-y-2" aria-label={t("ค้นหาเขื่อนหรือแม่น้ำ")}>
     <input type="search" value={query} onChange={(event) => setQuery(event.target.value)}
       placeholder={t("ค้นหาเขื่อนหรือแม่น้ำ")} aria-label={t("ค้นหาเขื่อนหรือแม่น้ำ")}
       className="map-chip w-full text-sm" style={{ textAlign: "left" }} />
     {query.trim() && <ul className="space-y-1">
-      {hits.length ? hits.map((hit) => <li key={`${hit.kind}:${hit.id}`}>
-        <button type="button" className="map-chip flex w-full justify-between gap-2 text-left text-sm"
-          onClick={() => { setQuery(""); if (hit.kind === "dam") onSelectDam(hit.id); else onSelectRiver(hit.id); }}>
-          <span>{hit.name}</span><span className="map-muted text-xs">{t(hit.kind === "dam" ? "เขื่อน" : "แม่น้ำ")}</span>
-        </button>
-      </li>) : <li className="map-muted text-xs">{t("ไม่พบชื่อนี้")}</li>}
+      {hits.length ? hits.map((hit) => {
+        if (hit.kind !== "riverGroup") return chip(hit);
+        const rows: WaterPointHit[] = [
+          ...hit.points.flatMap((id) => {
+            const point = riverPoints.find((point) => point.id === id);
+            return point ? [{ kind: "river" as const, id, name: t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh }] : [];
+          }),
+          ...hit.dams.flatMap((id) => {
+            const dam = dams.find((dam) => dam.id === id);
+            return dam ? [{ kind: "dam" as const, id, name: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh }] : [];
+          }),
+        ];
+        return <li key={`riverGroup:${hit.river.id}`} className="space-y-1">
+          <h3 className="text-xs font-semibold">{t("แม่น้ำ{name}", { name: t.locale === "en" ? hit.river.nameEn : hit.river.nameTh })}</h3>
+          {hit.river.points.length === 0 && <p className="map-muted text-xs">{hit.noPointReason === "dam-controlled"
+            ? t("ยังไม่มีจุดวัดแม่น้ำนี้ในแอป — ปริมาณน้ำขึ้นกับการปล่อยน้ำของเขื่อน ดูที่เขื่อนด้านล่าง")
+            : t("ยังไม่มีจุดวัดแม่น้ำนี้ในแอป ดูที่เขื่อนด้านล่าง")}</p>}
+          <ul className="space-y-1">{rows.map(chip)}</ul>
+        </li>;
+      }) : <li className="map-muted text-xs">{t("ไม่พบชื่อนี้")}</li>}
     </ul>}
   </section>;
 }
