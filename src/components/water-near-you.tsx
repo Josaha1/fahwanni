@@ -8,9 +8,9 @@ import { upstreamDamsFor, type DamDownstreamFile, type UpstreamDam } from "@/lib
 import type { DamPath } from "@/lib/dams/paths";
 import type { Place } from "@/lib/place";
 import { riverColors } from "@/lib/rivers/colors";
+import { nearestRiverWithStatus } from "@/lib/rivers/near";
 import { statusWord } from "@/lib/rivers/status";
 import type { RiverStatus, RiverTrend } from "@/lib/rivers/types";
-import { distanceKm } from "@/lib/storms/normalize";
 import type { TmdWarnings } from "@/lib/tmd";
 
 type DamPathsFile = { type: "FeatureCollection"; features: DamPath[] };
@@ -29,9 +29,6 @@ async function getJson<T>(url: string, signal: AbortSignal): Promise<T> {
 function value<T>(result: PromiseSettledResult<T>): T | null {
   return result.status === "fulfilled" ? result.value : null;
 }
-
-/** A river point farther than this is not "near you" (Phuket → Surat Thani is ~170 km). */
-const NEAR_RIVER_KM = 120;
 
 export function WaterNearYou({ place, onRiverStatus }: { place: Place; onRiverStatus?: (status: RiverStatus | null, lat: number, lon: number) => void }) {
   const t = useT();
@@ -69,9 +66,7 @@ export function WaterNearYou({ place, onRiverStatus }: { place: Place; onRiverSt
   }, [place, inThailand]);
 
   const data = inThailand && result?.lat === place.lat && result.lon === place.lon ? result : null;
-  const nearbyRivers = (data?.rivers?.points ?? []).map((point) => ({ point, km: distanceKm(place, point) }))
-    .sort((a, b) => a.km - b.km || a.point.id.localeCompare(b.point.id));
-  const nearest = nearbyRivers.find(({ point, km }) => km <= NEAR_RIVER_KM && point.summary)?.point ?? null;
+  const nearest = nearestRiverWithStatus(place, data?.rivers?.points ?? []);
   const riverStatus = nearest?.summary?.today.status;
   useEffect(() => {
     if (data) onRiverStatus?.(riverStatus ?? null, place.lat, place.lon);
