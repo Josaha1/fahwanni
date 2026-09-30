@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const out = join(root, "public/models/dam.glb");
-const BUDGET = 300 * 1024;
+const BUDGET = 200 * 1024;
 const NAMES = ["Basin", "Wall", "Spillway", "WaterUp", "WaterDown", "RimLastYear", "Rim2554"];
 
 function validate() {

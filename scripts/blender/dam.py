@@ -2,8 +2,9 @@
 
   Blender -b -P scripts/blender/dam.py -- --out public/models/dam.glb
 
-Blender Z becomes glTF +Y. Below level 1.1 the constant-length V section
-stays exact: WaterUp's unit width scales to widthAt1 * level, at H * level.
+Blender Z becomes glTF +Y, and downstream +Y becomes glTF -Z: the existing
+Three.js camera (8, 7, -10) sees the downstream face and right-hand chute.
+The tapered V section supports X-only level scaling through level 1.1.
 """
 import argparse
 import json
@@ -18,8 +19,10 @@ from mathutils import Vector, noise
 H = 2.0
 WIDTH_AT_0 = 0.0
 WIDTH_AT_1 = 4.0
-BACK = -3.0
+BACK = -2.55
 FRONT = 0.6
+BASE = -0.38
+WET_TOP = H * 1.1
 SEED = Vector((17.3, 43.7, 9.1))
 
 
@@ -59,7 +62,7 @@ def mesh(name, vertices, faces, mat, location=(0, 0, 0), smooth=False):
     return obj
 
 
-def tint(obj, terrain=False, plain=False):
+def tint(obj, terrain=False, plain=False, surface_vertices=None):
     data = obj.data
     # Point colours keep smooth terrain vertices shared in the GLB. No bake
     # device is required: normal, valley depth and local concavity approximate AO.
@@ -76,12 +79,19 @@ def tint(obj, terrain=False, plain=False):
                             for i in neighbours[vertex.index])
                      / max(1, len(neighbours[vertex.index])))
         if terrain:
-            rock = min(1, max(0, (1 - normal) * 1.5 + (z - 2.3) * 0.35))
-            grass = (0.60, 0.67, 0.48) if z > 2.2 else (0.67, 0.57, 0.43)
-            base = tuple(a * (1 - rock) + b * rock
-                         for a, b in zip(grass, (0.59, 0.57, 0.54)))
-            ao = max(0.62, 0.78 + 0.15 * normal + 0.06 * min(1, z / H)
-                     - 0.6 * cavity)
+            skirt = surface_vertices is not None and vertex.index >= surface_vertices
+            if skirt:
+                base = (0.25, 0.18, 0.12)
+                ao = 0.72 + 0.18 * max(0, min(1, (z - BASE) / 3.5))
+            else:
+                grass = max(0, min(1, (z - 0.65) / 1.25))
+                base = tuple(a * (1 - grass) + b * grass
+                             for a, b in zip((0.46, 0.39, 0.23), (0.32, 0.48, 0.24)))
+                rock = max(0, min(1, (z - 2.3) / 0.9 + max(0, 0.60 - normal)))
+                base = tuple(a * (1 - rock) + b * rock
+                             for a, b in zip(base, (0.53, 0.55, 0.54)))
+                ao = max(0.48, 0.70 + 0.23 * normal + 0.06 * min(1, z / H)
+                         - 1.1 * cavity - 0.13 * math.exp(-abs(vertex.co.x) / 0.35))
         else:
             base = (0.73, 0.75, 0.77)
             ao = max(0.65, 0.76 + 0.16 * normal - 0.5 * cavity)
@@ -105,20 +115,93 @@ def terrain_height(x, y):
     return z
 
 
+def shore_width(y):
+    # Cross sections taper into the upstream bank. Their common tip is a
+    # vertical crease, so the existing runtime needs no length scaling at low water.
+    return max(0, min(1, (y - BACK) / 1.15))
+
+
 def basin(mat):
-    # Nonuniform X samples pin the V cusp and level-1.1 shoreline exactly;
-    # nonuniform Y samples pin FRONT before the downstream valley drops away.
     xs = [-3.2 + i / 10 for i in range(11)]
     xs += [-2.2 + 4.4 * i / 44 for i in range(1, 45)]
     xs += [2.2 + i / 10 for i in range(1, 11)]
-    ys = [BACK + (FRONT - BACK) * i / 22 for i in range(23)]
+    ys = [BACK + 1.15 * i / 8 for i in range(9)]
+    ys += [BACK + 1.15 + (FRONT - BACK - 1.15) * i / 12 for i in range(1, 13)]
     ys += [FRONT + (3.3 - FRONT) * i / 14 for i in range(1, 15)]
     nx = len(xs)
-    vertices = [(x, y, terrain_height(x, y)) for y in ys for x in xs]
-    faces = [(j * nx + i, j * nx + i + 1, (j + 1) * nx + i + 1, (j + 1) * nx + i)
-             for j in range(len(ys) - 1) for i in range(nx - 1)]
+    vertices, faces, rows, shared = [], [], [], {}
+
+    def add(point):
+        key = tuple(round(v, 7) for v in point)
+        if key not in shared:
+            shared[key] = len(vertices)
+            vertices.append(point)
+        return shared[key]
+
+    for y in ys:
+        factor = shore_width(y)
+        row = []
+        for u in xs:
+            if abs(u) <= WET_TOP + 1e-6:
+                x = u * factor
+            else:
+                x = math.copysign(WET_TOP * factor + (abs(u) - WET_TOP)
+                                  * (3.2 - WET_TOP * factor) / (3.2 - WET_TOP), u)
+            # The submerged slopes are ruled surfaces: x = level * shoreline_x.
+            # Outside them the original rocky shoulders and downstream river remain.
+            z = abs(u) if y <= FRONT and abs(u) <= WET_TOP + 1e-6 else terrain_height(u, y)
+            row.append(add((x, y, z)))
+        rows.append(row)
+    for j, (before, after) in enumerate(zip(rows, rows[1:])):
+        for i in range(nx - 1):
+            a, b, c, d = before[i], before[i + 1], after[i + 1], after[i]
+            if ys[j] < BACK + 1.15 and max(abs(xs[i]), abs(xs[i + 1])) <= WET_TOP + 1e-6:
+                # These ruled quads are not planar. Fix the diagonal so their
+                # shoreline bows outward between samples, never into WaterUp.
+                faces.extend([(a, b, c), (a, c, d)] if xs[i] >= 0
+                             else [(a, b, d), (b, c, d)])
+            else:
+                faces.append((a, b, c, d))
+
+    # Land behind the tapered tip closes the upstream end with a rising bank.
+    # Only the upper edge joins here; the two wet slopes already share the crease.
+    cap = rows[0][:11] + rows[0][-10:]
+    caps = [cap]
+    for j in range(1, 4):
+        t = j / 3
+        row = []
+        for i, index in enumerate(cap):
+            x, y, z = vertices[index]
+            target_x = -3.2 + 6.4 * i / (len(cap) - 1)
+            row.append(add((x * (1 - t) + target_x * t, BACK - 0.65 * t,
+                            z + t * (0.55 + 0.08 * math.sin(i * 0.7)))))
+        caps.append(row)
+        faces.extend((row[i], row[i + 1], caps[-2][i + 1], caps[-2][i])
+                     for i in range(len(row) - 1))
+
+    surface_vertices = len(vertices)
+    # Duplicate just the perimeter for hard normals and dark earth colours.
+    # The flat bottom and four skirts remain part of Basin, keeping seven nodes.
+    perimeter = list(rows[-1])
+    perimeter += [row[-1] for row in reversed(rows[:-1])]
+    perimeter += [row[-1] for row in caps[1:]]
+    perimeter += list(reversed(caps[-1][:-1]))
+    perimeter += [row[0] for row in reversed(caps[:-1])]
+    perimeter += [row[0] for row in rows[1:-1]]
+    skirt = len(vertices)
+    for index in perimeter:
+        x, y, z = vertices[index]
+        vertices.extend([(x, y, z), (x, y, BASE)])
+    for i in range(len(perimeter)):
+        a = skirt + 2 * i
+        b = skirt + 2 * ((i + 1) % len(perimeter))
+        faces.append((a, b, b + 1, a + 1))
+    faces.append(tuple(skirt + 2 * i + 1 for i in range(len(perimeter))))
     obj = mesh("Basin", vertices, faces, mat, smooth=True)
-    tint(obj, terrain=True)
+    for poly in obj.data.polygons:
+        if any(index >= surface_vertices for index in poly.vertices):
+            poly.use_smooth = False
+    tint(obj, terrain=True, surface_vertices=surface_vertices)
 
 
 def append_box(vertices, faces, low, high):
@@ -255,18 +338,22 @@ def spillway(concrete, water):
         uv.data[loop.index].uv = (loop.vertex_index % 2, distances[loop.vertex_index // 2])
 
 
+def shoreline(half):
+    # Open U: the dam is the fourth side. The tapered upstream banks meet at
+    # their shared crease; there is no crossbar suspended above open water.
+    return [(-half, FRONT, 0), (-half, BACK + 1.15, 0),
+            (-half * 0.75, BACK + 1.15 * 0.75, 0),
+            (-half * 0.5, BACK + 1.15 * 0.5, 0),
+            (-half * 0.25, BACK + 1.15 * 0.25, 0), (0, BACK, 0),
+            (half * 0.25, BACK + 1.15 * 0.25, 0),
+            (half * 0.5, BACK + 1.15 * 0.5, 0),
+            (half * 0.75, BACK + 1.15 * 0.75, 0),
+            (half, BACK + 1.15, 0), (half, FRONT, 0)]
+
+
 def ring(name, mat):
-    # Rounded rectangular shoreline: local Z zero and level-one object position
-    # retain runtime Y translation / X scaling, including the zero-width case.
-    vertices, faces, points = [], [], []
-    half = WIDTH_AT_1 / 2
-    r = 0.035
-    for cx, cy, start in [(half - r, FRONT - r, 0), (-half + r, FRONT - r, 90),
-                          (-half + r, BACK + r, 180), (half - r, BACK + r, 270)]:
-        for i in range(5):
-            angle = math.radians(start + i * 90 / 4)
-            points.append((cx + r * math.cos(angle), cy + r * math.sin(angle), 0))
-    tube(vertices, faces, points, 0.014, closed=True)
+    vertices, faces = [], []
+    tube(vertices, faces, shoreline(WIDTH_AT_1 / 2), 0.014, sides=4)
     obj = mesh(name, vertices, faces, mat, location=(0, 0, H), smooth=True)
     tint(obj, plain=True)
 
@@ -279,9 +366,8 @@ def build():
     basin(terrain)
     wall(concrete)
     spillway(concrete, water)
-    upstream = mesh("WaterUp", [(-0.5, BACK, 0), (0.5, BACK, 0),
-                                (0.5, FRONT, 0), (-0.5, FRONT, 0)],
-                    [(0, 1, 2, 3)], water)
+    points = shoreline(0.5)
+    upstream = mesh("WaterUp", points, [tuple(range(len(points)))], water)
     tint(upstream, plain=True)
     upstream["levelHeight"] = H
     upstream["widthAt0"] = WIDTH_AT_0
