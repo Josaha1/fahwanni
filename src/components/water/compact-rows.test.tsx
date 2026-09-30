@@ -79,4 +79,26 @@ describe("compact water rows", () => {
     expect(older).toContain("ข้อมูล 29 ก.ย.");
     expect(render("th", <DamRowHeader dam={{ ...dam, date: "2026-09-30" }} dataDate="2026-09-30" showDate={false} expanded={false} onToggle={() => {}} />)).not.toContain("ข้อมูล 30 ก.ย.");
   });
+
+  it("shows an observed point as measured dam release with no model status", () => {
+    const observed: RiverRow = {
+      id: "maeklong-ratchaburi", nameTh: "แม่กลอง โพธาราม", nameEn: "Mae Klong River at Photharam", lat: 13.6, lon: 99.8,
+      downstreamOfDam: null, kind: "observed", summary: null, releaseDams: ["200401", "200402"],
+      gauge: { code: "RAJ001", name: "โพธาราม", lat: 13.6, lon: 99.8, km: 0, month: "2026-07",
+        levelMsl: { min: 0.05, mean: 0.25, max: 0.64 }, bankMsl: null, days: { from: "2026-07-01", to: "2026-07-31", count: 31 } },
+      release: { today: { date: "2026-09-29", totalCms: 32.5, missing: ["200402"] }, trend: null,
+        dams: [{ damId: "200401", releaseCms: 32.5, date: "2026-09-29" }, { damId: "200402", releaseCms: null, date: null }],
+        days: [{ date: "2026-09-28", totalCms: 30 }, { date: "2026-09-29", totalCms: 32.5 }] },
+    };
+    const header = render("th", <RiverRowHeader point={observed} expanded={false} onToggle={() => {}} />);
+    expect(header).toContain("ระบายจากเขื่อน 33 ลบ.ม./วินาที");
+    expect(header).toContain("วัดจริง");
+    expect(header).not.toMatch(/แบบจำลอง|สูงกว่าปกติ/);
+    const details = render("th", <RiverDetails point={observed} />);
+    expect(details).toContain("ไม่ใช่ปริมาณน้ำที่ไหลผ่านโพธาราม");
+    expect(details).toContain("ไม่รายงานวันนี้");
+    expect(details).toContain("ระดับน้ำที่สถานีจริง โพธาราม");
+    expect(details).not.toContain("ข้อมูลจุดนี้ไม่พร้อมใช้งาน");
+    expect(render("en", <RiverRowHeader point={observed} expanded={false} onToggle={() => {}} />)).toContain("Measured");
+  });
 });

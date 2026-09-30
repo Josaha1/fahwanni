@@ -37,3 +37,11 @@ function releaseTrend(today: ObservedRelease["today"], days: ObservedRelease["da
   if (today.totalCms < base * 0.9) return "falling";
   return "steady";
 }
+
+/** The number a watched river point is compared by: model discharge, or the observed point's summed release. */
+export function riverWatchValue(point: { summary: { today: { value: number; date: string } } | null; release?: ObservedRelease | null }):
+  { value: number; date: string } | null {
+  if (point.summary) return { value: point.summary.today.value, date: point.summary.today.date };
+  const today = point.release?.today;
+  return today && !today.missing.length ? { value: today.totalCms, date: today.date } : null;
+}

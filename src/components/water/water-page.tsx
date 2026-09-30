@@ -12,6 +12,7 @@ import { nearestProvince } from "@/lib/map/nearest";
 import type { Place } from "@/lib/place";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
 import { distanceKm } from "@/lib/storms/normalize";
+import { riverWatchValue } from "@/lib/rivers/observed";
 import { statusWord } from "@/lib/rivers/status";
 import type { TmdWarnings } from "@/lib/tmd";
 import type { TideSeries } from "@/lib/tide/tide";
@@ -91,15 +92,18 @@ export function WaterPage() {
   const oldestDamDate = dams.data?.dataDate ? oldestDifferentDamDate(dams.data.dams, dams.data.dataDate) : null;
   const currentWatch: WatchItem[] = useMemo(() => [
     ...(dams.data?.dams ?? []).map((dam) => ({ kind: "dam" as const, id: dam.id, value: dam.storagePct, unit: "pct" as const, date: dam.date })),
-    ...(rivers.data?.points ?? []).flatMap((point) => point.summary ? [{ kind: "river" as const, id: point.id,
-      value: point.summary.today.value, unit: "cms" as const, date: point.summary.today.date }] : []),
+    ...(rivers.data?.points ?? []).flatMap((point) => {
+      const watched = riverWatchValue(point);
+      return watched ? [{ kind: "river" as const, id: point.id, value: watched.value, unit: "cms" as const, date: watched.date }] : [];
+    }),
   ], [dams.data, rivers.data]);
   const newsItems: NewsItem[] = useMemo(() => {
     const riverIds = new Set(nearbyRivers.slice(0, 3).map(({ point }) => point.id));
     return [
-      ...(rivers.data?.points ?? []).filter((point) => point.summary && (riverIds.has(point.id) || watch[`river:${point.id}`]))
+      ...(rivers.data?.points ?? []).filter((point) => riverWatchValue(point) && (riverIds.has(point.id) || watch[`river:${point.id}`]))
         .map((point) => ({ key: `river:${point.id}` as const, label: t.locale === "en" ? point.nameEn || point.nameTh : point.nameTh,
-          value: point.summary!.today.value, unit: "cms" as const, status: statusWord(point.summary!.today.status), date: point.summary!.today.date })),
+          value: riverWatchValue(point)!.value, unit: "cms" as const,
+          ...(point.summary ? { status: statusWord(point.summary.today.status) } : {}), date: riverWatchValue(point)!.date })),
       ...(dams.data?.dams ?? []).filter((dam) => watch[`dam:${dam.id}`])
         .map((dam) => ({ key: `dam:${dam.id}` as const, label: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh,
           value: dam.storagePct, unit: "pct" as const, date: dam.date })),
@@ -187,7 +191,7 @@ export function WaterPage() {
           return <li key={point.id} className="py-1 first:pt-0 last:pb-0">
             <RiverRowHeader point={point} km={km} watched={watchedNow} expanded={expanded}
               onToggle={() => toggleRiver(point.id)}
-              onToggleWatch={point.summary ? () => changeWatch({ kind: "river", id: point.id, value: point.summary!.today.value, unit: "cms", date: point.summary!.today.date }) : undefined} />
+              onToggleWatch={riverWatchValue(point) ? () => changeWatch({ kind: "river", id: point.id, unit: "cms", ...riverWatchValue(point)! }) : undefined} />
             {expanded ? <><RiverDetails point={point} upstream={upstream} dams={dams.data?.dams ?? []} expanded showDisclaimers={false} showDate={false} showSummary={false}
               damHref={(id) => `/map?mode=water&dam=${encodeURIComponent(id)}`} />
               <Link className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-given underline underline-offset-2" href={`/map?mode=water&river=${encodeURIComponent(point.id)}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t("ดูบนแผนที่")}</Link></>

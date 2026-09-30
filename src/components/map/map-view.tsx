@@ -19,6 +19,7 @@ import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { rainModeAt } from "@/lib/precip/render";
 import { windMotion } from "@/lib/wind/particles";
+import { riverWatchValue } from "@/lib/rivers/observed";
 import { useLite } from "@/hooks/use-lite";
 import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
@@ -117,8 +118,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [watch, setWatch] = useState(readWatch);
   const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, { kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }));
   const toggleRiverWatch = (id: string) => {
-    const detail = rivers?.points.find((point) => point.id === id)?.summary;
-    if (detail) setWatch((current) => toggleWatch(current, { kind: "river", id, value: detail.today.value, unit: "cms", date: detail.today.date }));
+    const point = rivers?.points.find((item) => item.id === id);
+    const watched = point ? riverWatchValue(point) : null;
+    if (watched) setWatch((current) => toggleWatch(current, { kind: "river", id, unit: "cms", ...watched }));
   };
   useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
@@ -341,8 +343,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (!water || riversStatus !== "ready" || !rivers) return;
     let active = true;
     queueMicrotask(() => {
-      if (active) setWatch((current) => refreshWatch(current, rivers.points.flatMap((point) => point.summary ? [{ kind: "river" as const, id: point.id,
-        value: point.summary.today.value, unit: "cms" as const, date: point.summary.today.date }] : [])));
+      if (active) setWatch((current) => refreshWatch(current, rivers.points.flatMap((point) => {
+        const watched = riverWatchValue(point);
+        return watched ? [{ kind: "river" as const, id: point.id, unit: "cms" as const, ...watched }] : [];
+      })));
     });
     return () => { active = false; };
   }, [water, riversStatus, rivers]);

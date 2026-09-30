@@ -36,6 +36,7 @@ import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import { readRadarLevel } from "../radar-tile";
 import { RiverDetails, type RiversPayload } from "@/components/water/river-details";
+import { riverWatchValue } from "@/lib/rivers/observed";
 import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
@@ -154,7 +155,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         {dam && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `dam:${dam.id}`)}
           aria-label={t(Object.hasOwn(watch, `dam:${dam.id}`) ? "เลิกติดตามเขื่อนนี้" : "ติดตามเขื่อนนี้")}
           onClick={() => onToggleWatch(dam)}>{Object.hasOwn(watch, `dam:${dam.id}`) ? "★" : "☆"}</button>}
-        {river?.summary && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `river:${river.id}`)}
+        {river && riverWatchValue(river) && <button type="button" className="map-icon-btn" aria-pressed={Object.hasOwn(watch, `river:${river.id}`)}
           aria-label={t(Object.hasOwn(watch, `river:${river.id}`) ? "เลิกติดตามแม่น้ำนี้" : "ติดตามแม่น้ำนี้")}
           onClick={() => onToggleRiverWatch(river.id)}>{Object.hasOwn(watch, `river:${river.id}`) ? "★" : "☆"}</button>}
         <button type="button" className="map-icon-btn" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>

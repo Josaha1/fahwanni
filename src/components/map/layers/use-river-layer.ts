@@ -11,12 +11,22 @@ import { useMapContext } from "../map-provider";
 import { useStyleEffect } from "../use-style-effect";
 
 const SOURCE = "rivers";
+/** Same neutral grey as observed rows on /water. */
+const OBSERVED_COLOR = "#7c8799";
 const LAYERS = ["river-circle", "river-label"] as const;
 
 export function useRiverLayer(map: Map | null, rivers: RiversPayload | null, enabled: boolean, waterDay: number) {
   const { theme } = useMapContext();
   const t = useT();
   const data = useMemo(() => ({ type: "FeatureCollection" as const, features: enabled ? (rivers?.points ?? []).flatMap((point) => {
+    if (point.kind === "observed") {
+      // Measured points have no model status: neutral ring, label without a forecast arrow beyond today.
+      if (!point.release?.today && !point.gauge) return [];
+      const arrow = point.release?.trend === "rising" ? " ↗" : point.release?.trend === "falling" ? " ↘" : point.release?.trend === "steady" ? " →" : "";
+      const name = t.locale === "en" ? point.nameEn.split(" at ")[0] : point.nameTh.split(" ")[0];
+      return [{ type: "Feature" as const, properties: { id: point.id, color: OBSERVED_COLOR, label: `${name}${arrow}` },
+        geometry: { type: "Point" as const, coordinates: [point.lon, point.lat] } }];
+    }
     const selected = riverAtDay(point.summary, waterDay);
     if (!selected || !point.summary) return [];
     const next = riverAtDay(point.summary, Math.min(7, waterDay + 1));

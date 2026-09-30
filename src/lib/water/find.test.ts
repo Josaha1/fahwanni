@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../dams/fixture-rid.json";
 import { parseRidDams } from "../dams/rid";
-import points from "../../../public/data/river-points.json";
+import modelPoints from "../../../public/data/river-points.json";
+import observedPoints from "../../../public/data/observed-points.json";
 import { filterDams, findWater } from "./find";
 import { waterRivers } from "./rivers";
 
 const { dams } = parseRidDams(fixture);
+const points = { points: [...modelPoints.points, ...observedPoints.points] };
 
 describe("water filters and search", () => {
   it("keeps dams by chip", () => {
@@ -25,12 +27,13 @@ describe("water filters and search", () => {
     expect(findWater("เชียงใหม่", dams, points.points, "th")[0]).toEqual({ kind: "river", id: "ping-chiangmai", name: "ปิง เชียงใหม่" });
   });
 
-  it("finds Mae Klong and its dams in Thai and English", () => {
+  it("finds Mae Klong's observed point and its dams in Thai and English", () => {
     for (const [query, locale] of [["แม่น้ำแม่กลอง", "th"], ["Mae Klong River", "en"], ["  The   Mae Klong River  ", "en"], ["River Mae Klong", "en"], ["Mae Klong the", "en"], ["ลำน้ำแม่กลอง", "th"], ["น้ำ แม่กลอง", "th"]] as const) {
       expect(findWater(query, dams, points.points, locale)).toEqual([expect.objectContaining({
         kind: "riverGroup", river: expect.objectContaining({ id: "maeklong" }),
-        points: [], dams: ["200401", "200402"], noPointReason: "dam-controlled",
+        points: ["maeklong-ratchaburi"], dams: ["200401", "200402"],
       })]);
+      expect(findWater(query, dams, points.points, locale)[0]).not.toHaveProperty("noPointReason");
     }
   });
 
@@ -54,7 +57,8 @@ describe("water filters and search", () => {
     for (const query of ["แม่น้ำสุพรรณ", "Suphan River"]) {
       expect(findWater(query, dams, points.points, "th")[0]).toMatchObject({ kind: "riverGroup", river: { id: "thachin" }, dams: ["100303"] });
     }
-    expect(findWater("สุพรรณบุรี", dams, points.points, "th")).toEqual([]);
+    // The province name is not a river alias; it now finds the observed point by its own name.
+    expect(findWater("สุพรรณบุรี", dams, points.points, "th")).toEqual([{ kind: "river", id: "thachin-suphanburi", name: "ท่าจีน เมืองสุพรรณบุรี" }]);
     expect(findWater("น้ำอูน", dams, points.points, "th")[0]).toMatchObject({ kind: "dam", id: "100202" });
   });
 
@@ -73,5 +77,11 @@ describe("water filters and search", () => {
     expect(findWater("แม่น้ำ", dams, points.points, "th")).toEqual([]);
     expect(findWater("the river", dams, points.points, "en")).toEqual([]);
     expect(findWater("unknown river", dams, points.points, "en")).toEqual([]);
+  });
+
+  it("gives every river in the table at least one loaded point, and Songkhram only Nam Oon", () => {
+    const loaded = new Set(points.points.map((point) => point.id));
+    for (const river of waterRivers) expect(river.points.some((id) => loaded.has(id)), river.id).toBe(true);
+    expect(waterRivers.find((river) => river.id === "songkhram")?.dams).toEqual(["100202"]);
   });
 });
