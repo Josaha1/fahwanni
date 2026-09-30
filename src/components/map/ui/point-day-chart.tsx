@@ -1,6 +1,8 @@
 "use client";
 
 import { useT } from "@/i18n/client";
+import { ChartTable } from "@/components/ui/chart-table";
+import { pointDayChartSummary } from "@/lib/chart-summaries";
 import type { PointHour } from "@/lib/timeline/values";
 
 /** 24-hour strip for a tapped point: temperature line over rain-chance bars (model values). */
@@ -16,10 +18,9 @@ export function PointDayChart({ hours }: { hours: PointHour[] }) {
   const y = (temp: number) => top + (1 - (temp - low) / span) * (chartHeight - 8) + 4;
   const line = hours.flatMap((hour, index) => hour.temp === null ? [] : [`${x(index)},${y(hour.temp)}`]).join(" ");
   const hourLabel = (time: number) => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Bangkok" }).format(time);
-  const rainy = hours.filter((hour) => (hour.prob ?? 0) >= 50).length;
   return <figure className="mt-3">
     <svg className="w-full" viewBox={`0 0 ${width} 68`} role="img"
-      aria-label={t("24 ชม. ข้างหน้า: {low}–{high}° · ฝนโอกาส 50% ขึ้นไป {n} ชม.", { low: Math.round(low), high: Math.round(high), n: rainy })}>
+      aria-label={pointDayChartSummary(hours, t)}>
       {hours.map((hour, index) => hour.prob !== null && hour.prob > 0 && <rect key={`p${hour.time}`} x={x(index) - step * 0.35}
         y={base - (hour.prob / 100) * chartHeight} width={step * 0.7} height={(hour.prob / 100) * chartHeight}
         fill="#3b82f6" opacity={0.15 + (hour.prob / 100) * 0.45} />)}
@@ -33,5 +34,13 @@ export function PointDayChart({ hours }: { hours: PointHour[] }) {
       </text>)}
     </svg>
     <figcaption className="map-muted text-xs">{t("เส้น: อุณหภูมิ · แท่ง: โอกาสฝน (แบบจำลอง)")}</figcaption>
+    <ChartTable caption={t("ตารางพยากรณ์รายชั่วโมง 24 ชั่วโมง")}
+      columns={[t("เวลา"), t("อุณหภูมิ (°C)"), t("โอกาสฝน (%)"), t("ปริมาณฝน (มม.)")]}
+      rows={hours.map((hour) => [
+        new Intl.DateTimeFormat(t.intl, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Bangkok" }).format(hour.time),
+        hour.temp === null ? "—" : new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 }).format(hour.temp),
+        hour.prob === null ? "—" : new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 }).format(hour.prob),
+        hour.precip === null ? "—" : new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 }).format(hour.precip),
+      ])} />
   </figure>;
 }

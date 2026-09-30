@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
+import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
@@ -109,6 +109,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { place } = useLastPlace();
   const { favourites } = useFavourites();
   const t = useT();
+  const mapSummaryId = useId();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
@@ -692,6 +693,23 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isDesktop, mode, water, waterDay, domain, effectiveTime, reducedMotion, changeMode]);
   const showLegend = mapState.primary !== "rain" || rainOn;
+  const spokenOverlays = water ? [
+    allRoutes && t("เส้นทางน้ำทุกเขื่อน"), waterRadarOn && t("ฝนตอนนี้ (เรดาร์)"),
+    rainAccumOn && t("ฝนสะสม 3 วัน"), satFloodOn && t("น้ำท่วมจากดาวเทียม"),
+    surfaceWaterOn && t("พื้นที่ที่เคยมีน้ำขัง (1984–2021)"),
+  ] : [
+    rainVisible && t("เรดาร์ฝน"), windOn && Boolean(wind) && t("ลม"),
+    stormsOn && storms.length > 0 && t("พายุ"), quakesOn && quakes.length > 0 && t("แผ่นดินไหว"),
+    thermalOn && t("จุดความร้อน (ไฟ)"), imergOn && t("ฝนจากดาวเทียม (ล่าช้า ~6 ชม.)"),
+  ];
+  const overlaySummary = spokenOverlays.filter((label): label is string => Boolean(label)).join(", ") || t("ไม่มี");
+  const primaryLabels = { rain: "ฝน", temp: "อุณหภูมิ", heat: "ดัชนีความร้อน", pm25: "ฝุ่น PM2.5", cloud: "เมฆ", satellite: "ดาวเทียม" };
+  const mapSummary = water
+    ? t("แผนที่น้ำ · เขื่อน {count} · ซ้อนทับ: {overlays}", {
+      count: damsStatus === "ready" && dams ? t("{n} แห่ง", { n: visibleDamIds?.size ?? dams.dams.length }) : t("กำลังโหลดข้อมูลเขื่อน…"),
+      overlays: overlaySummary,
+    })
+    : t("แผนที่อากาศ · ชั้นหลัก {layer} · ซ้อนทับ: {overlays}", { layer: t(primaryLabels[primary]), overlays: overlaySummary });
   const panelContent = <MapPanelContent placeName={placeName} compact={compact} desktop={isDesktop} timeline={isDesktop ? null : timeline}
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
@@ -707,7 +725,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,
     "--map-label": BASE[theme].label, "--map-muted": BASE[theme].labelMuted, "--map-accent": DATA.pin,
   } as CSSProperties}>
-    <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} aria-label={t("แผนที่")} />
+    <div ref={container} className="absolute inset-0" style={{ position: "absolute" }} role="region" aria-label={t("แผนที่")} aria-describedby={mapSummaryId} />
+    <p id={mapSummaryId} className="sr-only" aria-live="polite" aria-atomic="true">{mapSummary}</p>
     {mapInstance && wind && windOn && !water && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />

@@ -11,6 +11,8 @@ import { pm25Level } from "@/lib/air-level";
 import { type HourlySeries } from "@/lib/timeline/store";
 import { modelRainLevelAt, pointHours, seriesValueAt } from "@/lib/timeline/values";
 import { PointDayChart } from "./point-day-chart";
+import { ChartTable } from "@/components/ui/chart-table";
+import { damSparklineSummary, dayLabel } from "@/lib/chart-summaries";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/constants";
 import { modelRainAt, sampleGrid, windAt, windAtField } from "@/lib/map/probe";
 import { nearestProvince, pointPlace } from "@/lib/map/nearest";
@@ -229,7 +231,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         <summary className="cursor-pointer font-semibold">{t("รายละเอียดเพิ่มเติม")}</summary>
         <div className="mt-2 space-y-3">
           {dam.usablePct !== null && <p className="map-muted">{t("ใช้การได้ {pct}%", { pct: percent.format(dam.usablePct) })}</p>}
-          {damTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} color={damBandColor(dam.band)} />}
+          {damTrend && damsTrend && trendDelta(damTrend) !== null && <DamSparkline values={damTrend} dates={damsTrend.dates} color={damBandColor(dam.band)} />}
           {historyRows.length > 0 && <div className="space-y-1">
             {historyRows.map((row) => <p key={row.label}>{t(row.label, { date: damDate(row.date, t.locale), pct: percent.format(row.value), change: row.change })}</p>)}
             <p className="map-muted text-xs">{t("ปริมาณน้ำในเขื่อนอย่างเดียวไม่ได้บอกว่าจะท่วม")}</p>
@@ -257,7 +259,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   </section>;
 }
 
-function DamSparkline({ values, color }: { values: (number | null)[]; color: string }) {
+function DamSparkline({ values, dates, color }: { values: (number | null)[]; dates: string[]; color: string }) {
   const t = useT();
   const delta = trendDelta(values);
   if (delta === null) return null;
@@ -276,10 +278,13 @@ function DamSparkline({ values, color }: { values: (number | null)[]; color: str
   if (segment.length > 1) segments.push(segment.join(" "));
   const change = `${delta >= 0 ? "+" : ""}${new Intl.NumberFormat(t.intl, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(delta)}`;
   return <div className="mt-2">
-    <svg className="w-full" height="36" viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+    <svg className="w-full" height="36" viewBox="0 0 100 36" preserveAspectRatio="none" role="img" aria-label={damSparklineSummary(values, dates, t)}>
       {segments.map((points) => <polyline key={points} points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}
     </svg>
     <p className="map-muted text-xs">{t("7 วัน: {change}%", { change })}</p>
+    <ChartTable caption={t("ตารางปริมาณน้ำในเขื่อน 7 วัน")}
+      columns={[t("วัน"), t("ปริมาณน้ำในเขื่อน (%)")]}
+      rows={values.map((value, index) => [dates[index] ? dayLabel(dates[index], t) : "—", value === null ? "—" : new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 }).format(value)])} />
   </div>;
 }
 
