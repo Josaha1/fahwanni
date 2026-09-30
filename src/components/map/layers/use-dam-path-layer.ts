@@ -9,7 +9,7 @@ import { useStyleEffect } from "../use-style-effect";
 
 const LAYERS = ["dam-path-casing", "dam-path", "dam-path-flow", "dam-path-arrows"] as const;
 
-export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCms: number | null, isDesktop: boolean, reducedMotion: boolean) {
+export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCms: number | null, isDesktop: boolean, reducedMotion: boolean, lite: boolean) {
   const { theme } = useMapContext();
   const width = flowWidth(releaseCms);
   useStyleEffect(map, (live) => {
@@ -32,13 +32,14 @@ export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCm
     if (live.getSource("dam-path")) live.removeSource("dam-path");
   }, [path, theme, width]);
 
-  // Runs only while a route is shown, motion is allowed and the tab is visible.
+  // A selected route animates for one minute, then keeps its current dash pattern.
   useEffect(() => {
-    if (!map || !path || reducedMotion) return;
+    if (!map || !path || lite) return;
     let frame = 0;
     let shown = -1;
     const start = performance.now();
     const tick = (now: number) => {
+      if (now - start >= 60_000) return;
       const step = flowStep(now - start);
       if (step !== shown && map.getLayer("dam-path-flow")) {
         map.setPaintProperty("dam-path-flow", "line-dasharray", FLOW_DASH_STEPS[step]);
@@ -48,12 +49,12 @@ export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCm
     };
     const onVisibilityChange = () => {
       cancelAnimationFrame(frame);
-      if (document.visibilityState === "visible") frame = requestAnimationFrame(tick);
+      if (document.visibilityState === "visible" && performance.now() - start < 60_000) frame = requestAnimationFrame(tick);
     };
     onVisibilityChange();
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => { cancelAnimationFrame(frame); document.removeEventListener("visibilitychange", onVisibilityChange); };
-  }, [map, path, reducedMotion]);
+  }, [map, path, lite]);
 
   useEffect(() => {
     if (!map || !path) return;

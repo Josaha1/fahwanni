@@ -466,6 +466,8 @@ export const common: Record<string, string> = {
   "แสดงปุ่มลัด": "Show keyboard shortcuts",
   "น้ำ": "Water",
   "แผนที่ 3 มิติ": "3D map",
+  "โหมดประหยัด (ลดภาพเคลื่อนไหว)": "Lite mode (less motion)",
+  "เปิดอัตโนมัติเพราะเครื่องนี้ตั้งลดภาพเคลื่อนไหว/หน่วยความจำน้อย": "Turned on automatically because this device requests less motion or has limited resources",
   "% ความจุ": "% of capacity",
   "น้ำไหลผ่านเขื่อน (ระบาย)": "Flow through the dam (release)",
   "ข้อมูลฝนหนักไม่พร้อมใช้งาน": "Heavy rain data is unavailable",

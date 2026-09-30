@@ -19,6 +19,7 @@ import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { rainModeAt } from "@/lib/precip/render";
 import { windMotion } from "@/lib/wind/particles";
+import { liteDefault, readDeviceEnv } from "@/lib/device";
 import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
@@ -147,7 +148,21 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const shortcutsTrigger = useRef<HTMLElement>(null);
   const [immersive, setImmersive] = useState(false);
   const [makingImage, setMakingImage] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
+  const [device, setDevice] = useState(readDeviceEnv);
+  const reducedMotion = device.reducedMotion;
+  const [liteOverride, setLiteOverride] = useState<boolean | null>(() => {
+    try {
+      const saved = localStorage.getItem("fah-lite");
+      return saved === "true" ? true : saved === "false" ? false : null;
+    } catch { return null; }
+  });
+  const automaticLite = liteDefault(device);
+  const lite = liteOverride ?? automaticLite;
+  const toggleLite = () => {
+    const next = !lite;
+    setLiteOverride(next);
+    try { localStorage.setItem("fah-lite", String(next)); } catch { /* Keep the setting for this visit only. */ }
+  };
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
       const saved = Number(localStorage.getItem("fah-map-play-speed"));
@@ -183,7 +198,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { series: pm25Series, loadedDays: pm25LoadedDays, lastAvailable: pm25LastAvailable, loading: pm25Loading, error: pm25Error } = useForecastDays({ source: "pm25", enabled: !water && primary === "pm25", focusTime: effectiveTime, nowMs });
   // Rain can be shown when there is radar for the past or model rain for the future.
   const radarAvailable = frames.length > 0 || Boolean(windSeries?.grids.precip);
-  const rainSource = rainSourceAt(effectiveTime, frames.map((frame) => Date.parse(frame.time)), nowMs);
+  const source = rainSourceAt(effectiveTime, frames.map((frame) => Date.parse(frame.time)), nowMs);
+  // In lite mode, show the closer source at the radar/model seam without mixing two rasters.
+  const rainSource: typeof source = lite && source.kind === "blend"
+    ? effectiveTime - nowMs <= 30 * MINUTE
+      ? { kind: "radar", index: source.index, frameTime: source.frameTime }
+      : { kind: "model" }
+    : source;
   const hasRadarFrame = rainSource.kind === "radar" || rainSource.kind === "blend";
   const legendRainMode = rainSource.kind === "radar" || rainSource.kind === "none" ? undefined
     : rainSource.kind === "blend" ? "blend" : rainModeAt(effectiveTime - nowMs);
@@ -205,17 +226,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const pm25Sample = pm25Series ? sampleSeries(pm25Series, "pm25", effectiveTime) : null;
   const pm25Values = pm25Sample ? (pm25Sample.exact ? pm25Sample.a : lerpGrid(pm25Sample.a, pm25Sample.b, pm25Sample.f)) : null;
   const locationPm25 = primary === "pm25" && pm25Values ? sampleGrid(scalarGrid, pm25Values, place.lon, place.lat) : null;
-  const [device] = useState(() => {
-    const nav = navigator as Navigator & { connection?: { saveData?: boolean }; deviceMemory?: number };
-    return { saveData: nav.connection?.saveData ?? false, deviceMemory: nav.deviceMemory };
-  });
-  const motion = windMotion({ reducedMotion, ...device });
+  const motion = windMotion({ ...device, reducedMotion: lite, saveData: lite });
   const windHour = wind ? Math.max(0, wind.hours.findLastIndex((hour) => Date.parse(hour) <= effectiveTime)) : 0;
   const windMinute = roundTo(effectiveTime, MINUTE);
   const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
-  const terrainOk = terrainAvailable(device.deviceMemory);
-  const rainImageSize = terrainOn || (device.deviceMemory !== undefined && device.deviceMemory < 4) ? 256 : 512;
+  const terrainOk = !lite && terrainAvailable(device.deviceMemory);
+  const rainImageSize = lite || terrainOn ? 256 : 512;
   // Water mode can overlay the newest radar frame ("ฝนตอนนี้") to spot heavy cells near dams and rivers.
   const [waterRadar, setWaterRadar] = useState(false);
   const waterRadarOn = water && waterRadar && frames.length > 0;
@@ -232,7 +249,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
-  useTerrainLayer(mapInstance, terrainOn, reducedMotion);
+  useTerrainLayer(mapInstance, terrainOn && terrainOk, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
   useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
@@ -255,7 +272,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     })()
     : "";
   const activeRelease = activePath ? dams?.dams.find((dam) => dam.id === activePath.id)?.releaseCms ?? null : null;
-  useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion);
+  useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion, lite);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
   useFavouriteLayer(mapInstance, favourites, place, windSeries, effectiveTime, !water);
 
@@ -361,7 +378,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => { setReducedMotion(query.matches); if (query.matches) dispatch({ type: "stop" }); };
+    const update = () => { setDevice(readDeviceEnv()); if (query.matches) dispatch({ type: "stop" }); };
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
@@ -747,6 +764,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         surfaceWater: { label: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", checked: surfaceWaterOn, onChange: () => setSurfaceWaterOn((on) => !on) },
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
+      lite={{ label: "โหมดประหยัด (ลดภาพเคลื่อนไหว)", checked: lite, onChange: toggleLite }} automaticLite={lite && liteOverride === null && automaticLite}
       fullscreen={immersive} onFullscreen={toggleFullscreen}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
     <ShortcutsDialog dialogRef={shortcutsDialog} triggerRef={shortcutsTrigger} />
