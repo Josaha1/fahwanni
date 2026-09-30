@@ -8,6 +8,7 @@ import { AdviceStrip } from "@/components/advice-strip";
 import { AlertsCard } from "@/components/alerts-card";
 import { AqiCard } from "@/components/aqi-card";
 import { MarineCard } from "@/components/marine-card";
+import { MenuTip } from "@/components/menu-tip";
 import { FarmCard } from "@/components/farm-card";
 import { LongWeekendCard } from "@/components/long-weekend-card";
 import { QuakeCard } from "@/components/quake-card";
@@ -88,9 +89,10 @@ export function WeatherApp() {
   return (
     <main className="app-shell">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-3xl">{t("ฟ้าวันนี้")}</h1>
+        <h1 id="home-title" className="text-3xl" tabIndex={-1}>{t("ฟ้าวันนี้")}</h1>
         <SettingsSheet />
       </div>
+      <MenuTip onClose={() => (document.getElementById("home-today-essentials") ?? document.getElementById("home-title"))?.focus()} />
       <OfflineSupport />
       <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={locate} locating={locating} />
       <FavouritesRow place={place} onSelect={selectPlace} />
@@ -98,7 +100,7 @@ export function WeatherApp() {
       <div className="space-y-4">
         {showStormBanner && <StormBanner place={place} />}
         {(brief.rain || brief.heat || brief.water) && <section className="placeholder-card" aria-label={t("วันนี้ต้องรู้")}>
-          <h2 className="text-xl">{t("วันนี้ต้องรู้")}</h2>
+          <h2 id="home-today-essentials" className="text-xl" tabIndex={-1}>{t("วันนี้ต้องรู้")}</h2>
           <div className="mt-2 space-y-1 text-sm">
             {brief.rain && <p className="truncate" title={brief.rain}>{brief.rain}</p>}
             {brief.heat && <p className="truncate" title={brief.heat}>{brief.heat}</p>}
