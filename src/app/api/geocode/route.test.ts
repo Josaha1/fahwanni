@@ -1,9 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET } from "./route";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+let GET: typeof import("./route").GET;
 
 const request = (query: string) => new Request(`http://localhost/api/geocode?${query}`);
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(async () => {
+  vi.resetModules();
+  ({ GET } = await import("./route"));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("GET /api/geocode", () => {
   it("rejects blank and overlong queries", async () => {
@@ -28,6 +37,7 @@ describe("GET /api/geocode", () => {
     const url = new URL(fetchMock.mock.calls[0][0]);
     expect(url.searchParams.get("count")).toBe("8");
     expect(url.searchParams.get("language")).toBe("en");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ next: { revalidate: 86400 }, signal: expect.any(AbortSignal) });
   });
 
   it("tries the district prefix before English and preserves province hits on failure", async () => {
@@ -62,5 +72,39 @@ describe("GET /api/geocode", () => {
     const { results } = await response.json();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(results[0]).toMatchObject({ name: "หัวหิน", admin: "ประจวบคีรีขันธ์" });
+  });
+
+  it("serves stale results during a 429 breaker, then retries after Retry-After", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
+        { id: 123, name: "Old City", latitude: 20, longitude: 99 },
+      ] }) })
+      .mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers({ "Retry-After": "120" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
+        { id: 124, name: "New City", latitude: 21, longitude: 100 },
+      ] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const query = "q=K4-unique-city&lang=en";
+    const first = await GET(request(query));
+    expect(first.headers.get("Cache-Control")).toBe("public, s-maxage=86400");
+
+    vi.setSystemTime(24 * 60 * 60 * 1000);
+    const stale = await GET(request(query));
+    expect((await stale.json()).results[0].name).toBe("Old City");
+    expect(stale.headers.get("x-geocode")).toBe("stale");
+    expect(stale.headers.get("Cache-Control")).toBe("public, s-maxage=60");
+
+    const blocked = await GET(request("q=K4-other-city&lang=en"));
+    expect((await blocked.json()).results).toEqual([]);
+    expect(blocked.headers.get("x-geocode")).toBe("degraded");
+    expect(blocked.headers.get("Cache-Control")).toBe("public, s-maxage=60");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.setSystemTime(24 * 60 * 60 * 1000 + 120_000);
+    const recovered = await GET(request(query));
+    expect((await recovered.json()).results[0].name).toBe("New City");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
