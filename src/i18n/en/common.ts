@@ -1,4 +1,6 @@
 export const common: Record<string, string> = {
+  "เกิดข้อผิดพลาด": "Something went wrong",
+  "กลับหน้าแรก": "Back to home",
   "ย่อแผง": "Collapse panel",
   "ขยายแผง": "Expand panel",
   "ลำน้ำจากเขื่อน{name}": "River from {name} Dam",
