@@ -1,7 +1,7 @@
 export type FreshnessInput = {
   radarTime?: string | null; modelFetchedAt?: number | null; damsDate?: string | null; rainObservedAt?: string | null;
   riversDate?: string | null;
-  satFloodDate?: string | null;
+  satFloodDate?: string | null; thermalDate?: string | null;
   himawariTime?: string | null; imergTime?: string | null;
   /** undefined: warnings not loaded; null: loaded and there is none right now. */
   warningAt?: string | null;
@@ -23,6 +23,7 @@ export function freshnessRows(input: FreshnessInput): FreshnessRow[] {
     { key: "rain", label: "ฝน 24 ชม. จากสถานี", source: "กรมอุตุนิยมวิทยา", time: at(input.rainObservedAt), daily: true },
     { key: "rivers", label: "ปริมาณน้ำไหลผ่าน (แบบจำลอง)", source: "GloFAS / Open-Meteo", time: day(input.riversDate), daily: true },
     ...(input.satFloodDate ? [{ key: "sat-flood", label: "น้ำท่วมจากดาวเทียม", source: "NASA LANCE / GIBS", time: Date.parse(`${input.satFloodDate}T00:00:00Z`), daily: true }] : []),
+    ...(input.thermalDate ? [{ key: "thermal", label: "จุดความร้อน (ไฟ)", source: "NASA FIRMS/GIBS", time: Date.parse(`${input.thermalDate}T00:00:00Z`), daily: true }] : []),
     ...(input.himawariTime !== undefined ? [{ key: "himawari", label: "ภาพดาวเทียมอินฟราเรด", source: "Himawari (JMA) via NASA GIBS", time: at(input.himawariTime), daily: false }] : []),
     ...(input.imergTime !== undefined ? [{ key: "imerg", label: "ฝนจากดาวเทียม", source: "IMERG (NASA GPM)", time: at(input.imergTime), daily: false }] : []),
     { key: "warnings", label: "ประกาศเตือนภัยล่าสุด", source: "กรมอุตุนิยมวิทยา", time: at(input.warningAt), daily: false, none: input.warningAt === null },

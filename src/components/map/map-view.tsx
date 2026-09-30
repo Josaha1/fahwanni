@@ -43,8 +43,10 @@ import { filterDams, type DamFilter } from "@/lib/water/find";
 import { useAllRoutesLayer } from "./layers/use-all-routes-layer";
 import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useSatelliteFloodLayer } from "./layers/use-satellite-flood-layer";
+import { useThermalAnomaliesLayer } from "./layers/use-thermal-anomalies-layer";
+import { useSurfaceWaterLayer } from "./layers/use-surface-water-layer";
 import { useGibsWeatherLayer } from "./layers/use-gibs-weather-layer";
-import { floodDate } from "@/lib/map/gibs";
+import { floodDate, thermalAnomaliesDefault } from "@/lib/map/gibs";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
@@ -124,6 +126,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(true);
   const [satFloodOn, setSatFloodOn] = useState(true);
+  const [surfaceWaterOn, setSurfaceWaterOn] = useState(false);
+  const [thermalOverride, setThermalOverride] = useState<boolean | null>(null);
   const [imergOn, setImergOn] = useState(false);
   const [satelliteTimes, setSatelliteTimes] = useState<{ himawari: string | null; imerg: string | null }>({ himawari: null, imerg: null });
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
@@ -160,6 +164,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const radarAge = minutesSinceNewest(frames, nowIso);
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const nowMs = Date.parse(nowIso);
+  const thermalSeason = thermalAnomaliesDefault(primary, nowMs);
+  const thermalOn = thermalOverride ?? thermalSeason;
   useEffect(() => {
     if (water || (primary !== "satellite" && !imergOn)) return;
     const controller = new AbortController();
@@ -221,12 +227,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useTimeImageLayer(mapInstance, { id: "pm25", enabled: !water && primary === "pm25", series: pm25Series, timeMs: effectiveTime, nowMs, kind: "pm25", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
   useGibsWeatherLayer(mapInstance, "himawari", satelliteTimes.himawari, !water && primary === "satellite");
   useGibsWeatherLayer(mapInstance, "imerg", satelliteTimes.imerg, !water && imergOn);
+  useThermalAnomaliesLayer(mapInstance, !water && thermalOn, nowMs);
   const selectStorm = useCallback((id: string, trigger: HTMLElement) => select({ kind: "storm", id }, trigger), [select]);
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
   useTerrainLayer(mapInstance, terrainOn, reducedMotion);
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
+  useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
   useSatelliteFloodLayer(mapInstance, water && satFloodOn, nowMs);
   const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
     ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
@@ -689,6 +697,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
       satFloodDate: water && satFloodOn ? floodDate(nowMs) : undefined,
+      thermalDate: !water && thermalOn ? floodDate(nowMs) : undefined,
       himawariTime: !water && primary === "satellite" ? satelliteTimes.himawari : undefined,
       imergTime: !water && imergOn ? satelliteTimes.imerg : undefined,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
@@ -703,9 +712,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
-    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn, imerg: !water && imergOn }}
+    <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn, surfaceWater: water && surfaceWaterOn, thermal: !water && thermalOn, imerg: !water && imergOn }}
       dialogRef={legendDialog} triggerRef={legendTrigger} />
     <LayersDialog mode={mode} primaryPicker={primaryPicker} overlays={layerOverlays}
+      thermal={{ label: "จุดความร้อน (ไฟ)", checked: thermalOn, onChange: () => setThermalOverride(!thermalOn) }} thermalSeason={thermalSeason}
       imerg={{ label: "ฝนจากดาวเทียม (ล่าช้า ~6 ชม.)", checked: imergOn, onChange: () => setImergOn((on) => !on) }}
       waterLayers={{
         dams: damsStatus === "ready" ? dams?.dams ?? null : null, watch, damFilter, onDamFilter: setDamFilter,
@@ -715,6 +725,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         rainAccum: { label: "ฝนสะสม 3 วัน", checked: rainAccumOn, status: rainAccumStatus, day: waterDay,
           startDate: waterDate(nowMs, waterDay), onChange: () => setRainAccumOn((on) => !on) },
         satFlood: { label: "น้ำท่วมจากดาวเทียม", checked: satFloodOn, onChange: () => setSatFloodOn((on) => !on) },
+        surfaceWater: { label: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", checked: surfaceWaterOn, onChange: () => setSurfaceWaterOn((on) => !on) },
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
       fullscreen={immersive} onFullscreen={toggleFullscreen}

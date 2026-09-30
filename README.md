@@ -34,6 +34,8 @@
 | ระดับน้ำที่สถานีจริง (ย้อนหลัง) | [สสน. HII open data](https://tiservice.hii.or.th/opendata/data_catalog/water_level/) | CC BY-NC · รายเดือน ล่าช้า 1–2 เดือน |
 | เส้นทางน้ำท้ายเขื่อน | HydroRIVERS | CC BY 4.0 |
 | น้ำท่วมจากดาวเทียม | NASA LANCE / GIBS (VIIRS, MODIS สำรอง) | ข้อมูลสาธารณะ ต้องใส่เครดิต · รายวัน ล่าช้า ~1 วัน ใต้เมฆมองไม่เห็น |
+| จุดความร้อนจากดาวเทียม | NASA FIRMS/GIBS (VIIRS NOAA-20) | ข้อมูลสาธารณะ ต้องใส่เครดิต · รายวัน ล่าช้า ~1 วัน ไม่ใช่ทุกจุดคือไฟป่า |
+| พื้นที่ที่เคยมีน้ำขัง 1984–2021 | EC JRC/Google Global Surface Water | CC BY · ภาพการเกิดน้ำในอดีต ไม่ใช่การพยากรณ์ |
 | พิกัดเขื่อน | Wikidata (CC0), OpenStreetMap (ODbL) | |
 
 แอปใช้เฉพาะแหล่งที่ประกาศเงื่อนไขการใช้ไว้ — ไม่ใช้ข้อมูลสด ThaiWater (สสน.) และภาพ CCTV ของ กฟผ. จนกว่าจะได้รับอนุญาต (ร่างหนังสืออยู่ที่ `docs/permissions/data-requests.md`)

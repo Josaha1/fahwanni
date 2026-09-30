@@ -18,7 +18,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; note?: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean; imerg?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean; surfaceWater?: boolean; thermal?: boolean; imerg?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -64,6 +64,12 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
   ] });
   if (active.satFlood) sections.push({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
     { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
+  ] });
+  if (active.surfaceWater) sections.push({ title: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", note: "พื้นที่ที่ดาวเทียมเคยเห็นน้ำ · ไม่ใช่การพยากรณ์", rows: [
+    { swatch: { kind: "fill", color: "#3186c9", opacity: 0.6 }, label: "พื้นที่ที่มีน้ำบ่อยในอดีต" },
+  ] });
+  if (active.thermal) sections.push({ title: "จุดความร้อน (ไฟ)", note: "จุดความร้อนจากดาวเทียม VIIRS · ล่าช้า ~1 วัน · ไม่ใช่ทุกจุดคือไฟป่า", rows: [
+    { swatch: { kind: "circle", color: "#ef4d2a", size: 10 }, label: "จุดความร้อนจากดาวเทียม ~1 วัน" },
   ] });
   if (active.imerg) sections.push({ title: "ฝนจากดาวเทียม (IMERG)", note: "ล่าช้า ~6 ชม.", rows: [
     { swatch: { kind: "fill", color: "#7b2cbf", opacity: 0.7 }, label: "อัตราฝนจากดาวเทียม" },

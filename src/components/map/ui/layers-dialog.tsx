@@ -15,6 +15,7 @@ type WaterLayers = {
   radar: SwitchRow & { available: boolean; ageKey: string; age: number; warn: boolean };
   rainAccum: SwitchRow & { status: "loading" | "shown" | "none" | "unavailable"; day: number; startDate: string };
   satFlood: SwitchRow;
+  surfaceWater: SwitchRow;
 };
 
 const FILTERS: { filter: DamFilter; label: string }[] = [
@@ -22,11 +23,13 @@ const FILTERS: { filter: DamFilter; label: string }[] = [
   { filter: "release", label: "ระบายมาก" }, { filter: "watched", label: "ติดตาม" },
 ];
 
-export function LayersDialog({ mode, primaryPicker, overlays, imerg, waterLayers, terrain, fullscreen, onFullscreen,
+export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSeason, imerg, waterLayers, terrain, fullscreen, onFullscreen,
   onOpenLegend, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primaryPicker: ReactNode;
   overlays: SwitchRow[];
+  thermal: SwitchRow;
+  thermalSeason: boolean;
   imerg: SwitchRow;
   waterLayers: WaterLayers;
   terrain: SwitchRow | null;
@@ -53,11 +56,15 @@ export function LayersDialog({ mode, primaryPicker, overlays, imerg, waterLayers
       <section className="mt-4" aria-labelledby="map-primary-title">
         <h3 id="map-primary-title" className="mb-2 text-sm font-semibold">{t("ชั้นหลัก")}</h3>
         {primaryPicker}
+        {thermalSeason && <p className="map-muted mt-2 text-xs">{t("จุดความร้อนจากดาวเทียม ~1 วัน")}</p>}
       </section>
       <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-overlays-title">
         <h3 id="map-overlays-title" className="mb-2 text-sm font-semibold">{t("ซ้อนทับ")}</h3>
+        {thermalSeason && switchButton(thermal)}
         {overlays.map(switchButton)}
         {switchButton(imerg)}
+        {!thermalSeason && switchButton(thermal)}
+        {thermal.checked && <p className="map-muted mt-1 text-xs">{t("จุดความร้อนจากดาวเทียม VIIRS · ล่าช้า ~1 วัน · ไม่ใช่ทุกจุดคือไฟป่า")}</p>}
       </section>
     </>}
     {mode === "water" && <>
@@ -83,6 +90,8 @@ export function LayersDialog({ mode, primaryPicker, overlays, imerg, waterLayers
         {waterLayers.rainAccum.checked && waterLayers.rainAccum.status === "unavailable" && <p className="map-muted mt-1 text-xs">{t("ข้อมูลฝนพยากรณ์ไม่พร้อมใช้งาน")}</p>}
         {switchButton(waterLayers.satFlood)}
         <p className="map-water-badge inline-block">{t("สังเกตจากดาวเทียม · ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น")}</p>
+        {switchButton(waterLayers.surfaceWater)}
+        <p className="map-muted mt-1 text-xs">{t("พื้นที่ที่ดาวเทียมเคยเห็นน้ำ · ไม่ใช่การพยากรณ์")}</p>
       </section>
     </>}
     <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-controls-title">

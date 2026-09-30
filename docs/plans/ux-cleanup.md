@@ -87,6 +87,7 @@ More recommendations (added at the user's request "มีอะไรแนะ�
 R1. **จุดความร้อน (ไฟป่า/เผา)** — NASA GIBS VIIRS thermal anomalies (daily vector tiles, free, no key; tile path/format
     to be confirmed in the task — a first probe 404'd). Overlay in the layers dialog, highlighted in the PM2.5 season
     (Jan–Apr, north) next to the PM2.5 layer: "จุดความร้อนจากดาวเทียม ~1 วัน". Explains *why* PM2.5 is high.
+> R1 note (Claude, 2026-09-30): GIBS thermal-anomaly `.mvt` WMTS tiles 404 for every layer/date/zoom; switched to the GIBS **WMS** raster (`wms.cgi`, `BBOX={bbox-epsg-3857}`), 200 + CORS *, verified headless.
 R2. **พื้นที่ที่มีน้ำบ่อยในอดีต** — JRC Global Surface Water occurrence tiles (free, CC BY; tile 200 checked) as a context
     overlay in water mode: "พื้นที่ที่เคยมีน้ำขัง 1984–2021 (ไม่ใช่การพยากรณ์)". Helps read the satellite flood layer.
 R3. **"วันนี้ต้องรู้"** card at the top of home: 3 short lines — best/worst rain window today, heat band, water status

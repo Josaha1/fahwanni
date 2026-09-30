@@ -22,7 +22,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean; imerg: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean; surfaceWater: boolean; thermal: boolean; imerg: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
@@ -56,6 +56,8 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
       </ul>
     </section>)}
     {mode === "weather" && <p className="map-muted mt-4 text-xs">{t("ที่มา: RainViewer, Open-Meteo, CAMS, USGS, JMA/GDACS, Himawari (JMA) via NASA GIBS, IMERG (NASA GPM)")}</p>}
+    {active.thermal && <p className="map-muted mt-1 text-xs">NASA FIRMS/GIBS</p>}
     {mode === "water" && <p className="map-muted mt-4 text-xs">{t("ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · ปริมาณน้ำไหลผ่าน: GloFAS ผ่าน Open-Meteo (CC BY 4.0) · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
+    {active.surfaceWater && <p className="map-muted mt-1 text-xs">EC JRC/Google Global Surface Water</p>}
   </dialog>;
 }
