@@ -1,0 +1,103 @@
+{
+  "points": [
+    {
+      "id": "maeklong-ratchaburi",
+      "river": "Mae Klong",
+      "nameTh": "แม่กลอง โพธาราม",
+      "nameEn": "Mae Klong River at Photharam",
+      "provinceId": "ratchaburi",
+      "lat": 13.63307,
+      "lon": 99.81636,
+      "dams": ["200401", "200402"],
+      "gauge": "RAJ001"
+    },
+    {
+      "id": "nan-phitsanulok",
+      "river": "Nan",
+      "nameTh": "น่าน เมืองพิษณุโลก",
+      "nameEn": "Nan River at Phitsanulok",
+      "provinceId": "phitsanulok",
+      "lat": 16.864717,
+      "lon": 100.24477,
+      "dams": ["200102", "100107"],
+      "gauge": "NAN012"
+    },
+    {
+      "id": "pasak-ayutthaya",
+      "river": "Pa Sak",
+      "nameTh": "ป่าสัก นครหลวง",
+      "nameEn": "Pa Sak River at Nakhon Luang",
+      "provinceId": "phra-nakhon-si-ayutthaya",
+      "lat": 14.40269,
+      "lon": 100.58636,
+      "dams": ["100301"],
+      "gauge": "PAS009"
+    },
+    {
+      "id": "bangpakong-chachoengsao",
+      "river": "Bang Pakong",
+      "nameTh": "บางปะกง บางน้ำเปรี้ยว",
+      "nameEn": "Bang Pakong River at Bang Nam Priao",
+      "provinceId": "chachoengsao",
+      "lat": 13.870314,
+      "lon": 101.145744,
+      "dams": ["100501", "100502", "100514"],
+      "gauge": "BPK003"
+    },
+    {
+      "id": "sakaekrang-uthaithani",
+      "river": "Sakae Krang",
+      "nameTh": "สะแกกรัง เมืองอุทัยธานี",
+      "nameEn": "Sakae Krang River at Uthai Thani",
+      "provinceId": "uthai-thani",
+      "lat": 15.37083,
+      "lon": 100.04418,
+      "dams": ["100302"],
+      "gauge": "SKG002"
+    },
+    {
+      "id": "thachin-suphanburi",
+      "river": "Tha Chin",
+      "nameTh": "ท่าจีน เมืองสุพรรณบุรี",
+      "nameEn": "Tha Chin River at Suphan Buri",
+      "provinceId": "suphan-buri",
+      "lat": 14.47051,
+      "lon": 100.11473,
+      "dams": [],
+      "gauge": "THA005"
+    },
+    {
+      "id": "songkhram-nakhonphanom",
+      "river": "Songkhram",
+      "nameTh": "สงคราม ศรีสงคราม",
+      "nameEn": "Songkhram River at Si Songkhram",
+      "provinceId": "nakhon-phanom",
+      "lat": 17.674871,
+      "lon": 104.28583,
+      "dams": ["100202"],
+      "gauge": "SKM004"
+    },
+    {
+      "id": "phetchaburi-mueang",
+      "river": "Phetchaburi",
+      "nameTh": "เพชรบุรี เมืองเพชรบุรี",
+      "nameEn": "Phetchaburi River at Phetchaburi",
+      "provinceId": "phetchaburi",
+      "lat": 13.08563,
+      "lon": 99.94397,
+      "dams": ["200601"],
+      "gauge": "PCH001"
+    },
+    {
+      "id": "pranburi-mueang",
+      "river": "Pran Buri",
+      "nameTh": "ปราณบุรี ปราณบุรี",
+      "nameEn": "Pran Buri River at Pran Buri",
+      "provinceId": "prachuap-khiri-khan",
+      "lat": 12.38992,
+      "lon": 99.91118,
+      "dams": ["100602"],
+      "gauge": "PRN001"
+    }
+  ]
+}

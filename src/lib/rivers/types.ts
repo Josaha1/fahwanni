@@ -24,6 +24,19 @@ export interface RiverPoint {
   value2554: Record<number, number | null>;
 }
 
+export interface ObservedPoint {
+  id: string;
+  nameTh: string;
+  nameEn: string;
+  river: string;
+  provinceId: string;
+  lat: number;
+  lon: number;
+  dams: string[];
+  /** Pinned HII station code; level measurements are separate from dam release. */
+  gauge: string;
+}
+
 export interface RiverGauge {
   code: string;
   name: string;
