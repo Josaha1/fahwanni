@@ -18,7 +18,27 @@ export async function fetchDams(fetchImpl: typeof fetch = fetch): Promise<DamsPa
   try {
     const response = await fetchImpl(URL, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(20_000) });
     if (!response.ok) return null;
-    const { dataDate, dams } = parseRidDams(await response.json());
+    const today = parseRidDams(await response.json());
+    const { dataDate } = today;
+    let dams = today.dams;
+    if (dataDate && dams.length < today.registeredCount) {
+      const dayStart = Date.parse(`${dataDate}T00:00:00Z`);
+      if (Number.isFinite(dayStart) && new Date(dayStart).toISOString().slice(0, 10) === dataDate) {
+        const previousDate = new Date(dayStart - 86_400_000).toISOString().slice(0, 10);
+        try {
+          const previousResponse = await fetchImpl(`${URL}/${previousDate}`, {
+            next: { revalidate: 3600 }, signal: AbortSignal.timeout(20_000),
+          });
+          if (previousResponse.ok) {
+            const previous = parseRidDams(await previousResponse.json());
+            if (previous.dataDate === previousDate) {
+              const currentIds = new Set(dams.map((dam) => dam.id));
+              dams = [...dams, ...previous.dams.filter((dam) => !currentIds.has(dam.id))];
+            }
+          }
+        } catch { /* Keep the current day's available dams if yesterday is unavailable. */ }
+      }
+    }
     if (dams.length === 0) return null;
     const fetchedAt = new Date().toISOString();
     const dataTime = dataDate === null ? null : Date.parse(`${dataDate}T00:00:00+07:00`);

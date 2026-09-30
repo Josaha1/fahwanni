@@ -5,8 +5,9 @@ import { parseRidDams } from "./rid";
 
 describe("RID large dams", () => {
   it("parses every dam in the real report and joins the registry", () => {
-    const { dams, dataDate } = parseRidDams(fixture);
+    const { dams, dataDate, registeredCount } = parseRidDams(fixture);
     expect(dataDate).toBe(fixture.date);
+    expect(registeredCount).toBe(35);
     expect(dams).toHaveLength(35);
     const bhumibol = dams.find((dam) => dam.nameTh === "ภูมิพล")!;
     expect(bhumibol).toMatchObject({ id: "200101", nameEn: "Bhumibol", agency: "EGAT", province: { th: "ตาก", en: "Tak" }, basin: { th: "ภาคเหนือ", en: "North" } });
@@ -26,8 +27,8 @@ describe("RID large dams", () => {
 
   it("skips unknown ids and malformed rows and never throws on junk", () => {
     const raw = { date: "2026-09-29", data: [{ region: "ภาคใต้", dam: [{ id: "999999", name: "x", storage: 1, dead_storage: 0, volume: 1, percent_storage: 1 }, { id: "200604" }] }] };
-    expect(parseRidDams(raw).dams).toEqual([]);
-    for (const junk of [null, 1, "x", {}, { date: 1 }]) expect(parseRidDams(junk)).toEqual({ dams: [], dataDate: null });
+    expect(parseRidDams(raw)).toMatchObject({ dams: [], registeredCount: 1 });
+    for (const junk of [null, 1, "x", {}, { date: 1 }]) expect(parseRidDams(junk)).toEqual({ dams: [], dataDate: null, registeredCount: 0 });
   });
 
   it("maps storage to RID bands", () => {

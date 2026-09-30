@@ -2,6 +2,11 @@ import { distanceKm } from "../storms/normalize";
 import type { RainStation } from "../rain-risk/tmd";
 import type { Dam } from "./types";
 
+export function oldestDifferentDamDate(dams: Pick<Dam, "date">[], dataDate: string): string | null {
+  return dams.reduce<string | null>((oldest, dam) =>
+    dam.date !== dataDate && (oldest === null || dam.date < oldest) ? dam.date : oldest, null);
+}
+
 export function waterSummary(dams: Dam[], rain: RainStation[] | null): {
   over80: number; over100: number; highRelease: number; heavyRain: number | null;
 } {

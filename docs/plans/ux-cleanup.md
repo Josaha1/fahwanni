@@ -101,6 +101,16 @@ R7. **เข้าถึงได้ทุกคน** — text alternatives: eac
     `aria-label` summary + a "ดูเป็นตาราง" toggle; the map region gets a one-line spoken summary of what is shown.
 Keep-alive (after the above; code tasks):
 K1. CI (`.github/workflows/ci.yml`): typecheck, lint, vitest (perf skipped), i18n on push; `verify:deploy` every 6 h.
+D1. **เขื่อนหายช่วงเช้า** (added 2026-09-30, user-approved): RID's report for today can list all 35 dams while
+    `volume`/`percent_storage` are still null for many (09:23 today: 24 of 35 null, incl. ภูมิพล/สิริกิติ์; the 2026-09-29
+    report is complete). `parseRidDams` drops those rows → site showed 11 dams. Fix in `src/lib/dams/client.ts` (+ `rid.ts`):
+    when today's parse has fewer dams than rows with a registry id, fetch `…/api/dam/public/{previous day}` (same parser,
+    same timeout/revalidate) and add each missing dam from it, keeping that dam's own `date` (the card already shows
+    "ข้อมูลวันที่ {date}"). Never replace a dam that has today's value; never go back more than 1 day; if the previous-day
+    fetch fails, return today's dams as now. `dataDate` stays today's. Unit tests with fixtures: partial today + full
+    yesterday → 35 dams, mixed dates; yesterday fetch fails → today's only; today complete → no second fetch.
+    Verify: `npx vitest run --no-file-parallelism src/lib/dams && npm run typecheck && npm run lint`, then Claude checks
+    `/api/dams` returns 35 dams with ภูมิพล dated 2026-09-29 while RID is partial.
 K2. `error.tsx` + `global-error.tsx` (Thai) + `/api/log` for client errors (no PII, rate-limited).
 K3. Lite mode (`src/lib/device.ts`: reduced motion / ≤ 4 GB / ≤ 4 cores / Save-Data) → no wind particles, static
     flow line, no 3D, no cross-fade; normal mode stops the flow animation after 60 s; toggle in the layers dialog.

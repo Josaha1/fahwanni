@@ -62,5 +62,8 @@ describe("compact water rows", () => {
     expect(html).toContain(`/map?mode=water&amp;dam=${dam.id}`);
     const collapsed = render("th", <DamRowHeader dam={dam} expanded={false} onToggle={() => {}} />);
     expect(collapsed).toContain(`id="${damDetailsId(dam.id)}" hidden=""`);
+    const older = render("th", <DamRowHeader dam={{ ...dam, date: "2026-09-29" }} dataDate="2026-09-30" showDate={false} expanded={false} onToggle={() => {}} />);
+    expect(older).toContain("ข้อมูล 29 ก.ย.");
+    expect(render("th", <DamRowHeader dam={{ ...dam, date: "2026-09-30" }} dataDate="2026-09-30" showDate={false} expanded={false} onToggle={() => {}} />)).not.toContain("ข้อมูล 30 ก.ย.");
   });
 });

@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 import fixture from "./fixture-rid.json";
 import { parseRidDams } from "./rid";
-import { nearestDams, waterSummary } from "./summary";
+import { nearestDams, oldestDifferentDamDate, waterSummary } from "./summary";
 
 const dams = parseRidDams(fixture).dams;
 
 describe("water summary", () => {
+  it("selects the oldest dam date that differs from the payload date", () => {
+    expect(oldestDifferentDamDate([], "2026-09-30")).toBeNull();
+    expect(oldestDifferentDamDate([{ date: "2026-09-30" }], "2026-09-30")).toBeNull();
+    expect(oldestDifferentDamDate([
+      { date: "2026-09-30" }, { date: "2026-09-29" }, { date: "2026-09-28" }, { date: "2026-09-29" },
+    ], "2026-09-30")).toBe("2026-09-28");
+  });
+
   it("counts overlapping storage bands, releases, and ready rain stations", () => {
     expect(waterSummary(dams, null)).toEqual({ over80: 15, over100: 2, highRelease: 4, heavyRain: null });
     expect(waterSummary(dams, [])).toEqual({ over80: 15, over100: 2, highRelease: 4, heavyRain: 0 });

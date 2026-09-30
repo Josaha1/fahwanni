@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useT } from "@/i18n/client";
 import { useLastPlace } from "@/hooks/use-favourites";
 import type { DamsPayload } from "@/lib/dams/client";
-import { nearestDams, waterSummary } from "@/lib/dams/summary";
+import { nearestDams, oldestDifferentDamDate, waterSummary } from "@/lib/dams/summary";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
 import { formatFullDate } from "@/lib/format";
 import { nearestProvince } from "@/lib/map/nearest";
@@ -88,6 +88,7 @@ export function WaterPage() {
   const nearestRiverId = nearbyRivers[0]?.point.id;
   const isRiverExpanded = (id: string) => expandedRivers.has(id) || (id === nearestRiverId && !collapsedNearest.has(id));
   const nearbyDams = dams.data ? nearestDams(dams.data.dams, place) : [];
+  const oldestDamDate = dams.data?.dataDate ? oldestDifferentDamDate(dams.data.dams, dams.data.dataDate) : null;
   const currentWatch: WatchItem[] = useMemo(() => [
     ...(dams.data?.dams ?? []).map((dam) => ({ kind: "dam" as const, id: dam.id, value: dam.storagePct, unit: "pct" as const, date: dam.date })),
     ...(rivers.data?.points ?? []).flatMap((point) => point.summary ? [{ kind: "river" as const, id: point.id,
@@ -164,7 +165,7 @@ export function WaterPage() {
       <ul className="divide-y divide-[var(--border)]">{watched.map(({ item }) => {
         const dam = item.kind === "dam" ? dams.data?.dams.find((entry) => entry.id === item.id) : null;
         const river = item.kind === "river" ? nearbyRivers.find(({ point }) => point.id === item.id) : null;
-        if (dam) return <li key={`dam:${dam.id}`} className="py-1"><DamRowHeader dam={dam} expanded={expandedWatchedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedWatchedDams, dam.id)} detailsId={`watched-dam-details-${dam.id}`} showDate={false} /></li>;
+        if (dam) return <li key={`dam:${dam.id}`} className="py-1"><DamRowHeader dam={dam} dataDate={dams.data?.dataDate ?? undefined} expanded={expandedWatchedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedWatchedDams, dam.id)} detailsId={`watched-dam-details-${dam.id}`} showDate={false} /></li>;
         if (river) return <li key={`river:${river.point.id}`} className="py-1">
           <RiverRowHeader point={river.point} expanded={expandedWatchedRivers.has(river.point.id)} onToggle={() => toggleExpanded(setExpandedWatchedRivers, river.point.id)} detailsId={`watched-river-details-${river.point.id}`} />
           {expandedWatchedRivers.has(river.point.id) ? <RiverDetails point={river.point} expanded showDisclaimers={false} showDate={false} showSummary={false} detailsId={`watched-river-details-${river.point.id}`} />
@@ -199,12 +200,15 @@ export function WaterPage() {
     {showTideForPlace(place) && <TideSection />}
     <section className="placeholder-card space-y-2" aria-label={t("เขื่อนใกล้คุณ")}>
       <div><h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
-        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}</p>}
+        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}{oldestDamDate && ` ${t("(บางเขื่อนใช้ข้อมูล {date})", {
+          date: new Intl.DateTimeFormat(t.intl, { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Bangkok" })
+            .format(new Date(`${oldestDamDate}T12:00:00+07:00`)),
+        })}`}</p>}
       </div>
       {sourceLine(dams.status, "กำลังโหลดข้อมูลเขื่อน…", "ข้อมูลเขื่อนไม่พร้อมใช้งาน")}
       {summary && <>
         <p className="text-muted text-sm">{t("เขื่อนน้ำมาก (เกิน 80%)")} {summary.over80} · {t("เกินความจุ")} {summary.over100} · {t("ระบายน้ำมาก")} {summary.highRelease}{summary.heavyRain !== null && <> · {t("สถานีฝนหนัก")} {summary.heavyRain}</>}</p>
-        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="py-1"><DamRowHeader dam={dam} km={km} expanded={expandedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedDams, dam.id)} showDate={false} /></li>)}</ul>
+        <ul className="divide-y divide-[var(--border)]">{nearbyDams.map(({ dam, km }) => <li key={dam.id} className="py-1"><DamRowHeader dam={dam} dataDate={dams.data?.dataDate ?? undefined} km={km} expanded={expandedDams.has(dam.id)} onToggle={() => toggleExpanded(setExpandedDams, dam.id)} showDate={false} /></li>)}</ul>
       </>}
     </section>
     <section className={rainNear.length ? "placeholder-card space-y-2" : "space-y-2"} aria-label={t("ฝนหนัก 24 ชม. ใกล้คุณ")}>
