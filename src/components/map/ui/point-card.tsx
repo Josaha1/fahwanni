@@ -36,6 +36,7 @@ import { provinces } from "@/lib/provinces";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import { readRadarLevel } from "../radar-tile";
 import { RiverDetails, type RiversPayload } from "@/components/water/river-details";
+import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
@@ -222,6 +223,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
           <p className="map-muted text-xs">{dam.inflowMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.inflowMcmDay) })}</p>
         </div>
       </div>
+      <Dam3DDialog dam={dam} damsHistory={damsHistory} className="map-chip w-full" />
       <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>

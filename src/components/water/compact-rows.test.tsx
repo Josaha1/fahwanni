@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/i18n/client";
 import fixture from "@/lib/dams/fixture-rid.json";
@@ -15,6 +15,19 @@ const dam = parseRidDams(fixture).dams[0];
 const render = (locale: "th" | "en", child: React.ReactNode) => renderToStaticMarkup(<LocaleProvider locale={locale}>{child}</LocaleProvider>);
 
 describe("compact water rows", () => {
+  it.each(["th", "en"] as const)("offers the dam dialog in %s without fetching history or rendering 3D on first load", (locale) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      const html = render(locale, <DamRowHeader dam={dam} expanded onToggle={() => {}} />);
+      expect(html).toContain('aria-haspopup="dialog"');
+      expect(html).toContain(locale === "th" ? "ดูแบบ 3 มิติ" : "View in 3D");
+      expect(html).toContain("<dialog");
+      expect(html).not.toContain("<canvas");
+      expect(html).not.toContain("<svg");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally { fetchSpy.mockRestore(); }
+  });
+
   it("formats the river value for the visible row and spoken unit in both languages", () => {
     expect(riverRowValueLabel(1234, "th")).toBe("1,234 ลบ.ม./วินาที");
     expect(riverRowValueLabel(1234, "en")).toBe("1,234 m³/s");

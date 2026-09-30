@@ -5,6 +5,7 @@ import { useT } from "@/i18n/client";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import type { Dam } from "@/lib/dams/types";
 import { formatFullDate } from "@/lib/format";
+import { Dam3DDialog } from "./dam-3d-dialog";
 
 export function damDetailsId(id: string) { return `dam-details-${id}`; }
 
@@ -40,6 +41,7 @@ export function DamRowHeader({ dam, dataDate, km, expanded, onToggle, detailsId,
       <p>{t("น้ำไหลผ่านเขื่อน (ระบาย)")}: {flow(dam.releaseCms)}</p>
       <p>{t("น้ำไหลเข้า")}: {flow(dam.inflowCms)}</p>
       {showDate && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: formatFullDate(`${dam.date}T12:00:00+07:00`, "Asia/Bangkok", t.locale) })}</p>}
+      <Dam3DDialog dam={dam} className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2 mr-3" />
       <Link className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2"
         href={`/map?mode=water&dam=${encodeURIComponent(dam.id)}`}>{t("ดูบนแผนที่")}</Link>
     </div>

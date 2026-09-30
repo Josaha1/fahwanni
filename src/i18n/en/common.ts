@@ -383,6 +383,7 @@ export const common: Record<string, string> = {
   "ระบาย {cms} ลบ.ม./วินาที": "Release {cms} m³/s",
   "ไม่มีข้อมูลการระบาย": "Release data unavailable",
   "แผนภาพ ไม่ใช่ระดับน้ำจริง": "Schematic, not the actual water level",
+  "ดูแบบ 3 มิติ": "View in 3D",
   "24 ชม. ข้างหน้า: ไม่มีข้อมูลอุณหภูมิ · ฝนโอกาส 50% ขึ้นไป {n} ชม.": "Next 24 h: temperature unavailable · {n} h with a 50% or higher chance of rain",
   "ดูเป็นตาราง": "View as table",
   "ซ่อนตาราง": "Hide table",

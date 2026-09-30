@@ -19,7 +19,7 @@ import { placeSeries, placeSeriesSummary } from "@/lib/timeline/place-series";
 import { levelToRgba } from "@/lib/nowcast/intensity";
 import { rainModeAt } from "@/lib/precip/render";
 import { windMotion } from "@/lib/wind/particles";
-import { liteDefault, readDeviceEnv } from "@/lib/device";
+import { useLite } from "@/hooks/use-lite";
 import { fieldFromGrid, windFieldAt } from "@/lib/wind/field";
 import { terrainAvailable } from "@/lib/map/terrain";
 import { initialMapState, mapReducer } from "@/lib/map/map-state";
@@ -148,21 +148,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const shortcutsTrigger = useRef<HTMLElement>(null);
   const [immersive, setImmersive] = useState(false);
   const [makingImage, setMakingImage] = useState(false);
-  const [device, setDevice] = useState(readDeviceEnv);
-  const reducedMotion = device.reducedMotion;
-  const [liteOverride, setLiteOverride] = useState<boolean | null>(() => {
-    try {
-      const saved = localStorage.getItem("fah-lite");
-      return saved === "true" ? true : saved === "false" ? false : null;
-    } catch { return null; }
-  });
-  const automaticLite = liteDefault(device);
-  const lite = liteOverride ?? automaticLite;
-  const toggleLite = () => {
-    const next = !lite;
-    setLiteOverride(next);
-    try { localStorage.setItem("fah-lite", String(next)); } catch { /* Keep the setting for this visit only. */ }
-  };
+  const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
       const saved = Number(localStorage.getItem("fah-map-play-speed"));
@@ -378,7 +364,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => { setDevice(readDeviceEnv()); if (query.matches) dispatch({ type: "stop" }); };
+    const update = () => { if (query.matches) dispatch({ type: "stop" }); };
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
