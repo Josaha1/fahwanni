@@ -25,4 +25,16 @@ describe("dam history", () => {
     expect(trendDelta(trend.pct[today.dams[0].id])).toBeNull();
     expect(trendDelta(trend.pct[today.dams.at(-1)!.id])).toBeCloseTo(2);
   });
+
+  it("records release per report date and never a back-filled value", () => {
+    const today = parseRidDams(fixture);
+    const [first, second] = today.dams;
+    const trend = buildTrend([
+      { date: "2026-09-29", dams: [{ ...first, date: "2026-09-29", releaseCms: 10 }, { ...second, date: "2026-09-29", releaseCms: 5 }] },
+      // morning back-fill: `second` still carries yesterday's report
+      { date: "2026-09-30", dams: [{ ...first, date: "2026-09-30", releaseCms: 12 }, { ...second, date: "2026-09-29", releaseCms: 5 }] },
+    ]);
+    expect(trend.release[first.id]).toEqual([10, 12]);
+    expect(trend.release[second.id]).toEqual([5, null]);
+  });
 });

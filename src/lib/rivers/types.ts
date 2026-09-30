@@ -37,6 +37,17 @@ export interface ObservedPoint {
   gauge: string;
 }
 
+/** Summed release of a river's upstream RID dams (measured at the dams, not flow at the station). */
+export interface ObservedRelease {
+  /** Latest value per dam; `date` is the oldest report date used, `missing` lists dams with no value. */
+  today: { date: string; totalCms: number; missing: string[] } | null;
+  /** Today versus the first complete day of the week: ±10 %. */
+  trend: RiverTrend | null;
+  dams: { damId: string; releaseCms: number | null; date: string | null }[];
+  /** Only days where every dam reported; others are null so a partial sum is never drawn. */
+  days: { date: string; totalCms: number | null }[];
+}
+
 export interface RiverGauge {
   code: string;
   name: string;
