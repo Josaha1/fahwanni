@@ -89,6 +89,7 @@ GOOGLE_MAPS_API_KEY=your_api_key_here
 | `node scripts/i18n-check.mjs` | ตรวจข้อความที่ยังไม่มีคำแปลอังกฤษ |
 | `npm run check:sources` | ตรวจว่าแหล่งข้อมูลภายนอกทั้งหมดยังตอบกลับ |
 | `node scripts/blender/build.mjs` | เรนเดอร์ไอคอนเคลื่อนไหวใหม่ (ต้องมี Blender 4.5 ใน `~/Applications`) |
+| `node scripts/blender/build-dam.mjs` | สร้างโมเดลเขื่อน 3 มิติ `public/models/dam.glb` (Blender 4.5, headless) — ไฟล์ glb commit ไว้ใน repo เพราะ Vercel รัน Blender ไม่ได้ |
 
 ## CI และการรายงานข้อผิดพลาด
 

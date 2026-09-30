@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import {
-  AmbientLight, Box3, Color, DataTexture, DirectionalLight, DoubleSide, Group,
-  Mesh, MeshStandardMaterial, PerspectiveCamera, RepeatWrapping, RGBAFormat,
-  Scene, Sphere, SRGBColorSpace, Texture, Vector3, WebGLRenderer,
+  AmbientLight, Box3, Color, DataTexture, DirectionalLight, DoubleSide, Group, HemisphereLight,
+  Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, RepeatWrapping, RGBAFormat,
+  Scene, SRGBColorSpace, Texture, Vector3, WebGLRenderer,
   type Material, type Object3D,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -53,7 +53,7 @@ export function Dam3D(props: Props) {
     const canvas = canvasRef.current!;
     let renderer: WebGLRenderer;
     try {
-      renderer = new WebGLRenderer({ canvas, antialias: true });
+      renderer = new WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: false });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     } catch {
       settings.current.onFallback();
@@ -62,12 +62,17 @@ export function Dam3D(props: Props) {
 
     const scene = new Scene();
     const pivot = new Group();
-    scene.add(pivot, new AmbientLight(0xffffff, 2));
+    const ambient = new AmbientLight(0xffffff, 2);
+    const hemisphere = new HemisphereLight(0xe6efff, 0x99836b, 0.5);
+    scene.add(pivot, ambient, hemisphere);
     const sun = new DirectionalLight(0xffffff, 3);
     sun.position.set(-3, 8, 5);
     scene.add(sun);
     const camera = new PerspectiveCamera(38, 1, 0.1, 100);
     const viewDirection = new Vector3(8, 7, -10).normalize();
+    const viewRight = new Vector3().crossVectors(camera.up, viewDirection).normalize();
+    const viewUp = new Vector3().crossVectors(viewDirection, viewRight).normalize();
+    const bounds = new Box3();
     let model: Object3D | null = null;
     let nodes: Record<string, Mesh> = {};
     let widthAxis: "x" | "z" = "x";
@@ -125,11 +130,30 @@ export function Dam3D(props: Props) {
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       const vertical = camera.fov * Math.PI / 360;
-      const horizontal = Math.atan(Math.tan(vertical) * camera.aspect);
-      const distance = radius * 1.1 / Math.sin(Math.min(vertical, horizontal));
-      camera.position.copy(viewDirection).multiplyScalar(distance);
+      let distance = radius * 2;
+      const center = new Vector3();
+      if (model) {
+        pivot.updateWorldMatrix(true, false);
+        bounds.setFromObject(model);
+        bounds.getCenter(center);
+        radius = bounds.getSize(new Vector3()).length() / 2;
+        // Fit the box, measured from its own centre, into 92% of the canvas width and height separately, including depth.
+        const focalLength = height / (2 * Math.tan(vertical));
+        const halfWidth = width * 0.92 / 2, halfHeight = height * 0.92 / 2;
+        distance = 0;
+        for (const x of [bounds.min.x, bounds.max.x]) {
+          for (const y of [bounds.min.y, bounds.max.y]) {
+            for (const z of [bounds.min.z, bounds.max.z]) {
+              const corner = new Vector3(x, y, z).sub(center);
+              const needed = Math.max(Math.abs(corner.dot(viewRight)) / halfWidth, Math.abs(corner.dot(viewUp)) / halfHeight);
+              distance = Math.max(distance, corner.dot(viewDirection) + needed * focalLength);
+            }
+          }
+        }
+      }
+      camera.position.copy(viewDirection).multiplyScalar(distance).add(center);
       camera.far = distance + radius * 4;
-      camera.lookAt(0, 0, 0);
+      camera.lookAt(center);
       camera.updateProjectionMatrix();
       requestRender();
     }
@@ -143,11 +167,15 @@ export function Dam3D(props: Props) {
       const { dam, history } = settings.current;
       const colors = damSceneColors(sceneTheme, dam.band);
       scene.background = new Color(colors.background);
+      ambient.intensity = sceneTheme === "dark" ? 2.8 : 2;
+      hemisphere.intensity = sceneTheme === "dark" ? 1.6 : 0.5;
       for (const [name, mesh] of Object.entries(nodes)) {
-        const material = mesh.material as MeshStandardMaterial;
+        const material = mesh.material as MeshStandardMaterial | MeshBasicMaterial;
         material.color.set(name === "Basin" ? colors.terrain
           : name === "WaterUp" ? colors.water : name === "WaterDown" ? colors.waterDeep
             : name === "RimLastYear" ? colors.rimLastYear : name === "Rim2554" ? colors.rim2554 : colors.wall);
+        // The baked terrain already carries its colour and AO; a dark tint compounds both.
+        if (name === "Basin" && sceneTheme === "dark") material.color.lerp(new Color(0xffffff), 0.75);
       }
       if (nodes.WaterUp) setLevel(nodes.WaterUp, waterLevel(dam.storagePct), unitWidth);
       for (const [name, entry] of [["RimLastYear", history?.lastYear], ["Rim2554", history?.year2554]] as const) {
@@ -160,7 +188,7 @@ export function Dam3D(props: Props) {
       if (nodes.WaterDown) nodes.WaterDown.visible = (dam.releaseCms ?? 0) > 0;
       previousTime = 0;
       if (!flowSpeed()) { cancelAnimationFrame(frame); frame = 0; }
-      requestRender();
+      resize();
     }
 
     updateRef.current = () => { sceneTheme = settings.current.theme; update(); };
@@ -191,7 +219,7 @@ export function Dam3D(props: Props) {
       if (!pointer || pointer.id !== event.pointerId || failed) return;
       const delta = (event.clientX - pointer.x) / Math.max(1, canvas.clientWidth) * Math.PI;
       pivot.rotation.y = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, pointer.angle + delta));
-      requestRender();
+      resize();
     }
     function onPointerEnd(event: PointerEvent) {
       if (pointer?.id !== event.pointerId) return;
@@ -239,7 +267,14 @@ export function Dam3D(props: Props) {
       for (const [name, mesh] of Object.entries(nodes)) {
         for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) originalMaterials.add(material);
         const water = name === "WaterUp" || name === "WaterDown";
-        mesh.material = new MeshStandardMaterial({
+        const rim = name === "RimLastYear" || name === "Rim2554";
+        // Rims share the transparent queue with water so higher renderOrder applies.
+        mesh.renderOrder = rim ? 2 : water ? 1 : 0;
+        // The rim tubes are ~0.02 units thick; stretch them vertically so the level band reads at dialog size.
+        if (rim) mesh.scale.y = 6;
+        mesh.material = rim ? new MeshBasicMaterial({
+          side: DoubleSide, transparent: true, opacity: 1, depthTest: true, depthWrite: false,
+        }) : new MeshStandardMaterial({
           vertexColors: name === "Basin" || name === "Wall" || name === "Spillway",
           roughness: water ? 0.35 : 0.9, side: DoubleSide,
           transparent: water, opacity: water ? 0.88 : 1, depthWrite: !water,
@@ -250,9 +285,8 @@ export function Dam3D(props: Props) {
         for (const value of Object.values(material)) if (value instanceof Texture) value.dispose();
         material.dispose();
       });
-      const bounds = new Box3().setFromObject(model);
+      bounds.setFromObject(model);
       const center = bounds.getCenter(new Vector3());
-      radius = bounds.getBoundingSphere(new Sphere()).radius;
       model.position.sub(center);
       pivot.add(model);
       update();
