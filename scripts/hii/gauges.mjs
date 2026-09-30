@@ -115,3 +115,14 @@ export function summarizeGaugeCsv(csv, month) {
   return { header, levelMsl: { min: round(Math.min(...means)), mean: round(means.reduce((a, b) => a + b, 0) / means.length), max: round(Math.max(...means)) },
     bankMsl: banks.length ? round(banks[0]) : null, days: { from: dates[0], to: dates.at(-1), count: dates.length } };
 }
+
+/** A pinned HII code (observed points) wins over the nearest-station rule; unknown or file-less codes yield null. */
+export function pickStation(point, stations) {
+  if (point.gauge) return stations.find((station) => station.code.toUpperCase() === point.gauge.toUpperCase()) ?? null;
+  return nearestStation(point, stations);
+}
+
+/** A logger that reports the same value all month (e.g. PRN001: 4,464 zeros in 2026-07) is a fault, not a level. */
+export function isFlatline(levelMsl, days) {
+  return days.count >= 7 && levelMsl.max - levelMsl.min < 0.001;
+}

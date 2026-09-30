@@ -1,7 +1,7 @@
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { distanceKm, nearestStation, stationsFromCsv, summarizeGaugeCsv } from "./gauges.mjs";
+import { distanceKm, isFlatline, pickStation, stationsFromCsv, summarizeGaugeCsv } from "./gauges.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const cacheDir = join(root, ".cache/hii");
@@ -73,7 +73,11 @@ function validate(data, pointIds) {
   }
 }
 
-const points = JSON.parse(await readFile(join(root, "public/data/river-points.json"), "utf8")).points;
+const points = [
+  ...JSON.parse(await readFile(join(root, "public/data/river-points.json"), "utf8")).points,
+  // Observed points pin their station; see docs/plans/observed-points.md.
+  ...JSON.parse(await readFile(join(root, "public/data/observed-points.json"), "utf8")).points,
+];
 const ids = new Set(points.map((point) => point.id));
 if (check) {
   validate(JSON.parse(await readFile(output, "utf8")), ids);
@@ -86,11 +90,12 @@ if (check) {
   const gauges = {};
   for (const point of points) {
     const available = metadata.stations.filter((item) => files.some((file) => file.toLowerCase() === `${item.code}.csv`.toLowerCase()));
-    const station = nearestStation(point, available);
-    if (!station) { console.log(`${point.id}: no station within 10 km`); continue; }
+    const station = pickStation(point, available);
+    if (!station) { console.log(`${point.id}: ${point.gauge ? `pinned station ${point.gauge} has no file this month` : "no station within 10 km"}`); continue; }
     const filename = files.find((file) => file.toLowerCase() === `${station.code}.csv`.toLowerCase());
     const summary = summarizeGaugeCsv(await get(`${folder}/${filename}`), month);
     console.log(`${station.code} headers: ${summary.header.join(", ")}`);
+    if (isFlatline(summary.levelMsl, summary.days)) { console.log(`${point.id}: ${station.code} reports a flat line this month — skipped`); continue; }
     gauges[point.id] = { code: station.code, name: station.name, lat: station.lat, lon: station.lon,
       km: Math.round(distanceKm(point, station) * 10) / 10, levelMsl: summary.levelMsl,
       bankMsl: summary.bankMsl ?? station.bankMsl, days: summary.days };

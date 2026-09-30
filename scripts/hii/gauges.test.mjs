@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateOf, nearestStation, stationsFromCsv, summarizeGaugeCsv, dropOutliers } from "./gauges.mjs";
+import { dateOf, isFlatline, nearestStation, pickStation, stationsFromCsv, summarizeGaugeCsv, dropOutliers } from "./gauges.mjs";
 
 describe("HII gauge CSV", () => {
   it("parses quoted station names and selects the closest station within 10 km", () => {
@@ -45,5 +45,23 @@ describe("gauge quality rules", () => {
       { code: "C.35", name: "อยุธยา", lat: 14.36, lon: 100.59, subBasin: "ที่ราบแม่น้ำเจ้าพระยา" },
     ];
     expect(nearestStation(point, stations)?.code).toBe("C.35");
+  });
+});
+
+describe("pinned HII stations", () => {
+  const stations = [{ code: "RAJ001", name: "โพธาราม", lat: 13.63, lon: 99.82, subBasin: "ที่ราบแม่น้ำแม่กลอง" }];
+  it("uses the pinned code regardless of the same-river rule, case-insensitively", () => {
+    expect(pickStation({ id: "maeklong-ratchaburi", gauge: "raj001", lat: 13.9, lon: 99.9 }, stations)?.code).toBe("RAJ001");
+  });
+  it("returns null when the pinned station has no file this month", () => {
+    expect(pickStation({ id: "x", gauge: "ZZZ999", lat: 13.63, lon: 99.82 }, stations)).toBeNull();
+  });
+});
+
+describe("flat-line loggers", () => {
+  it("rejects a month of identical readings but keeps a quiet river", () => {
+    expect(isFlatline({ min: 0, mean: 0, max: 0 }, { count: 31 })).toBe(true);
+    expect(isFlatline({ min: 0.09, mean: 0.38, max: 0.66 }, { count: 31 })).toBe(false);
+    expect(isFlatline({ min: 1, mean: 1, max: 1 }, { count: 3 })).toBe(false);
   });
 });

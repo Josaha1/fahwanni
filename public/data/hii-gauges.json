@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T15:55:04.100Z",
+  "generatedAt": "2026-09-30T11:10:08.806Z",
   "source": "สถาบันสารสนเทศทรัพยากรน้ำ (HII) open data · CC BY-NC",
   "month": "2026-07",
   "gauges": {
@@ -103,6 +103,150 @@
         "min": 36.87,
         "mean": 37.07,
         "max": 37.14
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "maeklong-ratchaburi": {
+      "code": "RAJ001",
+      "name": "โพธาราม",
+      "lat": 13.63307,
+      "lon": 99.81636,
+      "km": 0,
+      "levelMsl": {
+        "min": 0.05,
+        "mean": 0.25,
+        "max": 0.64
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "nan-phitsanulok": {
+      "code": "NAN012",
+      "name": "เมืองพิษณุโลก",
+      "lat": 16.864717,
+      "lon": 100.24477,
+      "km": 0,
+      "levelMsl": {
+        "min": 36.72,
+        "mean": 37.27,
+        "max": 37.68
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "pasak-ayutthaya": {
+      "code": "PAS009",
+      "name": "นครหลวง",
+      "lat": 14.40269,
+      "lon": 100.58636,
+      "km": 0,
+      "levelMsl": {
+        "min": -0.02,
+        "mean": 0.15,
+        "max": 0.33
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "bangpakong-chachoengsao": {
+      "code": "BPK003",
+      "name": "บางน้ำเปรี้ยว",
+      "lat": 13.870314,
+      "lon": 101.145744,
+      "km": 0,
+      "levelMsl": {
+        "min": -0.13,
+        "mean": 0.16,
+        "max": 0.38
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "sakaekrang-uthaithani": {
+      "code": "SKG002",
+      "name": "เมืองอุทัยธานี",
+      "lat": 15.37083,
+      "lon": 100.04418,
+      "km": 0,
+      "levelMsl": {
+        "min": 14.82,
+        "mean": 15.43,
+        "max": 15.82
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "thachin-suphanburi": {
+      "code": "THA005",
+      "name": "เมืองสุพรรณบุรี",
+      "lat": 14.47051,
+      "lon": 100.11473,
+      "km": 0,
+      "levelMsl": {
+        "min": 0.98,
+        "mean": 1.54,
+        "max": 1.94
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "songkhram-nakhonphanom": {
+      "code": "SKM004",
+      "name": "ศรีสงคราม",
+      "lat": 17.674871,
+      "lon": 104.28583,
+      "km": 0,
+      "levelMsl": {
+        "min": 134.21,
+        "mean": 136.89,
+        "max": 138.53
+      },
+      "bankMsl": null,
+      "days": {
+        "from": "2026-07-01",
+        "to": "2026-07-31",
+        "count": 31
+      }
+    },
+    "phetchaburi-mueang": {
+      "code": "PCH001",
+      "name": "เมืองเพชรบุรี",
+      "lat": 13.08563,
+      "lon": 99.94397,
+      "km": 0,
+      "levelMsl": {
+        "min": 0.09,
+        "mean": 0.38,
+        "max": 0.66
       },
       "bankMsl": null,
       "days": {
