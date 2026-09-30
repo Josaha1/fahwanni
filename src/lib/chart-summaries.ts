@@ -1,4 +1,7 @@
 import type { T } from "@/i18n/core";
+import { damBandWord } from "@/lib/dams/bands";
+import type { DamHistory } from "@/lib/dams/history";
+import type { Dam } from "@/lib/dams/types";
 
 type DatedValue = { date: string; value: number };
 
@@ -41,4 +44,26 @@ export function damSparklineSummary(values: (number | null)[], dates: string[], 
   return peakDate
     ? t("กราฟน้ำในเขื่อน 7 วัน: ต่ำสุด {low}–สูงสุด {high}% · สูงสุดวันที่ {date} · {trend}", { ...params, date: dayLabel(peakDate, t) })
     : t("กราฟน้ำในเขื่อน 7 วัน: ต่ำสุด {low}–สูงสุด {high}% · {trend}", params);
+}
+
+export function damSceneSummary(dam: Dam, history: DamHistory | null | undefined, t: T): string {
+  const number = new Intl.NumberFormat(t.locale === "en" ? "en-GB" : "th-TH", { maximumFractionDigits: 1 });
+  const name = t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh;
+  const parts = [t("{name} กักเก็บ {pct}% · {band}", {
+    name, pct: number.format(dam.storagePct), band: t(damBandWord(dam.band)),
+  })];
+  if (history?.dataDate === dam.date) {
+    for (const { label, entry } of [
+      { label: "ปีที่แล้ว {pct}%", entry: history.lastYear },
+      { label: "ปี 2554 {pct}%", entry: history.year2554 },
+    ]) {
+      const pct = entry?.pct[dam.id];
+      if (pct !== undefined && Number.isFinite(pct)) parts.push(t(label, { pct: number.format(pct) }));
+    }
+  }
+  parts.push(dam.releaseCms === null
+    ? t("ไม่มีข้อมูลการระบาย")
+    : t("ระบาย {cms} ลบ.ม./วินาที", { cms: number.format(dam.releaseCms) }));
+  parts.push(t("แผนภาพ ไม่ใช่ระดับน้ำจริง"));
+  return parts.join(" · ");
 }
