@@ -7,7 +7,7 @@ export function ShortcutsDialog({ dialogRef, triggerRef }: {
 }) {
   const t = useT();
   const rows = [
-    { keys: "Space", action: "เล่น / หยุด (อากาศหรือน้ำ)" },
+    { keys: "Space", action: "เล่น / หยุด (อากาศหรือน้ำ; เมื่ออนุญาตภาพเคลื่อนไหว)" },
     { keys: "← / →", action: "ก่อนหน้า / ถัดไป 1 ชั่วโมง (อากาศ) หรือ 1 วัน (น้ำ)" },
     { keys: "1 / 2 / 3 / 4 / 5 / 6", action: "ฝน / อุณหภูมิ / ดัชนีความร้อน / ฝุ่น PM2.5 / เมฆ / ดาวเทียม (อากาศ)" },
     { keys: "W / A", action: "โหมดน้ำ / โหมดอากาศ" },

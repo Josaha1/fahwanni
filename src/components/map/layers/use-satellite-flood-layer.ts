@@ -30,7 +30,8 @@ export function useSatelliteFloodLayer(map: Map | null, enabled: boolean, nowMs:
 
   useStyleEffect(map, (live) => {
     if (!enabled || !live.getStyle()?.layers) return;
-    if (!live.getSource(ID)) live.addSource(ID, { type: "raster", tiles: [gibsTileUrl(layer, date, { z: "{z}", y: "{y}", x: "{x}" })], tileSize: 256, maxzoom: 9 });
+    if (!live.getSource(ID)) live.addSource(ID, { type: "raster", tiles: [gibsTileUrl(layer, date, { z: "{z}", y: "{y}", x: "{x}" })], tileSize: 256, maxzoom: 9,
+      attribution: "NASA LANCE/GIBS" });
     if (!live.getLayer(ID)) {
       const waterLayers = new Set(["all-routes", "dam-path-casing", "dam-path", "dam-path-flow", "river-circle", "rain-risk-circle", "rain-accum", "dam-high", "dam-circle"]);
       const before = live.getStyle().layers.find((item) => waterLayers.has(item.id))?.id
