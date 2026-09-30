@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { bearingDeg, distanceKm, type Position } from "../storms/normalize";
+export { nearbyQuakes, QUAKE_ATTRIBUTION, type NearbyQuake } from "./near";
 
 export interface Quake {
   id: string;
@@ -13,14 +13,8 @@ export interface Quake {
   url?: string;
 }
 
-export interface NearbyQuake extends Quake {
-  distanceKm: number;
-  bearingDeg: number;
-}
-
 /** USGS covers Thailand's neighbourhood: Myanmar, Laos, Sumatra/Andaman, southern China. */
 export const QUAKE_BBOX = { minLat: -5, maxLat: 30, minLon: 85, maxLon: 115 } as const;
-export const QUAKE_ATTRIBUTION = { text: "Earthquakes: USGS", url: "https://earthquake.usgs.gov" };
 
 const featureSchema = z.object({
   id: z.string(),
@@ -51,14 +45,4 @@ export function parseUsgs(raw: unknown): Quake[] {
       lat, lon, depthKm: Math.round(depth), tsunami: p.tsunami === 1, url: p.url,
     }];
   });
-}
-
-/** Quakes within `radiusKm` of a place in the last `days`, newest first. */
-export function nearbyQuakes(quakes: Quake[], place: Position, nowIso: string, radiusKm = 1000, days = 7): NearbyQuake[] {
-  const since = Date.parse(nowIso) - days * 86_400_000;
-  return quakes
-    .filter((q) => Date.parse(q.time) >= since)
-    .map((q) => ({ ...q, distanceKm: Math.round(distanceKm(place, q)), bearingDeg: Math.round(bearingDeg(place, q)) }))
-    .filter((q) => q.distanceKm <= radiusKm)
-    .sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
 }

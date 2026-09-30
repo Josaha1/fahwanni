@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useFarmerMode } from "@/hooks/use-farmer-mode";
 import { useT } from "@/i18n/client";
-import { rainTotalMm, soilWord, sprayWindow, type AgriSnapshot, type SoilWord } from "@/lib/agri";
+import { rainTotalMm, soilWord, sprayWindow, type SoilWord } from "@/lib/agri-helpers";
+import type { AgriSnapshot } from "@/lib/agri";
 import { formatTime } from "@/lib/format";
 import type { WeatherSnapshot } from "@/lib/weather/types";
 

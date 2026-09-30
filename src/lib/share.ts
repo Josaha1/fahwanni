@@ -1,7 +1,7 @@
 import type { Locale, T } from "@/i18n/core";
 import { adviceText } from "./advice-text";
 import { advise } from "./advise";
-import { pm25Level } from "./air";
+import { pm25Level } from "./air-level";
 import type { AirSnapshot } from "./air";
 import { describeCondition } from "./condition";
 import type { Place } from "./place";

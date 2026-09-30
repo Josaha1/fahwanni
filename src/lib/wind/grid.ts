@@ -1,8 +1,7 @@
 import { z } from "zod";
+import { WIND_BBOX, WIND_NX, WIND_NY } from "./constants";
+export { WIND_BBOX, WIND_NX, WIND_NY } from "./constants";
 
-export const WIND_BBOX = [92, 4, 110, 22] as const;
-export const WIND_NX = 19;
-export const WIND_NY = 19;
 
 export interface WindGrid {
   bbox: readonly [number, number, number, number];

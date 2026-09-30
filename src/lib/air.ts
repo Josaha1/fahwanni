@@ -1,4 +1,5 @@
 import { z } from "zod";
+export { pm25Level, type Pm25Level } from "./air-level";
 
 const airSchema = z.object({
   dateTime: z.string().optional(),
@@ -41,14 +42,4 @@ export function normalizeAir(raw: unknown): AirSnapshot {
     localAqi: local ? { code: local.code!, aqi: local.aqi!, category: local.category } : undefined,
     dateTime: air.dateTime,
   };
-}
-
-export type Pm25Level = "very-good" | "good" | "moderate" | "starting-to-affect" | "affects-health";
-
-export function pm25Level(value: number): Pm25Level {
-  if (value <= 15) return "very-good";
-  if (value <= 25) return "good";
-  if (value <= 37.5) return "moderate";
-  if (value <= 75) return "starting-to-affect";
-  return "affects-health";
 }

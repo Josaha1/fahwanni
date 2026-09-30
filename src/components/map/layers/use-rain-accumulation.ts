@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Map } from "maplibre-gl";
 import { accumulateRain, accumulationRgba } from "@/lib/rain-risk/accumulation";
 import { renderScalarImage } from "@/lib/raster/render-scalar";
-import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
+import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/constants";
 import type { ForecastDay } from "@/lib/wind/days";
 import { waterDate } from "../ui/water-day-stepper";
 import { useStyleEffect } from "../use-style-effect";

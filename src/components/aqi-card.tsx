@@ -1,5 +1,6 @@
 import { useT } from "@/i18n/client";
-import { pm25Level, type AirSnapshot } from "@/lib/air";
+import { pm25Level } from "@/lib/air-level";
+import type { AirSnapshot } from "@/lib/air";
 import { pm25LevelWord } from "@/lib/words";
 
 export function AqiCard({ air }: { air?: AirSnapshot }) {

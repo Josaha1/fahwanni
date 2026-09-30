@@ -1,4 +1,4 @@
-import { pm25Level, type Pm25Level } from "../air";
+import { pm25Level, type Pm25Level } from "../air-level";
 
 /** RainViewer scheme 2 "Universal Blue": 15/25/35/45 dBZ ≈ 0.3/1/4/10 mm/h. Index is level 0–4. */
 export const RAIN_RAMP = ["rgba(0, 0, 0, 0)", "#88ddee", "#0077aa", "#ffee00", "#ff4400"] as const;

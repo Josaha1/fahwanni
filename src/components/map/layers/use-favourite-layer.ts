@@ -7,7 +7,7 @@ import type { Place } from "@/lib/place";
 import { distanceKm } from "@/lib/storms/normalize";
 import type { HourlySeries } from "@/lib/timeline/store";
 import { seriesValueAt } from "@/lib/timeline/values";
-import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/grid";
+import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/constants";
 import { BASE } from "@/lib/map/base-style";
 import { DATA } from "@/lib/map/palette";
 import { useMapContext } from "../map-provider";

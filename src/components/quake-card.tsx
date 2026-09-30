@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/i18n/client";
-import { nearbyQuakes, QUAKE_ATTRIBUTION, type Quake } from "@/lib/quakes/usgs";
+import { nearbyQuakes, QUAKE_ATTRIBUTION } from "@/lib/quakes/near";
+import type { Quake } from "@/lib/quakes/usgs";
 import { bearingWord } from "@/lib/storms/present";
 
 function ago(iso: string, nowMs: number, t: ReturnType<typeof useT>): string {

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { Map } from "maplibre-gl";
 import { sampleField, type WindField } from "@/lib/wind/field";
-import { WIND_BBOX } from "@/lib/wind/grid";
+import { WIND_BBOX } from "@/lib/wind/constants";
 import { spawnArea, spawnParticle, speedColor, stepParticle, type Bounds, type Particle } from "@/lib/wind/particles";
 
 interface Props {

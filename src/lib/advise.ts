@@ -1,5 +1,5 @@
 import { TZDate } from "@date-fns/tz";
-import { pm25Level } from "./air";
+import { pm25Level } from "./air-level";
 import { describeCondition } from "./condition";
 import type { WeatherHour, WeatherSnapshot } from "./weather/types";
 
