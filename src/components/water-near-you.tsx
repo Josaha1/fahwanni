@@ -33,7 +33,7 @@ function value<T>(result: PromiseSettledResult<T>): T | null {
 /** A river point farther than this is not "near you" (Phuket → Surat Thani is ~170 km). */
 const NEAR_RIVER_KM = 120;
 
-export function WaterNearYou({ place }: { place: Place }) {
+export function WaterNearYou({ place, onRiverStatus }: { place: Place; onRiverStatus?: (status: RiverStatus | null, lat: number, lon: number) => void }) {
   const t = useT();
   const [result, setResult] = useState<Result | null>(null);
   const inThailand = place.lon >= 97.3 && place.lon <= 105.7 && place.lat >= 5.6 && place.lat <= 20.5;
@@ -69,13 +69,16 @@ export function WaterNearYou({ place }: { place: Place }) {
   }, [place, inThailand]);
 
   const data = inThailand && result?.lat === place.lat && result.lon === place.lon ? result : null;
-  if (!data) return null;
-
-  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
-  const nearbyRivers = (data.rivers?.points ?? []).map((point) => ({ point, km: distanceKm(place, point) }))
+  const nearbyRivers = (data?.rivers?.points ?? []).map((point) => ({ point, km: distanceKm(place, point) }))
     .sort((a, b) => a.km - b.km || a.point.id.localeCompare(b.point.id));
   const nearest = nearbyRivers.find(({ point, km }) => km <= NEAR_RIVER_KM && point.summary)?.point ?? null;
   const riverStatus = nearest?.summary?.today.status;
+  useEffect(() => {
+    if (data) onRiverStatus?.(riverStatus ?? null, place.lat, place.lon);
+  }, [data, riverStatus, place.lat, place.lon, onRiverStatus]);
+  if (!data) return null;
+
+  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 0 });
   const riverSummary = nearest?.summary ? t("{name}: {status} {trend}", {
     name: t.locale === "en" ? nearest.nameEn || nearest.nameTh : nearest.nameTh,
     status: t(statusWord(nearest.summary.today.status)),

@@ -1,4 +1,9 @@
 export const weather: Record<string, string> = {
+  "วันนี้ต้องรู้": "Today's essentials",
+  "ฝน: {time} น. โอกาส {chance}%": "Rain: {time}, {chance}% chance",
+  "ฝน: น้อยสุด {best} · มากสุด {worst} น.": "Rain: least {best} · most {worst}",
+  "ดัชนีความร้อน {temp}° · {band}": "Heat index {temp}° · {band}",
+  "น้ำใกล้คุณ: {status} (แบบจำลอง)": "Nearby water: {status} (model)",
   "ฝน": "Rain",
   "พยากรณ์จากแบบจำลอง ~100 กม. · ไม่ใช่เรดาร์": "Model forecast ~100 km · not radar",
   "มีโอกาส": "Possible",

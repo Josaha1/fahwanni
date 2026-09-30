@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { toast } from "sonner";
 import { AdviceStrip } from "@/components/advice-strip";
 import { AlertsCard } from "@/components/alerts-card";
@@ -30,6 +31,8 @@ import { useCurrentLocation } from "@/hooks/use-current-location";
 import { useWeather } from "@/hooks/use-weather";
 import { useT } from "@/i18n/client";
 import type { Place } from "@/lib/place";
+import type { RiverStatus } from "@/lib/rivers/types";
+import { todayBrief } from "@/lib/today-brief";
 
 const bangkok: Place = {
   id: "bangkok", name: "กรุงเทพมหานคร", admin: "Bangkok", country: "Thailand",
@@ -46,6 +49,13 @@ export function WeatherApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showStormBanner, setShowStormBanner] = useState(false);
+  const [water, setWater] = useState<{ lat: number; lon: number; status: RiverStatus | null } | null>(null);
+  const onRiverStatus = useCallback((status: RiverStatus | null, lat: number, lon: number) => {
+    setWater({ status, lat, lon });
+  }, []);
+  const brief = todayBrief(weather.snapshot,
+    water?.lat === place.lat && water.lon === place.lon ? water.status : null,
+    new Date().toISOString(), t);
 
   useEffect(() => {
     let timer: number;
@@ -87,8 +97,16 @@ export function WeatherApp() {
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
         {showStormBanner && <StormBanner place={place} />}
+        {(brief.rain || brief.heat || brief.water) && <section className="placeholder-card" aria-label={t("วันนี้ต้องรู้")}>
+          <h2 className="text-xl">{t("วันนี้ต้องรู้")}</h2>
+          <div className="mt-2 space-y-1 text-sm">
+            {brief.rain && <p className="truncate" title={brief.rain}>{brief.rain}</p>}
+            {brief.heat && <p className="truncate" title={brief.heat}>{brief.heat}</p>}
+            {brief.water && <Link href="/water" className="block min-h-11 content-center truncate text-given underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-given" title={brief.water}>{brief.water}</Link>}
+          </div>
+        </section>}
         <CurrentCard weather={weather} />
-        {showStormBanner && <WaterNearYou place={place} />}
+        {showStormBanner && <WaterNearYou place={place} onRiverStatus={onRiverStatus} />}
         <SeasonChip lat={place.lat} lon={place.lon} />
         {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>
