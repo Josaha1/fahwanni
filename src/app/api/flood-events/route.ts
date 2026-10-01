@@ -17,6 +17,8 @@ function gdacsUrl(nowMs: number) {
 async function getJson(url: string): Promise<unknown> {
   const response = await fetch(url, { next: { revalidate: 1800 }, signal: AbortSignal.timeout(20_000), headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error(`${response.status}`);
+  // GDACS answers 204 No Content when there are no events in the window: that is "none", not a failure.
+  if (response.status === 204) return { type: "FeatureCollection", features: [] };
   return response.json();
 }
 

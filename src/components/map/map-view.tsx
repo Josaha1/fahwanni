@@ -47,6 +47,8 @@ import { useRainAccumulation } from "./layers/use-rain-accumulation";
 import { useSatelliteFloodLayer } from "./layers/use-satellite-flood-layer";
 import { useReservoirsLayer } from "./layers/use-reservoirs-layer";
 import { useReservoirs } from "./use-reservoirs";
+import { useFloodEvents } from "./use-flood-events";
+import { useFloodEventsLayer } from "./layers/use-flood-events-layer";
 import { useThermalAnomaliesLayer } from "./layers/use-thermal-anomalies-layer";
 import { useSurfaceWaterLayer } from "./layers/use-surface-water-layer";
 import { useGibsWeatherLayer } from "./layers/use-gibs-weather-layer";
@@ -250,6 +252,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);
   const reservoirs = useReservoirs(water && reservoirsOn);
   useReservoirsLayer(mapInstance, reservoirs.points, water && reservoirsOn, nowMs);
+  const [floodEventsOn, setFloodEventsOn] = useState(true);
+  const floodEvents = useFloodEvents(water && floodEventsOn);
+  useFloodEventsLayer(mapInstance, floodEvents, water && floodEventsOn);
   useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
   useRiverLayer(mapInstance, rivers, water, waterDay);
   useAllRoutesLayer(mapInstance, dams, water && allRoutes);
@@ -631,7 +636,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   ];
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
-    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} reservoirs={reservoirs.points} waterDay={waterDay}
+    timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} reservoirs={reservoirs.points} floodEvents={floodEvents?.items ?? null} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
@@ -669,7 +674,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const changeMode = useCallback((next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode; water source cards close in weather mode.
-    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir")) close();
+    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir" || probe.kind === "floodEvent")) close();
     dispatch({ type: "setMode", mode: next });
   }, [mode, probe, close]);
   const openShortcuts = () => {
@@ -713,7 +718,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const showLegend = mapState.primary !== "rain" || rainOn;
   const spokenOverlays = water ? [
     allRoutes && t("เส้นทางน้ำทุกเขื่อน"), waterRadarOn && t("ฝนตอนนี้ (เรดาร์)"),
-    rainAccumOn && t("ฝนสะสม 3 วัน"), satFloodOn && t("น้ำท่วมจากดาวเทียม"), reservoirsOn && t("เขื่อน/อ่างทั้งหมด"),
+    rainAccumOn && t("ฝนสะสม 3 วัน"), satFloodOn && t("น้ำท่วมจากดาวเทียม"), reservoirsOn && t("เขื่อน/อ่างทั้งหมด"), floodEventsOn && t("เหตุการณ์น้ำท่วม/ภัยพิบัติ"),
     surfaceWaterOn && t("พื้นที่ที่เคยมีน้ำขัง (1984–2021)"),
   ] : [
     rainVisible && t("เรดาร์ฝน"), windOn && Boolean(wind) && t("ลม"),
@@ -762,6 +767,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         rainAccum: { label: "ฝนสะสม 3 วัน", checked: rainAccumOn, status: rainAccumStatus, day: waterDay,
           startDate: waterDate(nowMs, waterDay), onChange: () => setRainAccumOn((on) => !on) },
         satFlood: { label: "น้ำท่วมจากดาวเทียม", checked: satFloodOn, onChange: () => setSatFloodOn((on) => !on) },
+        floodEvents: { label: "เหตุการณ์น้ำท่วม/ภัยพิบัติ", checked: floodEventsOn, onChange: () => setFloodEventsOn((on) => !on), count: floodEvents?.items.length },
         reservoirs: { label: "เขื่อน/อ่างทั้งหมด", checked: reservoirsOn, onChange: () => setReservoirsOn((on) => !on),
           count: reservoirs.points?.length, status: reservoirs.status },
         surfaceWater: { label: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", checked: surfaceWaterOn, onChange: () => setSurfaceWaterOn((on) => !on) },

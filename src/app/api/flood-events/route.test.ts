@@ -21,3 +21,12 @@ it("returns 503 no-store when both sources fail", async () => {
   expect(response.status).toBe(503);
   expect(response.headers.get("Cache-Control")).toBe("no-store");
 });
+
+it("treats a GDACS 204 (no events) as an empty source, not a failure", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-01T03:00:00Z"));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => url.includes("gdacs") ? new Response(null, { status: 204 }) : Response.json(fixture.glide)));
+  const payload = await (await (await import("./route")).GET()).json();
+  expect(payload.sources).toEqual(["GDACS (European Commission JRC / UN OCHA)", "ADRC GLIDE via HDX (CC BY-IGO)"]);
+  expect(payload.items).toHaveLength(2);
+});

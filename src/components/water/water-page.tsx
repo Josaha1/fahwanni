@@ -19,6 +19,7 @@ import type { TideSeries } from "@/lib/tide/tide";
 import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/lib/water/whats-new";
 import { readWatch, refreshWatch, toggleWatch, watchRows, writeWatch, type WaterWatch, type WatchItem } from "@/lib/water/watchlist";
 import { TmdWarningList } from "./tmd-warnings";
+import { FloodEventList, type FloodEventsPayload } from "./flood-events";
 import { DamRowHeader } from "./dam-row";
 import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
 import { TideChart } from "./tide-chart";
@@ -43,6 +44,7 @@ const validRivers = (value: RiversPayload) => Array.isArray(value?.points);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validRain = (value: RainRisk) => Array.isArray(value?.stations);
 const validWarnings = (value: TmdWarnings & { error?: string }) => Array.isArray(value?.items) && !value.error;
+const validEvents = (value: FloodEventsPayload) => Array.isArray(value?.items);
 const validTide = (value: TideSeries) => Array.isArray(value?.times) && value.times.length === value?.heights?.length;
 const tideProvinces = new Set(["bangkok", "nonthaburi", "pathum-thani", "samut-prakan", "samut-sakhon", "phra-nakhon-si-ayutthaya"]);
 function TideSection() {
@@ -73,6 +75,7 @@ export function WaterPage() {
   const dams = useWaterSource("/api/dams", validDams);
   const rain = useWaterSource("/api/rain-risk", validRain);
   const warnings = useWaterSource("/api/tmd-warnings", validWarnings);
+  const events = useWaterSource("/api/flood-events", validEvents);
   const seenRaw = useSyncExternalStore(subscribeWater, () => stored("fah-water-seen"), () => null);
   const watchRaw = useSyncExternalStore(subscribeWater, () => stored("fah-water-watch") ?? stored("fah-dam-watch"), () => null);
   const seen: Seen | null = useMemo(() => seenRaw ? readSeen() : null, [seenRaw]);
@@ -157,6 +160,10 @@ export function WaterPage() {
     {warnings.data && warnings.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
       <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
       <TmdWarningList items={warnings.data.items} limit={3} />
+    </section>}
+    {events.data && events.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}>
+      <h2 className="text-lg font-semibold">{t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}</h2>
+      <FloodEventList payload={events.data} />
     </section>}
     {news.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("มีอะไรใหม่")}>
       <h2 className="text-lg font-semibold">{t("มีอะไรใหม่")}</h2>

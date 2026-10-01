@@ -16,6 +16,7 @@ type WaterLayers = {
   rainAccum: SwitchRow & { status: "loading" | "shown" | "none" | "unavailable"; day: number; startDate: string };
   satFlood: SwitchRow;
   reservoirs: SwitchRow & { status: "idle" | "loading" | "ready" | "error" };
+  floodEvents: SwitchRow;
   surfaceWater: SwitchRow;
 };
 
@@ -82,6 +83,8 @@ export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSe
       </section>}
       <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-water-overlays-title">
         <h3 id="map-water-overlays-title" className="mb-2 text-sm font-semibold">{t("ซ้อนทับ")}</h3>
+        {switchButton(waterLayers.floodEvents)}
+        <p className="map-muted mt-1 text-xs">{t("เหตุการณ์ 90 วันล่าสุดจาก GDACS และ GLIDE · ไม่ใช่ประกาศทางการของไทย")}</p>
         {switchButton(waterLayers.reservoirs)}
         <p className="map-muted mt-1 text-xs">{t(waterLayers.reservoirs.checked && waterLayers.reservoirs.status === "error"
           ? "ข้อมูลเขื่อน/อ่างเพิ่มเติมไม่พร้อมใช้งานตอนนี้"
