@@ -28,6 +28,9 @@ const checks = [
   ["OpenFreeMap", () => request("https://tiles.openfreemap.org/styles/positron")],
   ["Terrarium", () => request("https://s3.amazonaws.com/elevation-tiles-prod/terrarium/6/49/29.png")],
   ["TMD", () => request("https://data.tmd.go.th/api/WeatherWarningNews/v2/?uid=api&ukey=api12345")],
+  ["NOAA CPC ONI", () => request("https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt")],
+  ["aviationweather METAR", () => request("https://aviationweather.gov/api/data/metar?ids=VTBS&format=json")],
+  ["NOAA Coral Reef Watch", () => request("https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.json?CRW_SST%5Blast%5D%5B(10.1)%5D%5B(99.85)%5D")],
   ["Open-Meteo", () => request("https://api.open-meteo.com/v1/forecast?latitude=13.7,18.8&longitude=100.5,99.0&hourly=wind_speed_10m,wind_direction_10m&forecast_hours=2")],
 ];
 
