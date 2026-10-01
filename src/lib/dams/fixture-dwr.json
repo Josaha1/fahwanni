@@ -1,0 +1,502 @@
+{
+ "medium": {
+  "info": {
+   "metadata": {
+    "version": "1.0",
+    "dataProviderCode": "G09006",
+    "dataProviderName": "Department of Water Resources",
+    "documentGenerateTime": "2026-10-01T10:42:02",
+    "waterDatatype": "B004"
+   },
+   "waterResources": [
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G09006",
+      "dataOwnerName": "Department of Water Resources",
+      "waterResourcesCode": "G09006-REV-1-2564-060",
+      "waterResourcesName": "กุดวังซอ",
+      "waterResourcesType": null,
+      "waterResourcesSize": "ML",
+      "waterResourcesIrrigation": 0,
+      "capacity": 2.58,
+      "locationCode": "461802",
+      "latitude": 16.242024,
+      "longitude": 103.542803,
+      "surfaceArea": 0.88
+     },
+     "benefit": {
+      "numOfPeople": 1200,
+      "numOfHouseholds": null,
+      "agriculturalArea": 1000.0
+     },
+     "lastUpdateTime": "2021-02-19T12:16:40"
+    },
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G09006",
+      "dataOwnerName": "Department of Water Resources",
+      "waterResourcesCode": "G09006-REV-1-2564-052",
+      "waterResourcesName": "หนองบึงปากเขื่อน",
+      "waterResourcesType": null,
+      "waterResourcesSize": "ML",
+      "waterResourcesIrrigation": 0,
+      "capacity": 2.08,
+      "locationCode": "400707",
+      "latitude": 16.543885,
+      "longitude": 102.912793,
+      "surfaceArea": 1.13
+     },
+     "benefit": {
+      "numOfPeople": 1200,
+      "numOfHouseholds": null,
+      "agriculturalArea": 1000.0
+     },
+     "lastUpdateTime": "2021-02-19T12:16:40"
+    }
+   ]
+  },
+  "obs": {
+   "metadata": {
+    "version": "1.0",
+    "dataProviderCode": "G09006",
+    "dataProviderName": "Department of Water Resources",
+    "documentGenerateTime": "2026-10-01T10:42:07",
+    "interval": "P-Daily",
+    "waterDatatype": "A004"
+   },
+   "timeSeriesObservation": [
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G09006",
+      "observeAgencyName": "Department of Water Resources",
+      "originality": 1,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:07",
+     "waterResources": {
+      "waterResourcesCode": "G09006-REV-1-2564-060",
+      "waterResourcesReference": "/WaterResourcesInfo/G09006-REV-1-2564-060"
+     },
+     "measurementResults": [
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T14:27:45",
+       "updateTime": "2025-08-05T14:27:45",
+       "variable": "Storage",
+       "value": 1.03,
+       "uom": "MCM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T14:27:45",
+       "updateTime": "2025-08-05T14:27:45",
+       "variable": "ActiveStorage",
+       "value": 0.78,
+       "uom": "MCM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": null,
+       "createTime": null,
+       "updateTime": null,
+       "variable": "Inflow",
+       "value": null,
+       "uom": null,
+       "qualityFlag": null,
+       "comment": null,
+       "qualityControlLevel": null
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T14:27:46",
+       "updateTime": "2025-08-05T14:27:46",
+       "variable": "Outflow",
+       "value": 15.13,
+       "uom": "CMS",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      }
+     ]
+    },
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G09006",
+      "observeAgencyName": "Department of Water Resources",
+      "originality": 1,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:07",
+     "waterResources": {
+      "waterResourcesCode": "G09006-REV-1-2564-052",
+      "waterResourcesReference": "/WaterResourcesInfo/G09006-REV-1-2564-052"
+     },
+     "measurementResults": [
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T19:35:49",
+       "updateTime": "2025-08-05T19:35:49",
+       "variable": "Storage",
+       "value": 2.23,
+       "uom": "MCM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T19:35:49",
+       "updateTime": "2025-08-05T19:35:49",
+       "variable": "ActiveStorage",
+       "value": 2.07,
+       "uom": "MCM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": null,
+       "createTime": null,
+       "updateTime": null,
+       "variable": "Inflow",
+       "value": null,
+       "uom": null,
+       "qualityFlag": null,
+       "comment": null,
+       "qualityControlLevel": null
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T19:35:50",
+       "updateTime": "2025-08-05T19:35:50",
+       "variable": "Outflow",
+       "value": 20.67,
+       "uom": "CMS",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "small": {
+  "info": {
+   "metadata": {
+    "version": "1.0",
+    "dataProviderCode": "G07003",
+    "dataProviderName": "Royal Irrigation Department",
+    "documentGenerateTime": "2026-10-01T10:42:05",
+    "waterDatatype": "B005"
+   },
+   "waterResources": [
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G07003",
+      "dataOwnerName": "Royal Irrigation Department",
+      "waterResourcesCode": "G07003-21809230109001",
+      "waterResourcesName": "อ่างเก็บน้ำห้วยแร้ง",
+      "waterResourcesType": null,
+      "waterResourcesSize": "N/A",
+      "waterResourcesIrrigation": null,
+      "capacity": 0.0,
+      "locationCode": "230109",
+      "latitude": 12.407433,
+      "longitude": 102.667008,
+      "surfaceArea": null
+     },
+     "benefit": {
+      "numOfPeople": null,
+      "numOfHouseholds": null,
+      "agriculturalArea": null
+     },
+     "administration": {
+      "developAgencyName": null,
+      "improveAgencyName": "อ่างเก็บน้ำห้วยแร้ง",
+      "developDate": null,
+      "lastImproveDate": null
+     },
+     "lastUpdateTime": "2024-11-14T19:59:33"
+    },
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G09006",
+      "dataOwnerName": "Department of Water Resources",
+      "waterResourcesCode": "G09006-REV-1-2566-251",
+      "waterResourcesName": "หนองทุ่งช้างตาย",
+      "waterResourcesType": null,
+      "waterResourcesSize": "S",
+      "waterResourcesIrrigation": 0,
+      "capacity": 0.5,
+      "locationCode": "230305",
+      "latitude": 12.5461,
+      "longitude": 102.4705,
+      "surfaceArea": 0.11
+     },
+     "benefit": {
+      "numOfPeople": null,
+      "numOfHouseholds": null,
+      "agriculturalArea": null
+     },
+     "administration": {
+      "developAgencyName": null,
+      "improveAgencyName": "อ่างเก็บน้ำห้วยแร้ง",
+      "developDate": null,
+      "lastImproveDate": null
+     },
+     "lastUpdateTime": "2024-11-14T19:59:33"
+    },
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G07003",
+      "dataOwnerName": "Royal Irrigation Department",
+      "waterResourcesCode": "G07003-2009440401001",
+      "waterResourcesName": "อ่างเก็บน้ำหนองบ้านสา",
+      "waterResourcesType": null,
+      "waterResourcesSize": "N/A",
+      "waterResourcesIrrigation": null,
+      "capacity": 0.0,
+      "locationCode": "440401",
+      "latitude": 16.332546,
+      "longitude": 103.292213,
+      "surfaceArea": null
+     },
+     "benefit": {
+      "numOfPeople": null,
+      "numOfHouseholds": null,
+      "agriculturalArea": null
+     },
+     "administration": {
+      "developAgencyName": null,
+      "improveAgencyName": "อ่างเก็บน้ำห้วยแร้ง",
+      "developDate": null,
+      "lastImproveDate": null
+     },
+     "lastUpdateTime": "2024-11-14T19:59:33"
+    },
+    {
+     "waterResourcesMetadata": {
+      "dataOwnerCode": "G09006",
+      "dataOwnerName": "Department of Water Resources",
+      "waterResourcesCode": "G09006-REV-1-2566-246",
+      "waterResourcesName": "อ่างเก็บน้ำห้วยยาง 3",
+      "waterResourcesType": null,
+      "waterResourcesSize": "S",
+      "waterResourcesIrrigation": null,
+      "capacity": 0.0,
+      "locationCode": "160204",
+      "latitude": 14.8898,
+      "longitude": 100.897,
+      "surfaceArea": null
+     },
+     "benefit": {
+      "numOfPeople": null,
+      "numOfHouseholds": null,
+      "agriculturalArea": null
+     },
+     "administration": {
+      "developAgencyName": null,
+      "improveAgencyName": "อ่างเก็บน้ำห้วยแร้ง",
+      "developDate": null,
+      "lastImproveDate": null
+     },
+     "lastUpdateTime": "2024-11-14T19:59:33"
+    }
+   ]
+  },
+  "obs": {
+   "metadata": {
+    "version": "1.0",
+    "dataProviderCode": "G07003",
+    "dataProviderName": "Hydro-Informatics Institute (Public Organization)",
+    "documentGenerateTime": "2026-10-01T10:42:06",
+    "interval": "P-Daily",
+    "waterDatatype": "A005"
+   },
+   "timeSeriesObservation": [
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G07003",
+      "observeAgencyName": "Royal Irrigation Department",
+      "originality": 1,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:06",
+     "waterResources": {
+      "waterResourcesCode": "G07003-21809230109001",
+      "waterResourcesReference": "MediumsizedWaterResources/G07003-21809230109001"
+     },
+     "measurementResults": [
+      {
+       "measureTime": "2026-09-23T00:00:00",
+       "createTime": "2026-09-24T07:12:33",
+       "updateTime": "2026-09-24T07:12:33",
+       "variable": "Storage",
+       "value": 37900000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No quality control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2026-09-23T00:00:00",
+       "createTime": "2026-09-24T07:12:33",
+       "updateTime": "2026-09-24T07:12:33",
+       "variable": "Storage",
+       "value": 35400000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No quality control",
+       "qualityControlLevel": "1"
+      }
+     ]
+    },
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G09006",
+      "observeAgencyName": "Department of Water Resources",
+      "originality": 1,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:06",
+     "waterResources": {
+      "waterResourcesCode": "G09006-REV-1-2566-251",
+      "waterResourcesReference": "/WaterResourcesInfo/G09006-REV-1-2566-251"
+     },
+     "measurementResults": [
+      {
+       "measureTime": "2024-02-01T00:00:00",
+       "createTime": "2024-06-19T19:00:00",
+       "updateTime": "2024-06-19T19:00:00",
+       "variable": "Storage",
+       "value": 390000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T19:17:05",
+       "updateTime": "2025-08-05T19:17:05",
+       "variable": "Storage",
+       "value": 510000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2024-02-01T00:00:00",
+       "createTime": "2024-06-19T19:00:00",
+       "updateTime": "2024-06-19T19:00:00",
+       "variable": "ActiveStorage",
+       "value": 300000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2025-08-05T00:00:00",
+       "createTime": "2025-08-05T19:17:05",
+       "updateTime": "2025-08-05T19:17:05",
+       "variable": "ActiveStorage",
+       "value": 410000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No Quality Control",
+       "qualityControlLevel": "1"
+      }
+     ]
+    },
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G07003",
+      "observeAgencyName": "Royal Irrigation Department",
+      "originality": 1,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:06",
+     "waterResources": {
+      "waterResourcesCode": "G07003-2009440401001",
+      "waterResourcesReference": "MediumsizedWaterResources/G07003-2009440401001"
+     },
+     "measurementResults": [
+      {
+       "measureTime": "2021-10-26T00:00:00",
+       "createTime": "2026-09-24T07:13:23",
+       "updateTime": "2026-09-24T07:13:23",
+       "variable": "Storage",
+       "value": 80000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No quality control",
+       "qualityControlLevel": "1"
+      },
+      {
+       "measureTime": "2021-10-26T00:00:00",
+       "createTime": "2026-09-24T07:13:23",
+       "updateTime": "2026-09-24T07:13:23",
+       "variable": "Storage",
+       "value": 40000.0,
+       "uom": "CM",
+       "qualityFlag": "U",
+       "comment": "No quality control",
+       "qualityControlLevel": "1"
+      }
+     ]
+    },
+    {
+     "observationMetadata": {
+      "observeAgencyCode": "G09006",
+      "observeAgencyName": "Department of Water Resources",
+      "originality": null,
+      "editAgencyCode": null,
+      "editAgencyName": null
+     },
+     "resultTime": "2026-10-01T10:42:06",
+     "waterResources": {
+      "waterResourcesCode": "G09006-REV-1-2566-246",
+      "waterResourcesReference": null
+     },
+     "measurementResults": [
+      {
+       "measureTime": null,
+       "createTime": null,
+       "updateTime": null,
+       "variable": "Storage",
+       "value": null,
+       "uom": null,
+       "qualityFlag": null,
+       "comment": null,
+       "qualityControlLevel": null
+      },
+      {
+       "measureTime": null,
+       "createTime": null,
+       "updateTime": null,
+       "variable": "ActiveStorage",
+       "value": null,
+       "uom": null,
+       "qualityFlag": null,
+       "comment": null,
+       "qualityControlLevel": null
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
