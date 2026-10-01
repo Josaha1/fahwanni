@@ -1,5 +1,7 @@
 import "server-only";
 
+import { fetchJsonWithCa } from "../net/fetch-json-with-ca";
+import { SECTIGO_DV_R36 } from "../net/sectigo-dv-r36";
 import { distanceKm } from "../storms/normalize";
 import { normalizeDwr, type DwrReservoir } from "./dwr";
 
@@ -22,16 +24,14 @@ export function withoutRidDuplicates(reservoirs: DwrReservoir[], ridDams: { lat:
 }
 
 /** Returns null when any of the four DWR endpoints fails; the route keeps serving its cache. */
-export async function fetchDwr(ridDams: { lat: number; lon: number; nameTh?: string }[], fetchImpl: typeof fetch = fetch): Promise<DwrPayload | null> {
+export async function fetchDwr(ridDams: { lat: number; lon: number; nameTh?: string }[],
+  getJson: (url: string) => Promise<unknown> = (url) => fetchJsonWithCa(url, [SECTIGO_DV_R36])): Promise<DwrPayload | null> {
   try {
-    const bodies = await Promise.all(ENDPOINTS.map(async (name) => {
-      const response = await fetchImpl(`${BASE}${name}`, { next: { revalidate: 21600 }, signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(`DWR ${name} ${response.status}`);
-      return response.json();
-    }));
+    // DWR omits its intermediate certificate; plain fetch() fails in Node (UNABLE_TO_VERIFY_LEAF_SIGNATURE).
+    const bodies = await Promise.all(ENDPOINTS.map((name) => getJson(`${BASE}${name}`))) as Parameters<typeof normalizeDwr>[0][];
     const [mediumInfo, medium, smallInfo, small] = bodies;
     const reservoirs = withoutRidDuplicates([
-      ...normalizeDwr(mediumInfo, medium, "medium"), ...normalizeDwr(smallInfo, small, "small"),
+      ...normalizeDwr(mediumInfo, medium as never, "medium"), ...normalizeDwr(smallInfo, small as never, "small"),
     ], ridDams);
     if (!reservoirs.length) return null;
     return { fetchedAt: new Date().toISOString(), source: "กรมทรัพยากรน้ำ (DWR) open data · CC BY", reservoirs };
