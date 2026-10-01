@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Marker, type Map, type MapMouseEvent } from "maplibre-gl";
+import { Marker, type GeoJSONSource, type Map, type MapMouseEvent } from "maplibre-gl";
 
-export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string };
+export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string };
 
 /** `points: false` (water mode): a tap on empty map opens nothing; dam, storm and quake taps still work. */
 /** `onRoute`: a tap on the all-routes overview opens that route's dam and hands its id back to focus the route. */
@@ -42,13 +42,26 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       const river = map.getLayer("river-circle") ? map.queryRenderedFeatures([
         [event.point.x - 8, event.point.y - 8], [event.point.x + 8, event.point.y + 8],
       ], { layers: ["river-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
-      const route = !dam && !rain && !river && map.getLayer("all-routes") ? map.queryRenderedFeatures([
+      const reservoirLayers = ["reservoir-point", "osm-minor-point"].filter((id) => map.getLayer(id));
+      const reservoir = !dam && !rain && !river && reservoirLayers.length ? map.queryRenderedFeatures([
+        [event.point.x - 7, event.point.y - 7], [event.point.x + 7, event.point.y + 7],
+      ], { layers: reservoirLayers }).find((feature) => typeof feature.properties?.id === "string") : undefined;
+      const cluster = !dam && !rain && !river && !reservoir && map.getLayer("reservoir-cluster") ? map.queryRenderedFeatures([
+        [event.point.x - 10, event.point.y - 10], [event.point.x + 10, event.point.y + 10],
+      ], { layers: ["reservoir-cluster"] })[0] : undefined;
+      if (cluster && typeof cluster.properties?.cluster_id === "number" && cluster.geometry.type === "Point") {
+        const [lon, lat] = cluster.geometry.coordinates;
+        void (map.getSource("reservoirs") as GeoJSONSource).getClusterExpansionZoom(cluster.properties.cluster_id)
+          .then((zoom) => map.easeTo({ center: [lon, lat], zoom }));
+        return;
+      }
+      const route = !dam && !rain && !river && !reservoir && map.getLayer("all-routes") ? map.queryRenderedFeatures([
         [event.point.x - 6, event.point.y - 6], [event.point.x + 6, event.point.y + 6],
       ], { layers: ["all-routes"] }).filter((feature) => typeof feature.properties?.damId === "string")
         // Downstream reaches are shared by several routes; the dam nearest the tap is the one the user means.
         .sort((a, b) => Math.hypot(a.properties!.damLat - event.lngLat.lat, a.properties!.damLon - event.lngLat.lng)
           - Math.hypot(b.properties!.damLat - event.lngLat.lat, b.properties!.damLon - event.lngLat.lng))[0] : undefined;
-      const favourite = !dam && !rain && !river && !route && map.getLayer("favourite-circle") ? map.queryRenderedFeatures([
+      const favourite = !dam && !rain && !river && !reservoir && !route && map.getLayer("favourite-circle") ? map.queryRenderedFeatures([
         [event.point.x - 8, event.point.y - 8], [event.point.x + 8, event.point.y + 8],
       ], { layers: ["favourite-circle"] }).find((feature) =>
         typeof feature.properties?.lat === "number" && typeof feature.properties?.lon === "number") : undefined;
@@ -59,6 +72,7 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       if (dam) select({ kind: "dam", id: dam.properties!.id as string });
       else if (rain) select({ kind: "rain", id: rain.properties!.id as string });
       else if (river) select({ kind: "river", id: river.properties!.id as string });
+      else if (reservoir) select({ kind: "reservoir", id: reservoir.properties!.id as string });
       else if (route) {
         const damId = route.properties!.damId as string;
         select({ kind: "dam", id: damId });

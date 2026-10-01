@@ -37,6 +37,8 @@ import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import { readRadarLevel } from "../radar-tile";
 import { RiverDetails, type RiversPayload } from "@/components/water/river-details";
 import { riverWatchValue } from "@/lib/rivers/observed";
+import { isStale } from "@/lib/dams/dwr";
+import { reservoirKindWord, type ReservoirPoint } from "@/lib/dams/reservoirs";
 import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
@@ -49,7 +51,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, favourites, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
-  rivers, riversStatus, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
+  rivers, riversStatus, reservoirs = null, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
   probe: Probe;
   favourites: Place[];
   onClose: () => void;
@@ -71,6 +73,8 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   damsHistory: DamHistory | null;
   rivers: RiversPayload | null;
   riversStatus: "idle" | "loading" | "ready" | "error";
+  /** DWR reservoirs + OSM dams (water mode, "เขื่อน/อ่างทั้งหมด"). */
+  reservoirs?: ReservoirPoint[] | null;
   waterDay: number;
   watch: WaterWatch;
   onToggleWatch: (dam: Dam) => void;
@@ -110,6 +114,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   }) : [];
   const rainStation = probe.kind === "rain" ? rainRisk?.stations.find((item) => item.id === probe.id) : undefined;
   const river = probe.kind === "river" ? rivers?.points.find((item) => item.id === probe.id) : undefined;
+  const reservoir = probe.kind === "reservoir" ? reservoirs?.find((item) => item.id === probe.id) : undefined;
   const upstream = river?.downstreamOfDam ? dams?.dams.find((item) => item.id === river.downstreamOfDam) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
@@ -144,6 +149,8 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   else if (selectedDam) title = t.locale === "en" ? selectedDam.nameEn || selectedDam.nameTh : selectedDam.nameTh;
   else if (rainStation) title = t.locale === "en" ? rainStation.nameEn || rainStation.nameTh : rainStation.nameTh;
   else if (river) title = t.locale === "en" ? river.nameEn || river.nameTh : river.nameTh;
+  else if (reservoir) title = (t.locale === "en" ? reservoir.nameEn || reservoir.nameTh : reservoir.nameTh) || t("เขื่อน/ฝาย (ไม่มีชื่อ)");
+  else if (probe.kind === "reservoir") title = t("ไม่พบข้อมูลแหล่งน้ำนี้");
   else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
   else if (probe.kind === "rain") title = t("ไม่พบข้อมูลฝนของสถานีนี้");
   else if (probe.kind === "river") title = t("แม่น้ำใกล้คุณ");
@@ -258,6 +265,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
     {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers={false} waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
+    {reservoir && <ReservoirDetails point={reservoir} nowMs={nowMs} />}
     {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;
 }
@@ -327,4 +335,27 @@ function DamFailureDetails() {
       {EMERGENCY_NUMBERS.slice(0, 2).map(({ label, number, href }) => <a key={number} className="map-chip inline-flex items-center" href={href}>{t("โทร {name}", { name: t(label) })}</a>)}
     </div>
   </details>;
+}
+
+function ReservoirDetails({ point, nowMs }: { point: ReservoirPoint; nowMs: number }) {
+  const t = useT();
+  const volume = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 2 });
+  const pct = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
+  const date = point.measuredAt && new Intl.DateTimeFormat(t.intl, { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" })
+    .format(new Date(`${point.measuredAt}T12:00:00+07:00`));
+  const stale = isStale(point.measuredAt, nowMs);
+  const owner = point.owner === "RID" ? "กรมชลประทาน" : point.owner === "DWR" ? "กรมทรัพยากรน้ำ" : null;
+  return <div className="mt-2 space-y-1 text-sm">
+    <p className="map-muted text-xs">{t(reservoirKindWord(point.kind))}{owner && ` · ${t("ดูแลโดย{owner}", { owner: t(owner) })}`}</p>
+    {point.source === "osm" ? <p>{t("ตำแหน่งจาก OpenStreetMap · ไม่มีข้อมูลน้ำรายวันที่เปิดให้ใช้")}</p> : point.storageMcm === null
+      ? <p>{t("ยังไม่มีข้อมูลปริมาณน้ำ")}</p>
+      : <>
+        <p className="font-semibold">{point.pct !== null
+          ? t("ปริมาณน้ำ {volume} ล้าน ลบ.ม. ({pct}% ของความจุ)", { volume: volume.format(point.storageMcm), pct: pct.format(point.pct) })
+          : t("ปริมาณน้ำ {volume} ล้าน ลบ.ม.", { volume: volume.format(point.storageMcm) })}</p>
+        {point.pct === null && <p className="map-muted text-xs">{t("ไม่ทราบความจุ จึงไม่แสดงเปอร์เซ็นต์")}</p>}
+        {date && <p className={stale ? "map-warning text-xs" : "map-muted text-xs"}>{t(stale ? "ข้อมูลเก่า วันที่ {date}" : "ข้อมูลวันที่ {date}", { date })}</p>}
+      </>}
+    <p className="map-muted text-xs">{t(point.source === "osm" ? "© OpenStreetMap contributors (ODbL)" : "ที่มา: กรมทรัพยากรน้ำ open data (CC BY)")}</p>
+  </div>;
 }

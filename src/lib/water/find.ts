@@ -3,7 +3,7 @@ import type { WaterWatch } from "./watchlist";
 import { waterRivers, type WaterRiver } from "./rivers";
 
 export type DamFilter = "all" | "full" | "release" | "watched";
-export type WaterPointHit = { kind: "dam" | "river"; id: string; name: string };
+export type WaterPointHit = { kind: "dam" | "river" | "reservoir"; id: string; name: string };
 export type WaterHit = WaterPointHit | {
   kind: "riverGroup";
   river: WaterRiver;
@@ -28,7 +28,9 @@ const normalize = (text: string) => text.toLocaleLowerCase("th").replace(/\s+/g,
   .replace(/(?:^|\s+)(?:river|the)(?:\s+(?:river|the))*$/, "").trim();
 
 /** River groups and direct name hits; points precede dams within each group, with limits per list. */
-export function findWater(query: string, dams: Dam[], rivers: { id: string; nameTh: string; nameEn: string }[], locale: "th" | "en", limit = 6): WaterHit[] {
+/** `places`: other named dams/reservoirs (DWR, OpenStreetMap) — matched by name only, never grouped. */
+export function findWater(query: string, dams: Dam[], rivers: { id: string; nameTh: string; nameEn: string }[], locale: "th" | "en", limit = 6,
+  places: { id: string; nameTh: string; nameEn: string }[] = []): WaterHit[] {
   const q = normalize(query);
   if (!q) return [];
   const rankNames = (names: string[]) => {
@@ -50,6 +52,7 @@ export function findWater(query: string, dams: Dam[], rivers: { id: string; name
   const items = [
     ...dams.map((dam) => ({ kind: "dam" as const, id: dam.id, th: dam.nameTh, en: dam.nameEn })),
     ...rivers.map((river) => ({ kind: "river" as const, id: river.id, th: river.nameTh, en: river.nameEn })),
+    ...places.filter((place) => place.nameTh || place.nameEn).map((place) => ({ kind: "reservoir" as const, id: place.id, th: place.nameTh, en: place.nameEn })),
   ];
   const direct = items.flatMap((item) => {
     if (groupedIds.has(`${item.kind}:${item.id}`)) return [];

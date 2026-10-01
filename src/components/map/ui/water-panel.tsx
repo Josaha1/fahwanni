@@ -29,7 +29,7 @@ function subscribeOnline(onChange: () => void) {
 }
 
 export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, tmdWarnings, place, placeName, onSelectDam, waterDay,
-  stepper, legendButton, onOpenLegend, riverPoints, onSelectRiver }: {
+  stepper, legendButton, onOpenLegend, riverPoints, onSelectRiver, reservoirs = [], onSelectReservoir }: {
   dams: DamsPayload | null;
   damsStatus: "idle" | "loading" | "ready" | "error";
   watch: WaterWatch;
@@ -45,6 +45,8 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
   onOpenLegend: () => void;
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
   onSelectRiver: (id: string) => void;
+  reservoirs?: { id: string; nameTh: string; nameEn: string }[];
+  onSelectReservoir?: (id: string) => void;
 }) {
   const t = useT();
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
@@ -100,23 +102,25 @@ export function WaterPanel({ dams, damsStatus, watch, rainRisk, rainRiskStatus, 
       </li>)}</ul>
     </section>}
     {damsStatus === "ready" && dams && <WaterFinder dams={dams.dams}
-      riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver} />}
+      riverPoints={riverPoints} onSelectDam={onSelectDam} onSelectRiver={onSelectRiver}
+      reservoirs={reservoirs} onSelectReservoir={onSelectReservoir} />}
   </section>;
 }
 
 /** Name search over rivers, their dams and individual river points. */
-function WaterFinder({ dams, riverPoints, onSelectDam, onSelectRiver }: {
+function WaterFinder({ dams, riverPoints, onSelectDam, onSelectRiver, reservoirs, onSelectReservoir }: {
   dams: Dam[];
   riverPoints: { id: string; nameTh: string; nameEn: string }[];
   onSelectDam: (id: string) => void; onSelectRiver: (id: string) => void;
+  reservoirs: { id: string; nameTh: string; nameEn: string }[]; onSelectReservoir?: (id: string) => void;
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const hits = findWater(query, dams, riverPoints, t.locale);
+  const hits = findWater(query, dams, riverPoints, t.locale, 6, reservoirs);
   const chip = (hit: WaterPointHit) => <li key={`${hit.kind}:${hit.id}`}>
     <button type="button" className="map-chip flex w-full justify-between gap-2 text-left text-sm"
-      onClick={() => { setQuery(""); if (hit.kind === "dam") onSelectDam(hit.id); else onSelectRiver(hit.id); }}>
-      <span>{hit.name}</span><span className="map-muted text-xs">{t(hit.kind === "dam" ? "เขื่อน" : "แม่น้ำ")}</span>
+      onClick={() => { setQuery(""); if (hit.kind === "dam") onSelectDam(hit.id); else if (hit.kind === "reservoir") onSelectReservoir?.(hit.id); else onSelectRiver(hit.id); }}>
+      <span>{hit.name}</span><span className="map-muted text-xs">{t(hit.kind === "dam" ? "เขื่อน" : hit.kind === "reservoir" ? "อ่าง/เขื่อน" : "แม่น้ำ")}</span>
     </button>
   </li>;
   return <section className="space-y-2" aria-label={t("ค้นหาเขื่อนหรือแม่น้ำ")}>

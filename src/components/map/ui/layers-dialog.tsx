@@ -15,6 +15,7 @@ type WaterLayers = {
   radar: SwitchRow & { available: boolean; ageKey: string; age: number; warn: boolean };
   rainAccum: SwitchRow & { status: "loading" | "shown" | "none" | "unavailable"; day: number; startDate: string };
   satFlood: SwitchRow;
+  reservoirs: SwitchRow & { status: "idle" | "loading" | "ready" | "error" };
   surfaceWater: SwitchRow;
 };
 
@@ -81,6 +82,10 @@ export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSe
       </section>}
       <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-water-overlays-title">
         <h3 id="map-water-overlays-title" className="mb-2 text-sm font-semibold">{t("ซ้อนทับ")}</h3>
+        {switchButton(waterLayers.reservoirs)}
+        <p className="map-muted mt-1 text-xs">{t(waterLayers.reservoirs.checked && waterLayers.reservoirs.status === "error"
+          ? "ข้อมูลเขื่อน/อ่างเพิ่มเติมไม่พร้อมใช้งานตอนนี้"
+          : "อ่างเก็บน้ำกลาง/เล็ก (กรมทรัพยากรน้ำ) และเขื่อนจาก OpenStreetMap · สีเทา = ไม่มีข้อมูลน้ำล่าสุด")}</p>
         {switchButton(waterLayers.routes)}
         {waterLayers.radar.available && switchButton(waterLayers.radar)}
         {waterLayers.radar.checked && <p className={`${waterLayers.radar.warn ? "map-warning" : "map-muted"} text-xs`}>{waterLayers.radar.warn && <span aria-hidden="true">⚠ </span>}{t(waterLayers.radar.ageKey, { n: waterLayers.radar.age })}</p>}
