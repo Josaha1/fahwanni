@@ -1,0 +1,243 @@
+{
+ "source": "OurAirports (public domain)",
+ "airports": [
+  {
+   "icao": "VTBD",
+   "name": "Don Mueang International Airport",
+   "lat": 13.9126,
+   "lon": 100.607,
+   "nameTh": "ดอนเมือง"
+  },
+  {
+   "icao": "VTBO",
+   "name": "Trat Airport",
+   "lat": 12.2746,
+   "lon": 102.319,
+   "nameTh": "ตราด"
+  },
+  {
+   "icao": "VTBS",
+   "name": "Suvarnabhumi Airport",
+   "lat": 13.6811,
+   "lon": 100.747,
+   "nameTh": "สุวรรณภูมิ"
+  },
+  {
+   "icao": "VTBU",
+   "name": "U-Tapao–Rayong–Pattaya International Airport",
+   "lat": 12.6799,
+   "lon": 101.005,
+   "nameTh": "อู่ตะเภา"
+  },
+  {
+   "icao": "VTCC",
+   "name": "Chiang Mai International Airport",
+   "lat": 18.7668,
+   "lon": 98.9626,
+   "nameTh": "เชียงใหม่"
+  },
+  {
+   "icao": "VTCH",
+   "name": "Mae Hong Son Airport",
+   "lat": 19.3013,
+   "lon": 97.9758,
+   "nameTh": "แม่ฮ่องสอน"
+  },
+  {
+   "icao": "VTCL",
+   "name": "Lampang Airport",
+   "lat": 18.2709,
+   "lon": 99.5042,
+   "nameTh": "ลำปาง"
+  },
+  {
+   "icao": "VTCN",
+   "name": "Nan Airport",
+   "lat": 18.8079,
+   "lon": 100.783,
+   "nameTh": "น่าน"
+  },
+  {
+   "icao": "VTCP",
+   "name": "Phrae Airport",
+   "lat": 18.1322,
+   "lon": 100.165,
+   "nameTh": "แพร่"
+  },
+  {
+   "icao": "VTCT",
+   "name": "Mae Fah Luang - Chiang Rai International Airport",
+   "lat": 19.9523,
+   "lon": 99.8829,
+   "nameTh": "แม่ฟ้าหลวง เชียงราย"
+  },
+  {
+   "icao": "VTPB",
+   "name": "Phetchabun Airport",
+   "lat": 16.676,
+   "lon": 101.195,
+   "nameTh": "เพชรบูรณ์"
+  },
+  {
+   "icao": "VTPH",
+   "name": "Hua Hin Airport",
+   "lat": 12.6362,
+   "lon": 99.9515,
+   "nameTh": "หัวหิน"
+  },
+  {
+   "icao": "VTPM",
+   "name": "Mae Sot Airport",
+   "lat": 16.6999,
+   "lon": 98.5451,
+   "nameTh": "แม่สอด"
+  },
+  {
+   "icao": "VTPO",
+   "name": "Sukhothai Airport",
+   "lat": 17.238,
+   "lon": 99.8182,
+   "nameTh": "สุโขทัย"
+  },
+  {
+   "icao": "VTPP",
+   "name": "Phitsanulok Airport",
+   "lat": 16.7829,
+   "lon": 100.279,
+   "nameTh": "พิษณุโลก"
+  },
+  {
+   "icao": "VTSB",
+   "name": "Surat Thani Airport",
+   "lat": 9.1326,
+   "lon": 99.1356,
+   "nameTh": "สุราษฎร์ธานี"
+  },
+  {
+   "icao": "VTSC",
+   "name": "Narathiwat Airport",
+   "lat": 6.5199,
+   "lon": 101.743,
+   "nameTh": "นราธิวาส"
+  },
+  {
+   "icao": "VTSE",
+   "name": "Chumphon Airport",
+   "lat": 10.7112,
+   "lon": 99.3617,
+   "nameTh": "ชุมพร"
+  },
+  {
+   "icao": "VTSF",
+   "name": "Nakhon Si Thammarat Airport",
+   "lat": 8.5396,
+   "lon": 99.9447,
+   "nameTh": "นครศรีธรรมราช"
+  },
+  {
+   "icao": "VTSG",
+   "name": "Krabi International Airport",
+   "lat": 8.0956,
+   "lon": 98.989,
+   "nameTh": "กระบี่"
+  },
+  {
+   "icao": "VTSM",
+   "name": "Samui International Airport",
+   "lat": 9.5478,
+   "lon": 100.062,
+   "nameTh": "สมุย"
+  },
+  {
+   "icao": "VTSP",
+   "name": "Phuket International Airport",
+   "lat": 8.1133,
+   "lon": 98.3174,
+   "nameTh": "ภูเก็ต"
+  },
+  {
+   "icao": "VTSR",
+   "name": "Ranong Airport",
+   "lat": 9.7776,
+   "lon": 98.5855,
+   "nameTh": "ระนอง"
+  },
+  {
+   "icao": "VTSS",
+   "name": "Hat Yai International Airport",
+   "lat": 6.9332,
+   "lon": 100.393,
+   "nameTh": "หาดใหญ่"
+  },
+  {
+   "icao": "VTST",
+   "name": "Trang Airport",
+   "lat": 7.5087,
+   "lon": 99.6166,
+   "nameTh": "ตรัง"
+  },
+  {
+   "icao": "VTUD",
+   "name": "Udon Thani International Airport",
+   "lat": 17.3862,
+   "lon": 102.7886,
+   "nameTh": "อุดรธานี"
+  },
+  {
+   "icao": "VTUI",
+   "name": "Sakon Nakhon Airport",
+   "lat": 17.1951,
+   "lon": 104.119,
+   "nameTh": "สกลนคร"
+  },
+  {
+   "icao": "VTUK",
+   "name": "Khon Kaen Airport",
+   "lat": 16.4666,
+   "lon": 102.784,
+   "nameTh": "ขอนแก่น"
+  },
+  {
+   "icao": "VTUL",
+   "name": "Loei Airport",
+   "lat": 17.4391,
+   "lon": 101.722,
+   "nameTh": "เลย"
+  },
+  {
+   "icao": "VTUO",
+   "name": "Buri Ram Airport",
+   "lat": 15.2295,
+   "lon": 103.253,
+   "nameTh": "บุรีรัมย์"
+  },
+  {
+   "icao": "VTUQ",
+   "name": "Nakhon Ratchasima Airport",
+   "lat": 14.9495,
+   "lon": 102.313,
+   "nameTh": "นครราชสีมา"
+  },
+  {
+   "icao": "VTUU",
+   "name": "Ubon Ratchathani Airport",
+   "lat": 15.2513,
+   "lon": 104.87,
+   "nameTh": "อุบลราชธานี"
+  },
+  {
+   "icao": "VTUV",
+   "name": "Roi Et Airport",
+   "lat": 16.1168,
+   "lon": 103.774,
+   "nameTh": "ร้อยเอ็ด"
+  },
+  {
+   "icao": "VTUW",
+   "name": "Nakhon Phanom Airport",
+   "lat": 17.3838,
+   "lon": 104.643,
+   "nameTh": "นครพนม"
+  }
+ ]
+}
