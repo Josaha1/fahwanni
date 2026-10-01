@@ -12,15 +12,17 @@ export interface DwrPayload {
   reservoirs: DwrReservoir[];
 }
 
-/** Reservoirs within this distance of an RID large dam are the same place; RID's daily report wins. */
+/** A DWR row is the same place as an RID large dam only when it is this close AND carries the dam's name; RID wins. */
 const SAME_PLACE_KM = 2;
 
-export function withoutRidDuplicates(reservoirs: DwrReservoir[], ridDams: { lat: number; lon: number }[]): DwrReservoir[] {
-  return reservoirs.filter((reservoir) => !ridDams.some((dam) => distanceKm(reservoir, dam) < SAME_PLACE_KM));
+/** Distance alone is not enough: อ่างเก็บน้ำหนองบัว (อ.พังโคน) sits 1.7 km from เขื่อนน้ำอูน but is a different reservoir. */
+export function withoutRidDuplicates(reservoirs: DwrReservoir[], ridDams: { lat: number; lon: number; nameTh?: string }[]): DwrReservoir[] {
+  return reservoirs.filter((reservoir) => !ridDams.some((dam) => distanceKm(reservoir, dam) < SAME_PLACE_KM
+    && Boolean(dam.nameTh) && reservoir.name.includes(dam.nameTh!)));
 }
 
 /** Returns null when any of the four DWR endpoints fails; the route keeps serving its cache. */
-export async function fetchDwr(ridDams: { lat: number; lon: number }[], fetchImpl: typeof fetch = fetch): Promise<DwrPayload | null> {
+export async function fetchDwr(ridDams: { lat: number; lon: number; nameTh?: string }[], fetchImpl: typeof fetch = fetch): Promise<DwrPayload | null> {
   try {
     const bodies = await Promise.all(ENDPOINTS.map(async (name) => {
       const response = await fetchImpl(`${BASE}${name}`, { next: { revalidate: 21600 }, signal: AbortSignal.timeout(30_000) });
