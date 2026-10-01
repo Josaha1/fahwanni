@@ -18,7 +18,7 @@ export type Swatch =
   | { kind: "probe" };
 export type OverlayLegend = { title: string; note?: string; rows: { swatch: Swatch; label: string }[] };
 
-export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean; surfaceWater?: boolean; thermal?: boolean; imerg?: boolean }): OverlayLegend[] {
+export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites?: boolean; rivers?: boolean; allRoutes?: boolean; rainRisk?: boolean; rainAccum?: boolean; satFlood?: boolean; surfaceWater?: boolean; thermal?: boolean; imerg?: boolean; reservoirs?: boolean; floodEvents?: boolean; floodRisk?: boolean }): OverlayLegend[] {
   const sections: OverlayLegend[] = [{ title: "สัญลักษณ์", rows: [
     { swatch: { kind: "pin" }, label: "ตำแหน่งของคุณ" },
     { swatch: { kind: "probe" }, label: "จุดที่แตะดูอากาศ" },
@@ -67,6 +67,20 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
   ] });
   if (active.surfaceWater) sections.push({ title: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", note: "พื้นที่ที่ดาวเทียมเคยเห็นน้ำ · ไม่ใช่การพยากรณ์", rows: [
     { swatch: { kind: "fill", color: "#3186c9", opacity: 0.6 }, label: "พื้นที่ที่มีน้ำบ่อยในอดีต" },
+  ] });
+  if (active.reservoirs) sections.push({ title: "เขื่อน/อ่างทั้งหมด", note: "อ่างเก็บน้ำกลาง/เล็ก (กรมทรัพยากรน้ำ) และเขื่อนจาก OpenStreetMap", rows: [
+    { swatch: { kind: "circle", color: "#003CFA", size: 9 }, label: "มีข้อมูลน้ำล่าสุด (สีตาม % ความจุ)" },
+    { swatch: { kind: "circle", color: "#8a94a6", size: 9 }, label: "ไม่มีข้อมูลน้ำล่าสุด / ตำแหน่งเท่านั้น" },
+  ] });
+  if (active.floodEvents) sections.push({ title: "เหตุการณ์น้ำท่วม/ภัยพิบัติ", note: "90 วันล่าสุด · GDACS และ GLIDE · ไม่ใช่ประกาศทางการของไทย", rows: [
+    { swatch: { kind: "circle", color: "#C70000", size: 12 }, label: "GDACS ระดับแดง" },
+    { swatch: { kind: "circle", color: "#F28C28", size: 12 }, label: "GDACS ระดับส้ม" },
+    { swatch: { kind: "circle", color: "#3b82f6", size: 12 }, label: "เหตุการณ์ที่รายงาน (ไม่มีระดับ)" },
+  ] });
+  if (active.floodRisk) sections.push({ title: "พื้นที่เสี่ยงน้ำท่วม (ปภ.)", note: "ความเสี่ยงจากประวัติ ข้อมูลปี 2567 · ไม่ใช่น้ำท่วมตอนนี้", rows: [
+    { swatch: { kind: "circle", color: "#E8B500", size: 8 }, label: "ความเสี่ยงปานกลาง" },
+    { swatch: { kind: "circle", color: "#F28C28", size: 8 }, label: "ความเสี่ยงสูง" },
+    { swatch: { kind: "circle", color: "#D32F2F", size: 8 }, label: "ความเสี่ยงสูงมาก" },
   ] });
   if (active.thermal) sections.push({ title: "จุดความร้อน (ไฟ)", note: "จุดความร้อนจากดาวเทียม VIIRS · ล่าช้า ~1 วัน · ไม่ใช่ทุกจุดคือไฟป่า", rows: [
     { swatch: { kind: "circle", color: "#ef4d2a", size: 10 }, label: "จุดความร้อนจากดาวเทียม ~1 วัน" },

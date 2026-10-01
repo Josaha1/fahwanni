@@ -22,7 +22,7 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
   mode: "weather" | "water";
   primary: PrimaryLayer;
   rainMode?: RainMode;
-  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean; surfaceWater: boolean; thermal: boolean; imerg: boolean };
+  active: { wind: boolean; storms: boolean; quakes: boolean; dams: boolean; favourites: boolean; rivers: boolean; allRoutes: boolean; rainRisk: boolean; rainAccum: boolean; satFlood: boolean; surfaceWater: boolean; thermal: boolean; imerg: boolean; reservoirs?: boolean; floodEvents?: boolean; floodRisk?: boolean };
   dialogRef: RefObject<HTMLDialogElement | null>;
   triggerRef: RefObject<HTMLButtonElement | null>;
 }) {

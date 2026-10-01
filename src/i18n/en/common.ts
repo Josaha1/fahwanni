@@ -1,4 +1,12 @@
 export const common: Record<string, string> = {
+  "อ่างเก็บน้ำกลาง/เล็ก (กรมทรัพยากรน้ำ) และเขื่อนจาก OpenStreetMap": "Medium/small reservoirs (Department of Water Resources) and dams from OpenStreetMap",
+  "มีข้อมูลน้ำล่าสุด (สีตาม % ความจุ)": "Recent water data (colour by % of capacity)",
+  "ไม่มีข้อมูลน้ำล่าสุด / ตำแหน่งเท่านั้น": "No recent water data / location only",
+  "90 วันล่าสุด · GDACS และ GLIDE · ไม่ใช่ประกาศทางการของไทย": "Last 90 days · GDACS and GLIDE · not an official Thai announcement",
+  "GDACS ระดับแดง": "GDACS red alert",
+  "GDACS ระดับส้ม": "GDACS orange alert",
+  "เหตุการณ์ที่รายงาน (ไม่มีระดับ)": "Reported event (no alert level)",
+  "ความเสี่ยงจากประวัติ ข้อมูลปี 2567 · ไม่ใช่น้ำท่วมตอนนี้": "Historical risk, 2024 data · not a current flood",
   "พื้นที่เสี่ยงน้ำท่วม (ปภ.)": "Flood-risk villages (DDPM)",
   "หมู่บ้านเสี่ยงน้ำท่วม": "Flood-risk village",
   "ต.{tambon} อ.{amphoe} จ.{province}": "{tambon} subdistrict, {amphoe} district, {province}",

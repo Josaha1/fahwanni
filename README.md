@@ -38,6 +38,10 @@
 | ฝนจากดาวเทียม IMERG | NASA GPM ผ่าน NASA GIBS | อัตราฝนทุก 30 นาที โดยทั่วไปล่าช้า ~6 ชม. |
 | จุดความร้อนจากดาวเทียม | NASA FIRMS/GIBS (VIIRS NOAA-20) | ข้อมูลสาธารณะ ต้องใส่เครดิต · รายวัน ล่าช้า ~1 วัน ไม่ใช่ทุกจุดคือไฟป่า |
 | พื้นที่ที่เคยมีน้ำขัง 1984–2021 | EC JRC/Google Global Surface Water | CC BY · ภาพการเกิดน้ำในอดีต ไม่ใช่การพยากรณ์ |
+| อ่างเก็บน้ำกลาง/เล็ก 784 แห่ง | กรมทรัพยากรน้ำ `api.dwr.go.th/twsapi` (data.go.th) | CC BY · ข้อมูลบางแห่งเก่า แสดงวันที่เสมอ · เซิร์ฟเวอร์ไม่ส่ง intermediate cert จึงแนบ Sectigo DV R36 ไว้ใน `src/lib/net` |
+| ตำแหน่งเขื่อน/ฝาย | OpenStreetMap `waterway=dam` (snapshot `node scripts/osm/build-dams.mjs`) | ODbL · © OpenStreetMap contributors |
+| เหตุการณ์น้ำท่วม/ภัยพิบัติ | GDACS (flood) + ADRC GLIDE ผ่าน HDX `tha-glide-events` | GDACS Terms of Use · CC BY-IGO · ไม่ใช่ประกาศทางการของไทย |
+| หมู่บ้านเสี่ยงน้ำท่วม | ปภ. `floodrisk_rg` (catalog.disaster.go.th) | CC BY · ข้อมูลปี 2567 ความเสี่ยงจากประวัติ |
 | พิกัดเขื่อน | Wikidata (CC0), OpenStreetMap (ODbL) | |
 
 แอปใช้เฉพาะแหล่งที่ประกาศเงื่อนไขการใช้ไว้ — ไม่ใช้ข้อมูลสด ThaiWater (สสน.) และภาพ CCTV ของ กฟผ. จนกว่าจะได้รับอนุญาต (ร่างหนังสืออยู่ที่ `docs/permissions/data-requests.md`)
@@ -89,6 +93,7 @@ GOOGLE_MAPS_API_KEY=your_api_key_here
 | `node scripts/i18n-check.mjs` | ตรวจข้อความที่ยังไม่มีคำแปลอังกฤษ |
 | `npm run check:sources` | ตรวจว่าแหล่งข้อมูลภายนอกทั้งหมดยังตอบกลับ |
 | `node scripts/blender/build.mjs` | เรนเดอร์ไอคอนเคลื่อนไหวใหม่ (ต้องมี Blender 4.5 ใน `~/Applications`) |
+| `node scripts/osm/build-dams.mjs` | อัปเดตตำแหน่งเขื่อนจาก OpenStreetMap (Overpass, ใช้ตอน build เท่านั้น) |
 | `node scripts/blender/build-dam.mjs` | สร้างโมเดลเขื่อน 3 มิติ `public/models/dam.glb` (Blender 4.5, headless) — ไฟล์ glb commit ไว้ใน repo เพราะ Vercel รัน Blender ไม่ได้ |
 
 ## CI และการรายงานข้อผิดพลาด
