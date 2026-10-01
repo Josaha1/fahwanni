@@ -124,7 +124,7 @@ export function WeatherApp() {
           <AqiCard air={weather.air} />
           <MarineCard lat={place.lat} lon={place.lon} />
           <FarmCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
-          <SunCard snapshot={weather.snapshot} />
+          <SunCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
           <AlertsCard alerts={weather.snapshot.alerts} timeZone={weather.snapshot.timeZone} />
           <QuakeCard lat={place.lat} lon={place.lon} />
           <FavouritesOverview current={place} onSelect={selectPlace} isDark={isDark} />

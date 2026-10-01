@@ -1,10 +1,16 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import { useT } from "@/i18n/client";
 import { formatDayLabel, formatTime } from "@/lib/format";
 import { moonPhaseLabel, nextFullMoon } from "@/lib/moon";
 import type { WeatherSnapshot } from "@/lib/weather/types";
 import { uvWord } from "@/lib/words";
 
-export function SunCard({ snapshot }: { snapshot: WeatherSnapshot }) {
+// astronomy-engine (~200 KB) loads only when this card renders, never in the first page load.
+const NightSky = dynamic(() => import("./night-sky"), { ssr: false });
+
+export function SunCard({ snapshot, lat, lon }: { snapshot: WeatherSnapshot; lat?: number; lon?: number }) {
   const t = useT();
   const today = snapshot.days[0];
   if (!today && snapshot.uvIndex === undefined) return null;
@@ -12,8 +18,8 @@ export function SunCard({ snapshot }: { snapshot: WeatherSnapshot }) {
   const uv = snapshot.uvIndex;
 
   return (
-    <section className="placeholder-card" aria-label={t("พระอาทิตย์ ดวงจันทร์ และ UV")}>
-      <h2 className="text-xl">{t("พระอาทิตย์ ดวงจันทร์ และ UV")}</h2>
+    <section className="placeholder-card" aria-label={t("พระอาทิตย์ ดวงจันทร์ ดวงดาว และ UV")}>
+      <h2 className="text-xl">{t("พระอาทิตย์ ดวงจันทร์ ดวงดาว และ UV")}</h2>
       <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
         <div><p className="text-muted">{t("พระอาทิตย์ขึ้น")}</p><p className="text-xl font-semibold">{today?.sunrise ? formatTime(today.sunrise, zone, t.locale) : "—"}</p></div>
         <div><p className="text-muted">{t("พระอาทิตย์ตก")}</p><p className="text-xl font-semibold">{today?.sunset ? formatTime(today.sunset, zone, t.locale) : "—"}</p></div>
@@ -32,6 +38,8 @@ export function SunCard({ snapshot }: { snapshot: WeatherSnapshot }) {
           )}
         </div>;
       })()}
+      {lat !== undefined && lon !== undefined && snapshot.fetchedAt && <NightSky lat={lat} lon={lon} timeZone={zone} hours={snapshot.hours}
+        nowMs={Date.parse(snapshot.fetchedAt)} />}
       {uv !== undefined && <div className="mt-4 border-t border-border pt-3">
         <p className="text-sm text-muted">{t("ดัชนี UV")}</p>
         <p><strong className="text-2xl">{Math.round(uv)}</strong> · {uvWord(uv, t)}</p>
