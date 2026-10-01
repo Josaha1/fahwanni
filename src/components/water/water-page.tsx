@@ -20,6 +20,7 @@ import { diffSinceSeen, markSeen, readSeen, type NewsItem, type Seen } from "@/l
 import { readWatch, refreshWatch, toggleWatch, watchRows, writeWatch, type WaterWatch, type WatchItem } from "@/lib/water/watchlist";
 import { TmdWarningList } from "./tmd-warnings";
 import { FloodEventList, type FloodEventsPayload } from "./flood-events";
+import { EnsoBadge } from "@/components/enso-badge";
 import { DamRowHeader } from "./dam-row";
 import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
 import { TideChart } from "./tide-chart";
@@ -161,6 +162,7 @@ export function WaterPage() {
       <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
       <TmdWarningList items={warnings.data.items} limit={3} />
     </section>}
+    <EnsoBadge />
     {events.data && events.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}>
       <h2 className="text-lg font-semibold">{t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}</h2>
       <FloodEventList payload={events.data} />

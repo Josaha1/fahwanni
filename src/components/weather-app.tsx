@@ -27,6 +27,7 @@ import { SpeakButton } from "@/components/speak-button";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
+import { EnsoBadge } from "@/components/enso-badge";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useCurrentLocation } from "@/hooks/use-current-location";
 import { useWeather } from "@/hooks/use-weather";
@@ -110,6 +111,7 @@ export function WeatherApp() {
         <CurrentCard weather={weather} />
         {showStormBanner && <WaterNearYou place={place} onRiverStatus={onRiverStatus} />}
         <SeasonChip lat={place.lat} lon={place.lon} />
+        <EnsoBadge compact />
         {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>
           <div className="flex flex-wrap gap-2">
