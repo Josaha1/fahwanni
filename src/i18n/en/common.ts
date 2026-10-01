@@ -1,4 +1,8 @@
 export const common: Record<string, string> = {
+  "กล้องสดใกล้คุณ": "Live webcams near you",
+  "ภาพจากกล้อง {title}": "Webcam image: {title}",
+  "ภาพจาก Windy.com": "courtesy Windy.com",
+  "ภาพสดจากกล้องสาธารณะ ผ่าน Windy.com · แตะเพื่อดูภาพเคลื่อนไหว": "Live public webcams via Windy.com · tap for the timelapse",
   "น้ำทะเล {c}°C": "Sea {c}°C",
   "ข้อมูลวันที่ {date} · ความร้อนสะสม {dhw} °C-สัปดาห์": "Data {date} · heat stress {dhw} °C-weeks",
   "จุดดำน้ำ: อุณหภูมิน้ำและปะการัง": "Dive spots: sea temperature & coral",

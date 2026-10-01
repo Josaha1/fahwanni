@@ -29,6 +29,7 @@ import { ShareButton } from "@/components/share-button";
 import { SunCard } from "@/components/sun-card";
 import { EnsoBadge } from "@/components/enso-badge";
 import { AirportCard } from "@/components/airport-card";
+import { WebcamsCard } from "@/components/webcams-card";
 import { useLastPlace } from "@/hooks/use-favourites";
 import { useCurrentLocation } from "@/hooks/use-current-location";
 import { useWeather } from "@/hooks/use-weather";
@@ -126,6 +127,7 @@ export function WeatherApp() {
           <LongWeekendCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
           <AqiCard air={weather.air} />
           <AirportCard lat={place.lat} lon={place.lon} />
+          <WebcamsCard lat={place.lat} lon={place.lon} />
           <MarineCard lat={place.lat} lon={place.lon} />
           <FarmCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
           <SunCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
