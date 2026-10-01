@@ -40,6 +40,7 @@ import { riverWatchValue } from "@/lib/rivers/observed";
 import { isStale } from "@/lib/dams/dwr";
 import { reservoirKindWord, type ReservoirPoint } from "@/lib/dams/reservoirs";
 import type { FloodEvent } from "@/lib/water/flood-events";
+import { FLOOD_RISK_COLORS, FLOOD_RISK_LEVEL_WORDS, type FloodRiskPoint } from "@/lib/water/flood-risk";
 import { FloodEventItem, FLOOD_EVENT_WORDS } from "@/components/water/flood-events";
 import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
 
@@ -53,7 +54,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, favourites, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
-  rivers, riversStatus, reservoirs = null, floodEvents = null, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
+  rivers, riversStatus, reservoirs = null, floodEvents = null, floodRisk = null, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
   probe: Probe;
   favourites: Place[];
   onClose: () => void;
@@ -78,6 +79,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   /** DWR reservoirs + OSM dams (water mode, "เขื่อน/อ่างทั้งหมด"). */
   reservoirs?: ReservoirPoint[] | null;
   floodEvents?: FloodEvent[] | null;
+  floodRisk?: globalThis.Map<string, FloodRiskPoint> | null;
   waterDay: number;
   watch: WaterWatch;
   onToggleWatch: (dam: Dam) => void;
@@ -119,6 +121,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   const river = probe.kind === "river" ? rivers?.points.find((item) => item.id === probe.id) : undefined;
   const reservoir = probe.kind === "reservoir" ? reservoirs?.find((item) => item.id === probe.id) : undefined;
   const floodEvent = probe.kind === "floodEvent" ? floodEvents?.find((item) => item.id === probe.id) : undefined;
+  const riskPoint = probe.kind === "floodRisk" ? floodRisk?.get(probe.id) : undefined;
   const upstream = river?.downstreamOfDam ? dams?.dams.find((item) => item.id === river.downstreamOfDam) : undefined;
   const selectedDam = dam;
   const future = timeMs > nowMs;
@@ -157,6 +160,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   else if (probe.kind === "reservoir") title = t("ไม่พบข้อมูลแหล่งน้ำนี้");
   else if (floodEvent) title = t(FLOOD_EVENT_WORDS[floodEvent.type]);
   else if (probe.kind === "floodEvent") title = t("ไม่พบข้อมูลเหตุการณ์นี้");
+  else if (riskPoint) title = riskPoint.village || t("หมู่บ้านเสี่ยงน้ำท่วม");
   else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
   else if (probe.kind === "rain") title = t("ไม่พบข้อมูลฝนของสถานีนี้");
   else if (probe.kind === "river") title = t("แม่น้ำใกล้คุณ");
@@ -272,6 +276,12 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
     </div>}
     {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers={false} waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}
     {reservoir && <ReservoirDetails point={reservoir} nowMs={nowMs} />}
+    {riskPoint && <div className="mt-2 space-y-1 text-sm">
+      <p className="flex items-center gap-2 font-semibold"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: FLOOD_RISK_COLORS[riskPoint.level] }} aria-hidden="true" />{t(FLOOD_RISK_LEVEL_WORDS[riskPoint.level])}</p>
+      <p>{t("ต.{tambon} อ.{amphoe} จ.{province}", { tambon: riskPoint.tambon, amphoe: riskPoint.amphoe, province: riskPoint.province })}</p>
+      <p className="map-muted text-xs">{t("ความเสี่ยงจากประวัติ (ปภ. ข้อมูลปี 2567) ไม่ใช่น้ำท่วมตอนนี้")}</p>
+      <p className="map-muted text-xs">{t("ที่มา: กรมป้องกันและบรรเทาสาธารณภัย (CC BY)")}</p>
+    </div>}
     {floodEvent && <div className="mt-2"><FloodEventItem event={floodEvent} muted="map-muted" border="var(--map-panel-border)" /></div>}
     {probe.kind === "river" && !river && <p className="map-muted mt-2 text-sm" role="status">{t(riversStatus === "error" ? "ข้อมูลแม่น้ำไม่พร้อมใช้งาน" : riversStatus === "ready" ? "ข้อมูลจุดนี้ไม่พร้อมใช้งาน" : "กำลังโหลดข้อมูลแม่น้ำ…")}</p>}
   </section>;

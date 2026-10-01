@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Marker, type GeoJSONSource, type Map, type MapMouseEvent } from "maplibre-gl";
 
-export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string } | { kind: "floodEvent"; id: string };
+export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string } | { kind: "floodEvent"; id: string } | { kind: "floodRisk"; id: string };
 
 /** `points: false` (water mode): a tap on empty map opens nothing; dam, storm and quake taps still work. */
 /** `onRoute`: a tap on the all-routes overview opens that route's dam and hands its id back to focus the route. */
@@ -46,6 +46,14 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
         [event.point.x - 10, event.point.y - 10], [event.point.x + 10, event.point.y + 10],
       ], { layers: ["flood-event-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
       if (floodEvent) { select({ kind: "floodEvent", id: floodEvent.properties!.id as string }); return; }
+      const floodRisk = !dam && map.getLayer("flood-risk-circle") ? map.queryRenderedFeatures([
+        [event.point.x - 6, event.point.y - 6], [event.point.x + 6, event.point.y + 6],
+      ], { layers: ["flood-risk-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
+      if (floodRisk && !map.queryRenderedFeatures([[event.point.x - 7, event.point.y - 7], [event.point.x + 7, event.point.y + 7]],
+        { layers: ["reservoir-point", "river-circle", "rain-risk-circle"].filter((id) => map.getLayer(id)) }).length) {
+        select({ kind: "floodRisk", id: floodRisk.properties!.id as string });
+        return;
+      }
       const reservoirLayers = ["reservoir-point", "osm-minor-point"].filter((id) => map.getLayer(id));
       const reservoir = !dam && !rain && !river && reservoirLayers.length ? map.queryRenderedFeatures([
         [event.point.x - 7, event.point.y - 7], [event.point.x + 7, event.point.y + 7],
