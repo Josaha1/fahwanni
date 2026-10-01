@@ -1,0 +1,328 @@
+{
+ "glide": {
+  "type": "FeatureCollection",
+  "features": [
+   {
+    "geometry": {
+     "coordinates": [
+      100.5017651,
+      13.7563309
+     ],
+     "type": "Point"
+    },
+    "type": "Feature",
+    "properties": {
+     "Modified": "2026-09-29 00:00",
+     "year": 2026,
+     "latitude": 13.7563309,
+     "source": "",
+     "Created": "2026-09-29 00:00",
+     "duration": 0,
+     "number": "2026-000183",
+     "injured": 0,
+     "glidenumber": "FL-2026-000183-THA",
+     "magnitude": "",
+     "id": "",
+     "event": "FL",
+     "day": 27,
+     "longitude": 100.5017651,
+     "comments": "Intermittent heavy rain has caused flooding in Thailand&#39;s capital, Bangkok, forcing about 4,200 residents to temporarily evacuate to makeshift shelters.An active low-pressure system and strong monsoon conditions brought heavy rain to parts of the country.",
+     "docid": 23935,
+     "homeless": 0,
+     "idsource": "",
+     "killed": 0,
+     "affected": 0,
+     "month": 9,
+     "geocode": "THA",
+     "shape_type": 0,
+     "location": "Bangkok",
+     "subType": "Marker",
+     "time": "",
+     "status": "A",
+     "CreatedByOrg": "ADRC"
+    }
+   },
+   {
+    "geometry": {
+     "coordinates": [
+      99.9067377,
+      19.1709666
+     ],
+     "type": "Point"
+    },
+    "type": "Feature",
+    "properties": {
+     "Modified": "2026-08-24 00:00",
+     "year": 2026,
+     "latitude": 19.1709666,
+     "source": "",
+     "Created": "2026-08-24 00:00",
+     "duration": 0,
+     "number": "2026-000158",
+     "injured": 0,
+     "glidenumber": "FL-2026-000158-THA",
+     "magnitude": "",
+     "id": "",
+     "event": "FL",
+     "day": 18,
+     "longitude": 99.9067377,
+     "comments": "During 18-21 August 2026, flooding was reported in nine provinces, namely Phayao, Nan, Mae Hong Son, Sukhothai, Phitsanulok, Phetchabun, Sakon Nakhon, Nakhon Phanom, and Ubon Ratchathani. The flooding was primarily caused by continuous heavy rainfall, leading to inundation in several areas and affecting local communities. ",
+     "docid": 23907,
+     "homeless": 0,
+     "idsource": "",
+     "killed": 0,
+     "affected": 0,
+     "month": 8,
+     "geocode": "THA",
+     "shape_type": 0,
+     "location": "Phayao",
+     "subType": "Marker",
+     "time": "",
+     "status": "A",
+     "CreatedByOrg": "ADRC"
+    }
+   },
+   {
+    "geometry": {
+     "coordinates": [
+      99.8932739320313,
+      19.9268733489471
+     ],
+     "type": "Point"
+    },
+    "type": "Feature",
+    "properties": {
+     "Modified": "2024-09-13 00:00",
+     "year": 2024,
+     "latitude": 19.9268733489471,
+     "source": "ECHO",
+     "Created": "2024-09-13 00:00",
+     "duration": 0,
+     "number": "2024-000161",
+     "injured": 0,
+     "glidenumber": "TC-2024-000161-THA",
+     "magnitude": "",
+     "id": "",
+     "event": "TC",
+     "day": 10,
+     "longitude": 99.8932739320313,
+     "comments": "At least two people were killed and hundreds stranded in Thailand after heavy rains swept through two northern provinces, Chiang Rai and Chiang Mai, swelling rivers, inundating settlements and triggering mudslides, authorities said on 11 September. The adverse weather, which comes in the wake of Typhoon Yagi has impacted about 9,000 households in Thailand. Other northern provinces including Mae Hong Son, Nan, Phayao, Lampang, Phrae, Uttaradit, and Tak also faced flooding and landslides.",
+     "docid": 23324,
+     "homeless": 0,
+     "idsource": "",
+     "killed": 0,
+     "affected": 0,
+     "month": 9,
+     "geocode": "THA",
+     "shape_type": 0,
+     "location": "Chiang Rai Province and Chiang Mai Province",
+     "subType": "Marker",
+     "time": "",
+     "status": "A",
+     "CreatedByOrg": "ADRC"
+    }
+   }
+  ]
+ },
+ "gdacs": {
+  "type": "FeatureCollection",
+  "features": [
+   {
+    "type": "Feature",
+    "bbox": [
+     100.5684,
+     13.8284,
+     100.5684,
+     13.8284
+    ],
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      100.5684,
+      13.8284
+     ]
+    },
+    "properties": {
+     "eventtype": "FL",
+     "eventid": 1103663,
+     "episodeid": 1,
+     "eventname": "",
+     "glide": "",
+     "name": "Flood in Malaysia, Thailand",
+     "description": "Flood in Malaysia, Thailand",
+     "htmldescription": "Orange Flood in Malaysia, Thailand from: 12 Dec 2025 13 to: 12 Dec 2025 13.",
+     "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Orange/FL.png",
+     "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Orange/FL.png",
+     "url": {
+      "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1103663&episodeid=1",
+      "report": "https://www.gdacs.org/report.aspx?eventid=1103663&episodeid=1&eventtype=FL",
+      "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1103663"
+     },
+     "alertlevel": "Orange",
+     "alertscore": 2,
+     "episodealertlevel": "Orange",
+     "episodealertscore": 1.5,
+     "istemporary": "false",
+     "iscurrent": "false",
+     "country": "Malaysia, Thailand",
+     "fromdate": "2025-12-12T13:00:00",
+     "todate": "2025-12-12T13:00:00",
+     "datemodified": "2025-12-13T06:45:16",
+     "iso3": "MYS",
+     "source": "GLOFAS",
+     "sourceid": "",
+     "polygonlabel": "Centroid",
+     "Class": "Point_Centroid",
+     "affectedcountries": [
+      {
+       "iso2": "MY",
+       "iso3": "MYS",
+       "countryname": "Malaysia"
+      },
+      {
+       "iso2": "TH",
+       "iso3": "THA",
+       "countryname": "Thailand"
+      }
+     ],
+     "severitydata": {
+      "severity": 0.0,
+      "severitytext": "Magnitude 0 ",
+      "severityunit": ""
+     }
+    }
+   },
+   {
+    "type": "Feature",
+    "bbox": [
+     100.5684,
+     13.8284,
+     100.5684,
+     13.8284
+    ],
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      100.5684,
+      13.8284
+     ]
+    },
+    "properties": {
+     "eventtype": "FL",
+     "eventid": 1103646,
+     "episodeid": 4,
+     "eventname": "",
+     "glide": "",
+     "name": "Flood in Indonesia, Malaysia, Thailand",
+     "description": "Flood in Indonesia, Malaysia, Thailand",
+     "htmldescription": "Red Flood in Indonesia, Malaysia, Thailand from: 03 Dec 2025 01 to: 06 Dec 2025 01.",
+     "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Red/FL.png",
+     "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Red/FL.png",
+     "url": {
+      "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1103646&episodeid=4",
+      "report": "https://www.gdacs.org/report.aspx?eventid=1103646&episodeid=4&eventtype=FL",
+      "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1103646"
+     },
+     "alertlevel": "Red",
+     "alertscore": 3,
+     "episodealertlevel": "Red",
+     "episodealertscore": 2.5,
+     "istemporary": "false",
+     "iscurrent": "false",
+     "country": "Indonesia, Malaysia, Thailand",
+     "fromdate": "2025-12-03T01:00:00",
+     "todate": "2025-12-06T01:00:00",
+     "datemodified": "2025-12-10T10:21:22",
+     "iso3": "IDN",
+     "source": "GLOFAS",
+     "sourceid": "",
+     "polygonlabel": "Centroid",
+     "Class": "Point_Centroid",
+     "affectedcountries": [
+      {
+       "iso2": "ID",
+       "iso3": "IDN",
+       "countryname": "Indonesia"
+      },
+      {
+       "iso2": "MY",
+       "iso3": "MYS",
+       "countryname": "Malaysia"
+      },
+      {
+       "iso2": "TH",
+       "iso3": "THA",
+       "countryname": "Thailand"
+      }
+     ],
+     "severitydata": {
+      "severity": 0.0,
+      "severitytext": "Magnitude 0 ",
+      "severityunit": ""
+     }
+    }
+   },
+   {
+    "type": "Feature",
+    "bbox": [
+     101.141,
+     6.3345,
+     101.141,
+     6.3345
+    ],
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      101.141,
+      6.3345
+     ]
+    },
+    "properties": {
+     "eventtype": "FL",
+     "eventid": 1103621,
+     "episodeid": 2,
+     "eventname": "",
+     "glide": "FL-2025-000210-THA",
+     "name": "Flood in Thailand",
+     "description": "Flood in Thailand",
+     "htmldescription": "Orange Flood in Thailand from: 17 Nov 2025 01 to: 01 Dec 2025 14.",
+     "icon": "https://www.gdacs.org/images/gdacs_icons/maps/Orange/FL.png",
+     "iconoverall": "https://www.gdacs.org/images/gdacs_icons/maps/Orange/FL.png",
+     "url": {
+      "geometry": "https://www.gdacs.org/gdacsapi/api/polygons/getgeometry?eventtype=FL&eventid=1103621&episodeid=2",
+      "report": "https://www.gdacs.org/report.aspx?eventid=1103621&episodeid=2&eventtype=FL",
+      "details": "https://www.gdacs.org/gdacsapi/api/events/geteventdata?eventtype=FL&eventid=1103621"
+     },
+     "alertlevel": "Orange",
+     "alertscore": 2,
+     "episodealertlevel": "Orange",
+     "episodealertscore": 1.5,
+     "istemporary": "false",
+     "iscurrent": "false",
+     "country": "Thailand",
+     "fromdate": "2025-11-17T01:00:00",
+     "todate": "2025-12-01T14:00:00",
+     "datemodified": "2025-12-03T00:30:27",
+     "iso3": "THA",
+     "source": "GLOFAS",
+     "sourceid": "",
+     "polygonlabel": "Centroid",
+     "Class": "Point_Centroid",
+     "affectedcountries": [
+      {
+       "iso2": "TH",
+       "iso3": "THA",
+       "countryname": "Thailand"
+      }
+     ],
+     "severitydata": {
+      "severity": 0.0,
+      "severitytext": "Magnitude 0 ",
+      "severityunit": ""
+     }
+    }
+   }
+  ],
+  "bbox": null
+ }
+}
