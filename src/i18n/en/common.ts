@@ -1,4 +1,13 @@
 export const common: Record<string, string> = {
+  "น้ำทะเล {c}°C": "Sea {c}°C",
+  "ข้อมูลวันที่ {date} · ความร้อนสะสม {dhw} °C-สัปดาห์": "Data {date} · heat stress {dhw} °C-weeks",
+  "จุดดำน้ำ: อุณหภูมิน้ำและปะการัง": "Dive spots: sea temperature & coral",
+  "ที่มา: NOAA Coral Reef Watch (ข้อมูลดาวเทียมรายวัน 5 กม.)": "Source: NOAA Coral Reef Watch (daily 5 km satellite data)",
+  "ปะการังปกติ ไม่มีความเครียดจากความร้อน": "Coral normal, no heat stress",
+  "เฝ้าระวัง: น้ำเริ่มอุ่นกว่าปกติ": "Watch: water warmer than usual",
+  "เตือน: ปะการังเริ่มเครียดจากความร้อน": "Warning: coral under heat stress",
+  "แจ้งเตือนระดับ 1: เสี่ยงปะการังฟอกขาว": "Alert level 1: bleaching likely",
+  "แจ้งเตือนระดับ 2: เสี่ยงปะการังฟอกขาวรุนแรง/ตาย": "Alert level 2: severe bleaching and mortality likely",
   "ฝนตก": "Rain",
   "ฝนตกเป็นช่วง": "Showers",
   "ฝนปรอย": "Drizzle",

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/i18n/client";
 import type { MarineSnapshot, WaveLevel } from "@/lib/marine";
+import { SeaHeat } from "./sea-heat";
 
 const LEVEL: Record<WaveLevel, { label: string; advice: string }> = {
   calm: { label: "คลื่นลมสงบ", advice: "ทะเลเรียบ เล่นน้ำ/ออกเรือได้ตามปกติ" },
@@ -37,6 +38,7 @@ export function MarineCard({ lat, lon }: { lat: number; lon: number }) {
       </div>
       <p className={`mt-1 font-semibold ${strong ? "text-zone-alert-ink" : ""}`}>{t(label)} · {t(advice)}</p>
       {marine.periodS !== undefined && <p className="mt-1 text-sm text-muted">{t("คาบคลื่น ~{s} วินาที", { s: marine.periodS })}</p>}
+      <SeaHeat lat={lat} lon={lon} />
       <p className="mt-2 text-xs text-muted"><a className="underline" href={marine.attribution.url} target="_blank" rel="noopener noreferrer">{marine.attribution.text}</a></p>
     </section>
   );
