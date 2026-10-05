@@ -1,5 +1,8 @@
-import { damBandColor } from "./bands";
-import type { DamBand } from "./types";
+import { damBand, damBandColor } from "./bands";
+import type { Dam, DamBand } from "./types";
+import type { DamHistory } from "./history";
+import { trendDates, type DamTrend } from "./trend";
+import { streamRate } from "@/lib/visuals";
 
 /** V-shaped schematic valley (volume ∝ height²), not measured bathymetry. */
 export function waterLevel(pct: number): number {
@@ -18,4 +21,36 @@ export function damSceneColors(theme: "light" | "dark", band: DamBand) {
     rimLastYear: "#64748b",
     rim2554: "#e11d48",
   };
+}
+
+/** Calendar window includes today; missing reports never become selectable or zero. */
+export function reportedDamDays(dam: Dam, trend?: DamTrend | null): Dam[] {
+  const dates = [...trendDates(dam.date, 6), dam.date];
+  return dates.flatMap((date) => {
+    if (date === dam.date) return [dam];
+    const index = trend?.dates.indexOf(date) ?? -1;
+    const pct = trend?.pct[dam.id]?.[index];
+    if (pct == null || !Number.isFinite(pct) || pct < 0) return [];
+    return [{ ...dam, date, storagePct: pct, band: damBand(pct),
+      releaseCms: trend?.release[dam.id]?.[index] ?? null,
+      inflowCms: trend?.inflow[dam.id]?.[index] ?? null }];
+  });
+}
+
+export function damGhosts(dam: Dam, history?: DamHistory | null) {
+  if (history?.dataDate !== dam.date) return [];
+  return (["lastYear", "year2554"] as const).flatMap((key) => {
+    const entry = history[key];
+    const pct = entry?.pct[dam.id];
+    return pct != null && Number.isFinite(pct) && pct >= 0 ? [{ key, date: entry!.date, pct }] : [];
+  });
+}
+
+/** Fixed particle budget; density encodes reported cms, never a simulated flow speed. */
+export function damStreams(dam: Dam) {
+  const count = (cms: number | null) => {
+    const rate = streamRate(cms, "cms", 1000);
+    return rate.state === "data" ? Math.round(rate.ratio * 96) : 0;
+  };
+  return { release: count(dam.releaseCms), inflow: count(dam.inflowCms) };
 }

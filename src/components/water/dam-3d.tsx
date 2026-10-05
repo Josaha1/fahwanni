@@ -4,19 +4,25 @@ import { useEffect, useRef } from "react";
 import {
   AmbientLight, Box3, Color, DataTexture, DirectionalLight, DoubleSide, Group, HemisphereLight,
   Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, RepeatWrapping, RGBAFormat,
-  Scene, SRGBColorSpace, Texture, Vector3, WebGLRenderer,
+  Scene, SRGBColorSpace, Texture, Vector3, WebGLRenderer, BufferGeometry, Float32BufferAttribute,
+  PlaneGeometry, Points, PointsMaterial, EdgesGeometry, LineSegments, LineBasicMaterial,
   type Material, type Object3D,
 } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { useT } from "@/i18n/client";
 import { damSceneSummary } from "@/lib/chart-summaries";
 import type { DamHistory } from "@/lib/dams/history";
-import { damSceneColors, waterLevel } from "@/lib/dams/model3d";
+import { damGhosts, damSceneColors, damStreams, waterLevel } from "@/lib/dams/model3d";
 import type { Dam } from "@/lib/dams/types";
+import { forceGlFromSearch, glTier, readRendererString, type GlTier } from "@/lib/three/gl-tier";
+import { cappedDpr, sampleFrame, type FrameWatchdog } from "@/lib/three/scene-logic";
+import { terrariumGrid, terrariumTile } from "@/lib/terrain/terrarium";
 
 type Props = {
   dam: Dam; history?: DamHistory | null; theme: "light" | "dark";
   reducedMotion: boolean; onFallback: () => void;
+  detail?: boolean; summary?: string; onTierChange?: (tier: GlTier) => void; onTerrainLoaded?: () => void;
 };
 
 function disposeModel(root: Object3D) {
@@ -24,7 +30,7 @@ function disposeModel(root: Object3D) {
   const materials = new Set<Material>();
   const textures = new Set<Texture>();
   root.traverse((object) => {
-    if (!(object instanceof Mesh)) return;
+    if (!(object instanceof Mesh || object instanceof Points || object instanceof LineSegments)) return;
     geometries.add(object.geometry);
     for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
       materials.add(material);
@@ -42,7 +48,7 @@ export function Dam3D(props: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const settings = useRef(props);
   const updateRef = useRef<(() => void) | null>(null);
-  const summary = damSceneSummary(dam, history, t);
+  const summary = props.summary ?? damSceneSummary(dam, history, t);
 
   useEffect(() => {
     settings.current = props;
@@ -54,11 +60,21 @@ export function Dam3D(props: Props) {
     let renderer: WebGLRenderer;
     try {
       renderer = new WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: false });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(cappedDpr(window.devicePixelRatio, "full"));
     } catch {
       settings.current.onFallback();
       return;
     }
+
+    const signals = {
+      lite: false, reducedMotion: settings.current.reducedMotion, webgl2: true,
+      rendererString: readRendererString(renderer.getContext()),
+      deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+      contextLosses: 0, forceGl: forceGlFromSearch(window.location.search), avgFrameMs: 0,
+    };
+    let tier: GlTier = settings.current.detail ? glTier(signals) : "full";
+    if (tier === "svg") { renderer.dispose(); settings.current.onFallback(); return; }
+    renderer.setPixelRatio(cappedDpr(window.devicePixelRatio, tier));
 
     const scene = new Scene();
     const pivot = new Group();
@@ -86,9 +102,45 @@ export function Dam3D(props: Props) {
     let flowOffset = 0;
     let disposed = false;
     let failed = false;
-    let sceneTheme = settings.current.theme;
+    const initialTheme = document.documentElement.dataset.theme;
+    let sceneTheme = initialTheme === "dark" || initialTheme === "night" ? "dark" : settings.current.theme;
     let pointer: { id: number; x: number; angle: number } | null = null;
     let flowTexture: DataTexture | null = null;
+    let controls: OrbitControls | null = null;
+    let fitted = false;
+    let contextLost = false;
+    let visible = true;
+    let currentLevel = waterLevel(settings.current.dam.storagePct);
+    let targetLevel = currentLevel;
+    let tweenTime = 0;
+    let watchdog: FrameWatchdog = { samples: [], avgFrameMs: 0 };
+    const ghostPlanes: Record<string, Mesh> = {};
+    const streams: { key: "release" | "inflow"; points: Points; start: Vector3; end: Vector3 }[] = [];
+    const terrainAbort = new AbortController();
+    let terrainMesh: Mesh | null = null;
+
+    function applyTier() {
+      const next = settings.current.detail ? glTier(signals) : "full";
+      if (next === "svg") { fail(); return; }
+      tier = next;
+      renderer.setPixelRatio(cappedDpr(window.devicePixelRatio, tier));
+      settings.current.onTierChange?.(tier);
+      for (const stream of streams) {
+        const count = tier === "full" ? damStreams(settings.current.dam)[stream.key] : 0;
+        stream.points.geometry.setDrawRange(0, count);
+        stream.points.visible = count > 0;
+      }
+    }
+
+    if (settings.current.detail) {
+      controls = new OrbitControls(camera, canvas);
+      controls.enablePan = false;
+      controls.minPolarAngle = 15 * Math.PI / 180;
+      controls.maxPolarAngle = 70 * Math.PI / 180;
+      controls.addEventListener("change", requestRender);
+      // OrbitControls installs touch-action:none; keep vertical page scrolling available.
+      canvas.style.touchAction = "pan-y";
+    }
 
     function fail() {
       if (disposed || failed) return;
@@ -100,27 +152,61 @@ export function Dam3D(props: Props) {
 
     function flowSpeed() {
       const { dam, reducedMotion } = settings.current;
-      return !reducedMotion && Number.isFinite(dam.releaseCms) && (dam.releaseCms ?? 0) > 0
+      return tier === "full" && !reducedMotion && Number.isFinite(dam.releaseCms) && (dam.releaseCms ?? 0) > 0
         ? Math.min(2, (dam.releaseCms ?? 0) / 500) : 0;
     }
 
     function requestRender() {
-      if (disposed || failed || document.hidden || frame) return;
+      if (disposed || failed || contextLost || !visible || document.hidden || frame) return;
       frame = requestAnimationFrame(render);
     }
 
     function render(time: number) {
       frame = 0;
-      if (disposed || failed || document.hidden) return;
+      if (disposed || failed || contextLost || !visible || document.hidden) return;
+      const started = performance.now();
+      const delta = previousTime ? time - previousTime : 0;
       const speed = flowSpeed();
       if (flowTexture && speed) {
         if (previousTime) flowOffset = (flowOffset - Math.min(0.1, (time - previousTime) / 1000) * speed) % 1;
         flowTexture.offset.y = flowOffset;
       }
-      previousTime = speed ? time : 0;
+      const tweening = tier === "full" && Math.abs(currentLevel - targetLevel) > 0.001;
+      if (tweening && nodes.WaterUp) {
+        const elapsed = tweenTime ? Math.min(100, time - tweenTime) : 16;
+        currentLevel += (targetLevel - currentLevel) * (1 - Math.exp(-elapsed / 120));
+        setLevel(nodes.WaterUp, currentLevel, unitWidth);
+      } else if (nodes.WaterUp) {
+        currentLevel = targetLevel;
+        setLevel(nodes.WaterUp, currentLevel, unitWidth);
+      }
+      tweenTime = tweening ? time : 0;
+      const particle = new Vector3();
+      for (const { points, start, end, key } of streams) {
+        if (!points.visible) continue;
+        if (key === "inflow") start.y = end.y = currentLevel * levelHeight + 0.04;
+        const positions = points.geometry.getAttribute("position");
+        for (let i = 0; i < 96; i++) {
+          const phase = (time / 1400 + i / 96) % 1;
+          const p = particle.lerpVectors(start, end, phase);
+          p.x += Math.sin(i * 2.4) * 0.08;
+          positions.setXYZ(i, p.x, p.y, p.z);
+        }
+        positions.needsUpdate = true;
+      }
       try { renderer.render(scene, camera); }
       catch { fail(); return; }
-      if (model && speed) requestRender();
+      if (settings.current.detail && tier === "full") {
+        watchdog = sampleFrame(watchdog, Math.max(performance.now() - started, delta));
+        // Wait for a representative continuous run, not a single model-upload frame.
+        if (watchdog.samples.length === 30 && watchdog.avgFrameMs > 33) {
+          signals.avgFrameMs = watchdog.avgFrameMs;
+          applyTier();
+          currentLevel = targetLevel;
+        }
+      }
+      if (model && tier === "full" && (speed || tweening || streams.some(({ points }) => points.visible))) requestRender();
+      previousTime = frame ? time : 0;
     }
 
     function resize() {
@@ -151,9 +237,18 @@ export function Dam3D(props: Props) {
           }
         }
       }
-      camera.position.copy(viewDirection).multiplyScalar(distance).add(center);
-      camera.far = distance + radius * 4;
-      camera.lookAt(center);
+      if (!controls || !fitted) {
+        camera.position.copy(viewDirection).multiplyScalar(distance).add(center);
+        if (controls) {
+          controls.target.copy(center);
+          controls.minDistance = radius * 1.2;
+          controls.maxDistance = distance * 2.5;
+          controls.update();
+          fitted = model !== null;
+        }
+      }
+      camera.far = Math.max(distance + radius * 4, 120);
+      if (!controls) camera.lookAt(center);
       camera.updateProjectionMatrix();
       requestRender();
     }
@@ -177,21 +272,34 @@ export function Dam3D(props: Props) {
         // The baked terrain already carries its colour and AO; a dark tint compounds both.
         if (name === "Basin" && sceneTheme === "dark") material.color.lerp(new Color(0xffffff), 0.75);
       }
-      if (nodes.WaterUp) setLevel(nodes.WaterUp, waterLevel(dam.storagePct), unitWidth);
+      targetLevel = waterLevel(dam.storagePct);
+      if (tier !== "full" || !settings.current.detail) currentLevel = targetLevel;
+      if (nodes.WaterUp) setLevel(nodes.WaterUp, currentLevel, unitWidth);
       for (const [name, entry] of [["RimLastYear", history?.lastYear], ["Rim2554", history?.year2554]] as const) {
         const mesh = nodes[name];
         if (!mesh) continue;
         const pct = history?.dataDate === dam.date ? entry?.pct[dam.id] : undefined;
-        mesh.visible = pct !== undefined && Number.isFinite(pct);
+        mesh.visible = !settings.current.detail && pct !== undefined && Number.isFinite(pct);
         if (mesh.visible) setLevel(mesh, waterLevel(pct!), widthAt1);
       }
+      for (const [key, mesh] of Object.entries(ghostPlanes)) {
+        const ghost = damGhosts(dam, history).find((entry) => entry.key === key);
+        mesh.visible = !!ghost;
+        if (ghost) setLevel(mesh, waterLevel(ghost.pct), unitWidth);
+      }
+      applyTier();
+      if (terrainMesh) (terrainMesh.material as MeshStandardMaterial).color.set(colors.terrain);
       if (nodes.WaterDown) nodes.WaterDown.visible = (dam.releaseCms ?? 0) > 0;
       previousTime = 0;
       if (!flowSpeed()) { cancelAnimationFrame(frame); frame = 0; }
       resize();
     }
 
-    updateRef.current = () => { sceneTheme = settings.current.theme; update(); };
+    updateRef.current = () => {
+      const theme = document.documentElement.dataset.theme;
+      sceneTheme = theme === "dark" || theme === "night" ? "dark" : theme === "light" ? "light" : settings.current.theme;
+      update();
+    };
     update();
     const themeObserver = new MutationObserver(() => {
       const theme = document.documentElement.dataset.theme;
@@ -209,9 +317,24 @@ export function Dam3D(props: Props) {
       previousTime = 0;
       requestRender();
     }
-    function onContextLost(event: Event) { event.preventDefault(); fail(); }
+    function onContextLost(event: Event) {
+      event.preventDefault();
+      contextLost = true;
+      signals.contextLosses++;
+      canvas.style.visibility = "hidden";
+      cancelAnimationFrame(frame);
+      frame = 0;
+      previousTime = 0;
+      if (!settings.current.detail) fail(); else applyTier();
+    }
+    function onContextRestored() { contextLost = false; canvas.style.visibility = ""; update(); }
+    const visibilityObserver = new IntersectionObserver((entries) => {
+      visible = entries[0]?.isIntersecting ?? false;
+      onVisibility();
+    });
+    visibilityObserver.observe(canvas);
     function onPointerDown(event: PointerEvent) {
-      if (failed || pointer || !event.isPrimary || event.button !== 0) return;
+      if (controls || failed || pointer || !event.isPrimary || event.button !== 0) return;
       pointer = { id: event.pointerId, x: event.clientX, angle: pivot.rotation.y };
       canvas.setPointerCapture(event.pointerId);
     }
@@ -228,6 +351,7 @@ export function Dam3D(props: Props) {
     }
     document.addEventListener("visibilitychange", onVisibility);
     canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerEnd);
@@ -289,9 +413,94 @@ export function Dam3D(props: Props) {
       const center = bounds.getCenter(new Vector3());
       model.position.sub(center);
       pivot.add(model);
+      if (settings.current.detail) {
+        for (const [key, color] of [["lastYear", "#64748b"], ["year2554", "#e11d48"]]) {
+          const plane = new Mesh(upstream.geometry, new MeshBasicMaterial({ color,
+            transparent: true, opacity: 0.2, depthWrite: false, side: DoubleSide }));
+          plane.position.copy(upstream.position);
+          plane.rotation.copy(upstream.rotation);
+          plane.renderOrder = 2;
+          ghostPlanes[key] = plane;
+          model.add(plane);
+        }
+        const crest = new LineSegments(new EdgesGeometry(upstream.geometry), new LineBasicMaterial({ color: "#94a3b8" }));
+        crest.position.copy(upstream.position);
+        crest.position.y = levelHeight;
+        crest.rotation.copy(upstream.rotation);
+        crest.scale[widthAxis] = widthAt1 / unitWidth;
+        model.add(crest);
+        model.updateWorldMatrix(true, true);
+        for (const key of ["release", "inflow"] as const) {
+          const node = key === "release" ? nodes.WaterDown : upstream;
+          const streamBounds = new Box3().setFromObject(node);
+          const start = model.worldToLocal(streamBounds.getCenter(new Vector3()));
+          const end = start.clone();
+          // Schematic paths only: density represents cms, not river velocity or routing.
+          if (key === "release") {
+            start.copy(model.worldToLocal(new Vector3(streamBounds.max.x - 0.25, streamBounds.max.y, streamBounds.max.z)));
+            end.copy(model.worldToLocal(new Vector3(streamBounds.min.x + 0.25, streamBounds.min.y, streamBounds.min.z)));
+          } else {
+            start.z -= 1.2;
+            start.y = end.y = currentLevel * levelHeight + 0.04;
+          }
+          const geometry = new BufferGeometry();
+          geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(96 * 3), 3));
+          const points = new Points(geometry, new PointsMaterial({ color: "#38bdf8", size: 0.06,
+            transparent: true, opacity: 0.85, depthWrite: false }));
+          points.frustumCulled = false;
+          model.add(points);
+          streams.push({ key, points, start, end });
+        }
+        void loadTerrain();
+      }
       update();
       resize();
     }).catch(fail);
+
+    async function loadTerrain() {
+      const tile = terrariumTile(settings.current.dam.lat, settings.current.dam.lon);
+      let bitmap: ImageBitmap | null = null;
+      try {
+        const response = await fetch(tile.url, { signal: terrainAbort.signal });
+        if (!response.ok) return;
+        bitmap = await createImageBitmap(await response.blob(), { colorSpaceConversion: "none" });
+        if (disposed || failed) return;
+        const image = document.createElement("canvas");
+        image.width = bitmap.width; image.height = bitmap.height;
+        const context = image.getContext("2d", { willReadFrequently: true });
+        if (!context) return;
+        context.drawImage(bitmap, 0, 0);
+        const pixels = context.getImageData(0, 0, image.width, image.height);
+        const heights = terrariumGrid(pixels.data, image.width, image.height);
+        const geometry = new PlaneGeometry(18, 18, 32, 32);
+        geometry.rotateX(-Math.PI / 2);
+        const positions = geometry.getAttribute("position");
+        const originIndex = Math.round(tile.v * 32) * 33 + Math.round(tile.u * 32);
+        const base = heights[originIndex];
+        const floor = bounds.min.y - 0.4;
+        for (let i = 0; i < positions.count; i++) {
+          positions.setXYZ(i, positions.getX(i) + (0.5 - tile.u) * 18,
+            floor + (heights[i] - base) / tile.metres * 18 * 4,
+            positions.getZ(i) + (0.5 - tile.v) * 18);
+        }
+        // Leave room for the schematic dam; DEM is geographical context, not bathymetry.
+        const indices = geometry.index!;
+        const kept: number[] = [];
+        for (let i = 0; i < indices.count; i += 3) {
+          const triangle = [indices.getX(i), indices.getX(i + 1), indices.getX(i + 2)];
+          if (triangle.every((v) => Math.hypot(positions.getX(v), positions.getZ(v)) > radius * 1.05)) kept.push(...triangle);
+        }
+        geometry.setIndex(kept);
+        geometry.computeVertexNormals();
+        terrainMesh = new Mesh(geometry, new MeshStandardMaterial({ color: damSceneColors(sceneTheme, settings.current.dam.band).terrain,
+          roughness: 1, side: DoubleSide }));
+        scene.add(terrainMesh);
+        settings.current.onTerrainLoaded?.();
+        requestRender();
+      } catch {
+        // Optional terrain must never take the dam or its scrubber down with it.
+      } finally { bitmap?.close(); }
+    }
 
     return () => {
       disposed = true;
@@ -299,8 +508,12 @@ export function Dam3D(props: Props) {
       cancelAnimationFrame(frame);
       themeObserver.disconnect();
       resizeObserver.disconnect();
+      visibilityObserver.disconnect();
+      terrainAbort.abort();
+      controls?.dispose();
       document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
       canvas.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", onPointerEnd);
@@ -308,15 +521,16 @@ export function Dam3D(props: Props) {
       canvas.removeEventListener("lostpointercapture", onPointerEnd);
       if (pointer && canvas.hasPointerCapture(pointer.id)) canvas.releasePointerCapture(pointer.id);
       if (model) disposeModel(model);
+      if (terrainMesh) disposeModel(terrainMesh);
       flowTexture?.dispose();
       nodes = {};
       renderer.dispose();
     };
   }, []);
 
-  return <div className="space-y-2">
+  return <div className="space-y-2" style={{ touchAction: "pan-y" }}>
     <canvas ref={canvasRef} className="aspect-[3/2] w-full rounded-xl" style={{ touchAction: "pan-y" }}
       role="img" aria-label={summary} />
-    <p className="text-muted text-xs">{summary}</p>
+    {!props.detail && <p className="text-muted text-xs">{summary}</p>}
   </div>;
 }

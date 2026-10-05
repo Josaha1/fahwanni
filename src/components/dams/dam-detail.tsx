@@ -13,6 +13,7 @@ import { distanceKm } from "@/lib/storms/normalize";
 import { sumRelease } from "@/lib/rivers/observed";
 import observed from "../../../public/data/observed-points.json";
 import { DownstreamProvinces, validTrend } from "./drainage-pillar";
+import { DamHero } from "./dam-hero";
 import { DamTrendChart } from "./dam-trend-chart";
 
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
@@ -45,7 +46,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
   return <main className="app-shell space-y-4" style={{ paddingBottom: "calc(var(--nav-h, 88px) + 2rem)" }}>
     <header><Link className="inline-flex min-h-11 items-center text-given underline" href="/water">{t("การระบายน้ำจากเขื่อน")}</Link><h1 className="text-2xl font-semibold">{t.locale === "en" ? registered.nameEn : registered.nameTh}</h1></header>
     <section className="placeholder-card space-y-2">
-      {dam ? <><p>{t("ระบาย (ลบ.ม./วินาที)")}: {value(dam.releaseCms)}</p><p>{t("ไหลเข้า (ลบ.ม./วินาที)")}: {value(dam.inflowCms)}</p><p>{t("ปริมาณน้ำในเขื่อน (%)")}: {value(dam.storagePct)}</p><SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" /></> : status(dams.status === "loading")}
+      {dam ? <DamHero dam={dam} trend={trend.data} history={history.data} /> : status(dams.status === "loading")}
     </section>
     <section className="placeholder-card space-y-2" aria-label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")}>
       <h2 className="text-lg font-semibold">{t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")}</h2>

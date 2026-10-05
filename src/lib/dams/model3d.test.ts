@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { damBandColor } from "./bands";
-import { damSceneColors, waterLevel } from "./model3d";
+import { damGhosts, damSceneColors, damStreams, reportedDamDays, waterLevel } from "./model3d";
 import type { DamBand } from "./types";
+import fixture from "./fixture-rid.json";
+import { parseRidDams } from "./rid";
 
 describe("schematic water level", () => {
   it.each([[0, 0], [25, 0.5], [50, Math.sqrt(0.5)], [100, 1], [110, Math.sqrt(1.1)],
@@ -33,4 +35,36 @@ describe("dam scene colours", () => {
     expect(damSceneColors("light", 3)).toMatchObject({ terrain: "#d8cdb4", wall: "#b9bec7", background: "#eef4fb" });
     expect(damSceneColors("dark", 3)).toMatchObject({ terrain: "#3b4150", wall: "#6b7280", background: "#141a26" });
   });
+});
+
+
+const dam = { ...parseRidDams(fixture).dams[0], date: "2026-10-05" };
+
+it("selects only reported days in the seven-day window, including today's separate report", () => {
+  const trend = { dates: ["2026-09-28", "2026-09-29", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-06"],
+    pct: { [dam.id]: [80, 0, null, 105, NaN, 90, 99] },
+    release: { [dam.id]: [10, 0, null, 500, 12, null, 15] }, inflow: { [dam.id]: [null, 0, null, 100, 10, 200, 15] } };
+  const days = reportedDamDays(dam, trend);
+  expect(days.map((day) => day.date)).toEqual(["2026-09-29", "2026-10-02", "2026-10-04", "2026-10-05"]);
+  expect(days[0]).toMatchObject({ storagePct: 0, releaseCms: 0, inflowCms: 0 });
+  expect(days[1]).toMatchObject({ storagePct: 105, band: 5 });
+  expect(days[2]).toMatchObject({ releaseCms: null, inflowCms: 200 });
+  expect(days.at(-1)).toEqual(dam);
+  expect(reportedDamDays(dam, null)).toEqual([dam]);
+});
+
+it("keeps ghost comparisons tied to their report day and omits invalid values", () => {
+  const history = { dataDate: dam.date, lastYear: { date: "2025-10-05", pct: { [dam.id]: 0 } },
+    year2554: { date: "2011-10-05", pct: { [dam.id]: 110 } } };
+  expect(damGhosts(dam, history)).toEqual([{ key: "lastYear", date: "2025-10-05", pct: 0 }, { key: "year2554", date: "2011-10-05", pct: 110 }]);
+  expect(damGhosts({ ...dam, date: "2026-10-04" }, history)).toEqual([]);
+  expect(damGhosts(dam, { ...history, lastYear: null, year2554: { date: "2011-10-05", pct: { [dam.id]: NaN } } })).toEqual([]);
+});
+
+it("uses proportional capped stream budgets and never substitutes missing or negative cms", () => {
+  expect(damStreams({ ...dam, releaseCms: 500, inflowCms: 250 })).toEqual({ release: 48, inflow: 24 });
+  expect(damStreams({ ...dam, releaseCms: 5000, inflowCms: 1000 })).toEqual({ release: 96, inflow: 96 });
+  for (const cms of [null, 0, -1, NaN, Infinity]) {
+    expect(damStreams({ ...dam, releaseCms: cms, inflowCms: cms })).toEqual({ release: 0, inflow: 0 });
+  }
 });

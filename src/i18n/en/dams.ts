@@ -1,4 +1,6 @@
 export const dams: Record<string, string> = {
+  "100% เต็มความจุ": "100% full capacity",
+  "ภูมิประเทศขยายความสูง ×{n}": "Terrain height exaggerated ×{n}",
   "การระบายน้ำจากเขื่อน": "Dam releases",
   "ภาพรวมประเทศ": "National overview",
   "ระบายรวมวันนี้ vs เมื่อวาน": "Total release today vs yesterday",
