@@ -145,7 +145,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [imergOn, setImergOn] = useState(false);
   const [satelliteTimes, setSatelliteTimes] = useState<{ himawari: string | null; imerg: string | null }>({ himawari: null, imerg: null });
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
-  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
   const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
   const rainVisible = !water && primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
@@ -164,6 +163,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [buildings3dOn, setBuildings3dOn] = useState(false);
   const [floodOn, setFloodOn] = useState(false);
   const [floodDepth, setFloodDepth] = useState(1.0);
+  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, floodOn: floodOn && !lite, onRoute: focusRoute });
   if (lite && buildings3dOn) setBuildings3dOn(false);
   if (lite && floodOn) setFloodOn(false);
   const toggleFlood = () => {
@@ -239,6 +239,23 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = !lite && terrainAvailable(device.deviceMemory);
+  const [floodGround, setFloodGround] = useState<{ probe: typeof probe; elevation: number | null } | null>(null);
+  useEffect(() => {
+    if (!mapInstance || probe?.kind !== "flood" || !floodOn || !terrainOn || !terrainOk) return;
+    let active = true;
+    const update = () => {
+      if (!active) return;
+      const terrain = mapInstance.getTerrain();
+      const elevation = terrain ? mapInstance.queryTerrainElevation([probe.lon, probe.lat]) : null;
+      // MapLibre reports the displayed height, including the terrain's visual exaggeration.
+      const ground = elevation === null ? null : elevation / (terrain?.exaggeration ?? 1);
+      setFloodGround((current) => current?.probe === probe && current.elevation === ground ? current : { probe, elevation: ground });
+    };
+    queueMicrotask(update);
+    mapInstance.on("sourcedata", update);
+    mapInstance.on("terrain", update);
+    return () => { active = false; mapInstance.off("sourcedata", update); mapInstance.off("terrain", update); };
+  }, [mapInstance, probe, floodOn, terrainOn, terrainOk]);
   const rainImageSize = lite || terrainOn ? 256 : 512;
   // Water mode can overlay the newest radar frame ("ฝนตอนนี้") to spot heavy cells near dams and rivers.
   const [waterRadar, setWaterRadar] = useState(false);
@@ -390,7 +407,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   // A newly opened card expands the sheet once; after that the user can collapse it (the card title
   // stays visible at the top of the collapsed sheet).
   const visibleSheetPosition = sheetPosition;
-  const probeKey = probe ? (probe.kind === "point" ? `${probe.lat},${probe.lon}` : `${probe.kind}:${probe.id}`) : null;
+  const probeKey = probe ? (probe.kind === "point" || probe.kind === "flood" ? `${probe.kind}:${probe.lat},${probe.lon}` : `${probe.kind}:${probe.id}`) : null;
   const [expandedFor, setExpandedFor] = useState<string | null>(null);
   if (probeKey !== expandedFor) {
     // Adjusting state while rendering (React's documented pattern) instead of in an effect.
@@ -656,10 +673,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     ...(quakes.length > 0 ? [{ label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),
   ];
-  const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
+  const card = probe && (probe.kind !== "flood" || (floodOn && !lite)) && <PointCard key={probe.kind === "point" || probe.kind === "flood" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} reservoirs={reservoirs.points} floodEvents={floodEvents?.items ?? null} floodRisk={floodRisk.points} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
+    floodSimulation={probe.kind === "flood" ? { depth: floodDepth, buildingHeight: probe.buildingHeight ?? null,
+      groundElevation: floodGround?.probe === probe ? floodGround.elevation : null, terrainOn: terrainOn && terrainOk } : null}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
     onSelectDam={(id) => select({ kind: "dam", id })} />;
@@ -696,7 +715,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const changeMode = useCallback((next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode; water source cards close in weather mode.
-    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir" || probe.kind === "floodEvent" || probe.kind === "floodRisk")) close();
+    if (probe && probe.kind !== "flood" && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir" || probe.kind === "floodEvent" || probe.kind === "floodRisk")) close();
     dispatch({ type: "setMode", mode: next });
   }, [mode, probe, close]);
   const openShortcuts = () => {

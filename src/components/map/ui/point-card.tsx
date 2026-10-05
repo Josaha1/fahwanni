@@ -43,6 +43,7 @@ import type { FloodEvent } from "@/lib/water/flood-events";
 import { FLOOD_RISK_COLORS, FLOOD_RISK_LEVEL_WORDS, type FloodRiskPoint } from "@/lib/water/flood-risk";
 import { FloodEventItem, FLOOD_EVENT_WORDS } from "@/components/water/flood-events";
 import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
+import { floodProbeLines, type FloodProbeData } from "@/lib/map/flood-sim";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
@@ -54,7 +55,7 @@ function damDate(value: string, locale: "th" | "en") {
 }
 
 export function PointCard({ probe, favourites, onClose, frame, wind, windHour, windField, windSeries, pm25Series, timeMs, nowMs, timeLabel, storms, quakes, dams, damsTrend, damsHistory, rainRisk,
-  rivers, riversStatus, reservoirs = null, floodEvents = null, floodRisk = null, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
+  rivers, riversStatus, reservoirs = null, floodEvents = null, floodRisk = null, floodSimulation = null, waterDay, watch, onToggleWatch, onToggleRiverWatch, downstream, pathActive, pathLoading, onTogglePath, onSelectDam }: {
   probe: Probe;
   favourites: Place[];
   onClose: () => void;
@@ -80,6 +81,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   reservoirs?: ReservoirPoint[] | null;
   floodEvents?: FloodEvent[] | null;
   floodRisk?: globalThis.Map<string, FloodRiskPoint> | null;
+  floodSimulation?: FloodProbeData | null;
   waterDay: number;
   watch: WaterWatch;
   onToggleWatch: (dam: Dam) => void;
@@ -164,6 +166,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
   else if (probe.kind === "dam") title = t("ไม่พบข้อมูลเขื่อนนี้");
   else if (probe.kind === "rain") title = t("ไม่พบข้อมูลฝนของสถานีนี้");
   else if (probe.kind === "river") title = t("แม่น้ำใกล้คุณ");
+  else if (probe.kind === "flood") title = t("จำลองน้ำท่วม (ความลึกจากพื้น)");
 
   return <section className="map-panel map-point-card mt-3" aria-live="polite">
     <div className="flex items-start justify-between gap-2">
@@ -178,6 +181,11 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         <button type="button" className="map-icon-btn" aria-label={t("ปิดการ์ด")} onClick={onClose}>✕</button>
       </div>
     </div>
+    {probe.kind === "flood" && floodSimulation && <div className="mt-2 space-y-1 text-sm">
+      <p className="map-muted">{probe.lat.toFixed(4)}, {probe.lon.toFixed(4)}</p>
+      {floodProbeLines({ ...floodSimulation, buildingHeight: probe.buildingHeight }, t).map((line, index, lines) => <p key={index}
+        className={index === 0 ? "font-semibold" : index === lines.length - 1 ? "map-warning text-xs" : undefined}>{line}</p>)}
+    </div>}
     {point && province && <>
       <p className="map-muted text-xs">{t("ข้อมูล ณ {time}", { time: timeLabel })}</p>
       <p className="map-muted text-sm">{probe.kind === "point" && `${probe.lat.toFixed(2)}, ${probe.lon.toFixed(2)}`}{province.km <= 100 && <> · {t("ห่างจาก{province} {km} กม.", { province: t.locale === "en" ? province.en : province.th, km: Math.round(province.km) })}</>}</p>

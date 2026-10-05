@@ -1,8 +1,9 @@
 import { validateStyleMin } from "@maplibre/maplibre-gl-style-spec";
 import { describe, expect, it } from "vitest";
 import { BASE } from "./base-style";
+import { translator } from "@/i18n/core";
 import {
-  buildings3dLayer, depthColor, depthPresets, floodWaterLayer, floorReached,
+  buildings3dLayer, depthColor, depthPresets, floodProbeLines, floodWaterLayer, floorReached,
   modeBAllowed, terrariumDecode, waterGrid, wetBandLayer,
 } from "./flood-sim";
 
@@ -90,6 +91,72 @@ describe("floorReached", () => {
     expect(floorReached(4.5, 2)).toEqual({ floor: 3, fraction: 0.25 });
     for (const depth of [NaN, Infinity, -Infinity]) expect(() => floorReached(depth)).toThrow(RangeError);
     for (const height of [0, -1, NaN, Infinity]) expect(() => floorReached(1, height)).toThrow(RangeError);
+  });
+});
+
+describe("floodProbeLines", () => {
+  const data = { depth: 0.25, buildingHeight: null, groundElevation: null, terrainOn: false };
+  const t = translator("th");
+
+  it("preserves slider precision and explains missing terrain without inventing building heights", () => {
+    expect(floodProbeLines(data, t)).toEqual([
+      "น้ำลึก 0.25 ม. จากพื้น (จำลอง)", "ไม่มีข้อมูลความสูงของอาคารนี้ใน OpenStreetMap", "ความสูงพื้นดิน: —",
+      "เปิดแผนที่ 3 มิติเพื่อดูความสูงพื้น", "ภาพจำลองสมมติ ไม่ใช่การพยากรณ์",
+    ]);
+  });
+
+  it("uses floorReached boundaries and estimates building floors and submerged height", () => {
+    expect(floodProbeLines({ ...data, depth: 3, buildingHeight: 9, groundElevation: -1.5, terrainOn: true }, t)).toEqual([
+      "น้ำลึก 3 ม. จากพื้น (จำลอง)", "ถึงชั้น 2", "อาคารสูง ~9 ม. (~3 ชั้น)",
+      "น้ำท่วมอาคารนี้ 33% ของความสูง", "ความสูงพื้นดิน: -1.5 ม.", "ภาพจำลองสมมติ ไม่ใช่การพยากรณ์",
+    ]);
+  });
+
+  it.each([5, undefined, null, 0, -1, NaN, Infinity])("explains unavailable or default building height %s without floors or percentages", (buildingHeight) => {
+    expect(floodProbeLines({ ...data, buildingHeight }, t)).toEqual(floodProbeLines(data, t));
+  });
+
+  it.each([
+    [0.25, 100, "<1"], [0.0001, 100, "<1"], [0.999, 100, "<1"],
+    [1, 100, "1"], [1.49, 100, "1"], [1.5, 100, "2"],
+    [1, 4.99, "20"], [1, 5.01, "20"],
+  ])("formats depth %s over height %s as %s%%", (depth, buildingHeight, pct) => {
+    expect(floodProbeLines({ ...data, depth, buildingHeight }, t)).toContain(`น้ำท่วมอาคารนี้ ${pct}% ของความสูง`);
+  });
+
+  it("caps submerged height at 100%, keeps at least one floor, and handles dry ground", () => {
+    expect(floodProbeLines({ ...data, depth: 5, buildingHeight: 1 }, t)).toContain("น้ำท่วมอาคารนี้ 100% ของความสูง");
+    const dry = floodProbeLines({ ...data, depth: 0, buildingHeight: 1 }, t);
+    expect(dry).toContain("ถึงชั้น 0");
+    expect(dry).toContain("อาคารสูง ~1 ม. (~1 ชั้น)");
+    expect(dry).toContain("น้ำท่วมอาคารนี้ 0% ของความสูง");
+  });
+
+  it.each([null, NaN, Infinity])("shows a dash for unavailable terrain elevation %s", (groundElevation) => {
+    expect(floodProbeLines({ ...data, terrainOn: true, groundElevation }, t)).toEqual([
+      "น้ำลึก 0.25 ม. จากพื้น (จำลอง)", "ไม่มีข้อมูลความสูงของอาคารนี้ใน OpenStreetMap", "ความสูงพื้นดิน: —", "ภาพจำลองสมมติ ไม่ใช่การพยากรณ์",
+    ]);
+  });
+
+  it("ignores terrain readings when terrain is off and accepts sea-level zero", () => {
+    expect(floodProbeLines({ ...data, groundElevation: 100 }, t)).toEqual(floodProbeLines(data, t));
+    expect(floodProbeLines({ ...data, terrainOn: true, groundElevation: 0 }, t)).toContain("ความสูงพื้นดิน: 0 ม.");
+  });
+
+  it("translates every flood card line into English", () => {
+    expect(floodProbeLines({ ...data, buildingHeight: 10 }, translator("en"))).toEqual([
+      "Water depth 0.25 m above ground (simulated)", "Reaches floor 1", "Building height ~10 m (~3 floors)",
+      "Water covers 3% of this building's height", "Ground elevation: —",
+      "Enable the 3D map to see ground elevation", "Hypothetical simulation, not a forecast",
+    ]);
+  });
+
+  it.each([5, undefined, null])("translates missing building height %s into English", (buildingHeight) => {
+    expect(floodProbeLines({ ...data, buildingHeight }, translator("en"))).toEqual([
+      "Water depth 0.25 m above ground (simulated)", "No height data for this building in OpenStreetMap", "Ground elevation: —",
+      "Enable the 3D map to see ground elevation", "Hypothetical simulation, not a forecast",
+    ]);
+    expect(floodProbeLines({ ...data, buildingHeight: 100 }, translator("en"))).toContain("Water covers <1% of this building's height");
   });
 });
 

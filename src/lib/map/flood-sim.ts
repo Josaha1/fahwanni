@@ -1,6 +1,7 @@
 import type { FeatureCollection, Polygon } from "geojson";
 import type { FillExtrusionLayerSpecification } from "maplibre-gl";
 import { BASE, type BaseTheme } from "./base-style";
+import { intlOf, type T } from "@/i18n/core";
 
 /**
  * Rectangles clipped to the view, using metres per degree at its middle latitude.
@@ -58,6 +59,29 @@ export function floorReached(depthM: number, floorM = 3): { floor: number; fract
   if (depthM < 0.1) return { floor: 0, fraction: 0 };
   const completed = Math.floor(depthM / floorM);
   return { floor: completed + 1, fraction: (depthM - completed * floorM) / floorM };
+}
+
+export type FloodProbeData = { depth: number; buildingHeight?: number | null; groundElevation: number | null; terrainOn: boolean };
+
+export function floodProbeLines({ depth, buildingHeight, groundElevation, terrainOn }: FloodProbeData, t: T): string[] {
+  const number = new Intl.NumberFormat(intlOf(t), { maximumFractionDigits: 2 });
+  const lines = [
+    t("น้ำลึก {d} ม. จากพื้น (จำลอง)", { d: number.format(Math.max(0, depth)) }),
+  ];
+  // OpenMapTiles uses 5 m when OSM has no height or levels; it cannot establish a real height.
+  if (buildingHeight != null && Number.isFinite(buildingHeight) && buildingHeight > 0 && buildingHeight !== 5) {
+    const pct = Math.min(100, Math.max(0, depth) / buildingHeight * 100);
+    lines.push(
+      t("ถึงชั้น {floor}", { floor: floorReached(depth).floor }),
+      t("อาคารสูง ~{h} ม. (~{floors} ชั้น)", { h: number.format(buildingHeight), floors: Math.max(1, Math.round(buildingHeight / 3)) }),
+      t("น้ำท่วมอาคารนี้ {pct}% ของความสูง", { pct: pct > 0 && pct < 1 ? "<1" : number.format(Math.round(pct)) }),
+    );
+  } else lines.push(t("ไม่มีข้อมูลความสูงของอาคารนี้ใน OpenStreetMap"));
+  lines.push(t("ความสูงพื้นดิน: {h}", { h: terrainOn && groundElevation !== null && Number.isFinite(groundElevation)
+    ? t("{d} ม.", { d: number.format(groundElevation) }) : "—" }));
+  if (!terrainOn) lines.push(t("เปิดแผนที่ 3 มิติเพื่อดูความสูงพื้น"));
+  lines.push(t("ภาพจำลองสมมติ ไม่ใช่การพยากรณ์"));
+  return lines;
 }
 
 export function terrariumDecode(r: number, g: number, b: number): number {

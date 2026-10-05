@@ -1,4 +1,12 @@
 export const flood: Record<string, string> = {
+  "น้ำลึก {d} ม. จากพื้น (จำลอง)": "Water depth {d} m above ground (simulated)",
+  "ถึงชั้น {floor}": "Reaches floor {floor}",
+  "อาคารสูง ~{h} ม. (~{floors} ชั้น)": "Building height ~{h} m (~{floors} floors)",
+  "ไม่มีข้อมูลความสูงของอาคารนี้ใน OpenStreetMap": "No height data for this building in OpenStreetMap",
+  "น้ำท่วมอาคารนี้ {pct}% ของความสูง": "Water covers {pct}% of this building's height",
+  "ความสูงพื้นดิน: {h}": "Ground elevation: {h}",
+  "เปิดแผนที่ 3 มิติเพื่อดูความสูงพื้น": "Enable the 3D map to see ground elevation",
+  "ภาพจำลองสมมติ ไม่ใช่การพยากรณ์": "Hypothetical simulation, not a forecast",
   "จำลองน้ำท่วม (ความลึกจากพื้น)": "Simulate flooding (depth above ground)",
   "ปิดจำลองน้ำท่วม": "Close flood simulation",
   "น้ำ {d} ม. · ถึงชั้น {floor}": "Water {d} m · reaches floor {floor}",

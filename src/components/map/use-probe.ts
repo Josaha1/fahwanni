@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Marker, type GeoJSONSource, type Map, type MapMouseEvent } from "maplibre-gl";
 
-export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string } | { kind: "floodEvent"; id: string } | { kind: "floodRisk"; id: string };
+export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "flood"; lat: number; lon: number; buildingHeight?: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string } | { kind: "floodEvent"; id: string } | { kind: "floodRisk"; id: string };
 
-/** `points: false` (water mode): a tap on empty map opens nothing; dam, storm and quake taps still work. */
+/** `points: false` (water mode): empty taps open only a flood probe when simulation is on. */
 /** `onRoute`: a tap on the all-routes overview opens that route's dam and hands its id back to focus the route. */
-export function useProbe(map: Map | null, { points, onRoute }: { points: boolean; onRoute?: (damId: string) => void } = { points: true }) {
+export function useProbe(map: Map | null, { points, floodOn = false, onRoute }: { points: boolean; floodOn?: boolean; onRoute?: (damId: string) => void } = { points: true }) {
   const routeHandler = useRef(onRoute);
   useEffect(() => { routeHandler.current = onRoute; }, [onRoute]);
   const [probe, setProbe] = useState<Probe | null>(null);
@@ -42,18 +42,12 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       const river = map.getLayer("river-circle") ? map.queryRenderedFeatures([
         [event.point.x - 8, event.point.y - 8], [event.point.x + 8, event.point.y + 8],
       ], { layers: ["river-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
-      const floodEvent = !dam && map.getLayer("flood-event-circle") ? map.queryRenderedFeatures([
+      const floodEvent = !dam && !rain && !river && map.getLayer("flood-event-circle") ? map.queryRenderedFeatures([
         [event.point.x - 10, event.point.y - 10], [event.point.x + 10, event.point.y + 10],
       ], { layers: ["flood-event-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
-      if (floodEvent) { select({ kind: "floodEvent", id: floodEvent.properties!.id as string }); return; }
       const floodRisk = !dam && map.getLayer("flood-risk-circle") ? map.queryRenderedFeatures([
         [event.point.x - 6, event.point.y - 6], [event.point.x + 6, event.point.y + 6],
       ], { layers: ["flood-risk-circle"] }).find((feature) => typeof feature.properties?.id === "string") : undefined;
-      if (floodRisk && !map.queryRenderedFeatures([[event.point.x - 7, event.point.y - 7], [event.point.x + 7, event.point.y + 7]],
-        { layers: ["reservoir-point", "river-circle", "rain-risk-circle"].filter((id) => map.getLayer(id)) }).length) {
-        select({ kind: "floodRisk", id: floodRisk.properties!.id as string });
-        return;
-      }
       const reservoirLayers = ["reservoir-point", "osm-minor-point"].filter((id) => map.getLayer(id));
       const reservoir = !dam && !rain && !river && reservoirLayers.length ? map.queryRenderedFeatures([
         [event.point.x - 7, event.point.y - 7], [event.point.x + 7, event.point.y + 7],
@@ -85,6 +79,8 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       else if (rain) select({ kind: "rain", id: rain.properties!.id as string });
       else if (river) select({ kind: "river", id: river.properties!.id as string });
       else if (reservoir) select({ kind: "reservoir", id: reservoir.properties!.id as string });
+      else if (floodEvent) select({ kind: "floodEvent", id: floodEvent.properties!.id as string });
+      else if (floodRisk) select({ kind: "floodRisk", id: floodRisk.properties!.id as string });
       else if (route) {
         const damId = route.properties!.damId as string;
         select({ kind: "dam", id: damId });
@@ -93,19 +89,32 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       else if (favourite) select({ kind: "point", lat: favourite.properties!.lat as number, lon: favourite.properties!.lon as number });
       else if (quake) select({ kind: "quake", id: quake.properties!.id as string });
       else if (storm) select({ kind: "storm", id: storm.properties!.id as string });
+      else if (floodOn) {
+        const building = map.getLayer("buildings-3d") ? map.queryRenderedFeatures(event.point, { layers: ["buildings-3d"] })[0] : undefined;
+        const height = building?.properties?.render_height;
+        select({ kind: "flood", lat: event.lngLat.lat, lon: event.lngLat.lng,
+          buildingHeight: typeof height === "number" && Number.isFinite(height) && height > 0 ? height : undefined });
+      }
       else if (points) select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });
     };
     map.on("click", onClick);
     return () => { map.off("click", onClick); };
-  }, [map, select, points]);
+  }, [map, select, points, floodOn]);
 
   useEffect(() => {
-    if (!map || probe?.kind !== "point") return;
+    if (floodOn || probe?.kind !== "flood") return;
+    let active = true;
+    queueMicrotask(() => { if (active) close(); });
+    return () => { active = false; };
+  }, [floodOn, probe, close]);
+
+  useEffect(() => {
+    if (!map || (probe?.kind !== "point" && (probe?.kind !== "flood" || !floodOn))) return;
     const element = document.createElement("div");
     element.className = "map-probe-marker";
     const marker = new Marker({ element, anchor: "center" }).setLngLat([probe.lon, probe.lat]).addTo(map);
     return () => { marker.remove(); };
-  }, [map, probe]);
+  }, [map, probe, floodOn]);
 
   useEffect(() => {
     if (!probe) return;
