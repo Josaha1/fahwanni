@@ -1,9 +1,11 @@
 import {
   AmbientLight, BufferGeometry, CanvasTexture, CircleGeometry, Color, DirectionalLight, DoubleSide,
   Float32BufferAttribute, Fog, HemisphereLight, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera,
-  PlaneGeometry, Points, PointsMaterial, RingGeometry, Scene, Sprite, SpriteMaterial,
+  PlaneGeometry, Points, PointsMaterial, RingGeometry, Scene, Sprite, SpriteMaterial, Vector3,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { attachOrientation } from "@/lib/three/orientation";
+import { cameraTilt } from "@/lib/three/camera-tilt";
 import type { SceneHost } from "@/lib/three/scene-host";
 import { writeSceneState } from "@/lib/three/scene-state";
 import { terrainCoordinate, terrainElevation, terrainPosition, terrainSurfaceHeight, terrariumArea, type TerrainPixels } from "@/lib/terrain/terrarium";
@@ -12,6 +14,7 @@ import type { NearMeProps, nearMeVisuals } from "./near-me-3d";
 export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearMeProps, data: ReturnType<typeof nearMeVisuals>) {
   const fallback = element.querySelector<HTMLElement>("[data-near-me-fallback]")!;
   const label = element.querySelector<HTMLElement>("[data-terrain-label]")!;
+  const tiltButton = element.querySelector<HTMLButtonElement>("button[data-enable-tilt]");
   const scene = new Scene();
   const camera = new PerspectiveCamera(42, 1, 0.1, 500);
   // One unit = 1 km; this framing fills the 180 px tile with the 30 km circle.
@@ -52,14 +55,23 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
     const svg = host.tier === "svg" || !ready;
     fallback.style.visibility = svg ? "" : "hidden";
     label.hidden = svg || !state.terrain;
+    if (tiltButton) tiltButton.hidden = svg || !window.DeviceOrientationEvent || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (svg) { element.removeAttribute("role"); element.removeAttribute("aria-label"); }
-    else { element.setAttribute("role", "img"); element.setAttribute("aria-label", props.summaries.join(" · ")); }
+    else { element.setAttribute("role", "group"); element.setAttribute("aria-label", props.summaries.join(" · ")); }
     particles.forEach(({ points }) => { points.visible = host.tier === "full"; });
     writeSceneState(element, { ...state, mode: svg ? "svg" : host.tier });
     host.setAnimating(element, ready && host.tier === "full" && particles.length > 0);
   }
   let unregister = () => {};
-  const change = () => host.markDirty(element);
+  const tiltCamera = cameraTilt(camera, () => controls.target ?? new Vector3());
+  const disposeTilt = attachOrientation(element, tiltButton, (tilt) => {
+    if (host.tier === "svg" || !ready) return;
+    tiltCamera(tilt); change();
+  });
+  const change = () => {
+    element.dataset.cameraPosition = JSON.stringify(camera.position.toArray());
+    host.markDirty(element);
+  };
   controls.addEventListener("change", change);
 
   function glyph(x: number, z: number, home: boolean, dam = false) {
@@ -200,7 +212,7 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
   show();
   void load();
   return () => {
-    disposed = true; abort.abort(); unregister(); themeObserver.disconnect(); controls.removeEventListener("change", change); controls.dispose();
+    disposed = true; disposeTilt(); abort.abort(); unregister(); themeObserver.disconnect(); controls.removeEventListener("change", change); controls.dispose();
     geometries.forEach((geometry) => geometry.dispose()); materials.forEach((material) => material.dispose()); textures.forEach((texture) => texture.dispose());
     fallback.style.visibility = ""; label.hidden = true; element.removeAttribute("role"); element.removeAttribute("aria-label");
     writeSceneState(element, { mode: "svg", terrain: false, ...data.state });

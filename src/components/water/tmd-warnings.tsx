@@ -1,5 +1,6 @@
 "use client";
 
+import { WarningHaptic } from "./warning-haptic";
 import { useT } from "@/i18n/client";
 import { SourceTime } from "@/components/ui/source-time";
 import { warningKey, type TmdWarning } from "@/lib/tmd";
@@ -7,6 +8,7 @@ import { warningKey, type TmdWarning } from "@/lib/tmd";
 export function TmdWarningList({ items, limit, onDismiss, onMap = false }: { items: TmdWarning[]; limit: number; onDismiss?: (key: string) => void; onMap?: boolean }) {
   const t = useT();
   return <section className="space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
+    <WarningHaptic ids={items.slice(0, limit).map(warningKey)} />
     {items.slice(0, limit).map((item) => {
       return <article key={warningKey(item)} className="rounded-lg border p-3" style={{ borderColor: onMap ? "var(--map-panel-border)" : "var(--border)" }}>
         <div className="flex items-start gap-2">

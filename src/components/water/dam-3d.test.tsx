@@ -62,7 +62,7 @@ beforeEach(() => {
   harness.effects = []; harness.refs = []; harness.cursor = 0;
   harness.rendererString = "hardware"; harness.scene = null; harness.controls = null;
   frames = new Map(); clock = 0;
-  canvas = Object.assign(new EventTarget(), { style: {}, getBoundingClientRect: () => ({ width: 480, height: 320 }) });
+  canvas = Object.assign(new EventTarget(), { style: {}, dataset: {}, getBoundingClientRect: () => ({ width: 480, height: 320 }) });
   const doc = Object.assign(new EventTarget(), { hidden: false, documentElement: { dataset: { theme: "light" } } });
   class Observer { observe() {} disconnect() {} }
   vi.stubGlobal("document", doc);

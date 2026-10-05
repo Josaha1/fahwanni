@@ -1,5 +1,8 @@
 "use client";
 
+import { SpeakButton } from "@/components/speak-button";
+import { WarningHaptic } from "@/components/water/warning-haptic";
+import { warningKey } from "@/lib/tmd";
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useLastPlace } from "@/hooks/use-favourites";
@@ -83,6 +86,7 @@ function NearHome({ place, rain, dams, trend }: { place: Place; rain: Load<RainR
   return <section className="placeholder-card !p-4 space-y-2" aria-label={t("ใกล้บ้านคุณ")}>
     <h2 className="text-lg font-semibold">{t("ใกล้บ้านคุณ")}</h2>
     <NearMe3D {...nearby} summaries={summaries} />
+    <SpeakButton text={summaries.join(" · ")} />
     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
       {summaries.map((summary, index) => <div key={labels[index]} className="min-w-0">
         <p className="truncate font-medium" title={labels[index]}>{labels[index]}</p>
@@ -131,6 +135,7 @@ export function FloodHome() {
     <OfflineSupport />
     <section className="placeholder-card !p-4 space-y-1" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
       {warnings.data ? warnings.data.items.length > 0 ? <>
+        <WarningHaptic ids={warnings.data.items.map(warningKey)} />
         <h2 className="text-base font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
         <details>
           <summary className="cursor-pointer text-sm"><span className="line-clamp-2">⚠ {warnings.data.items[0].title}</span></summary>

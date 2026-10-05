@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
+import { VisualTransition } from "@/components/visual-transition";
 import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
 import { TimeScrubber } from "@/components/time-scrubber";
@@ -72,9 +73,9 @@ export function DamHero({ dam, trend, history }: Props) {
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
   return <div ref={host} className="space-y-2" data-scene-state={JSON.stringify({ mode, day: selected.date,
     pct: selected.storagePct, ghosts, particles: mode === "full" ? damStreams(selected) : { release: 0, inflow: 0 } })}>
-    {showScene ? <Scene dam={selected} history={history} theme="light" reducedMotion={reducedMotion}
+    <VisualTransition name={`dam-${dam.id}`}><div>{showScene ? <Scene dam={selected} history={history} theme="light" reducedMotion={reducedMotion}
       detail summary={summary} onTierChange={setTier} onTerrainLoaded={() => setTerrain(true)}
-      onFallback={() => { setFailed(true); setTier("svg"); }} /> : <DamTank dam={selected} history={history} summary={summary} />}
+      onFallback={() => { setFailed(true); setTier("svg"); }} /> : <DamTank dam={selected} history={history} summary={summary} />}</div></VisualTransition>
     {ghosts.length > 0 && <ul className="flex flex-wrap gap-3 text-xs">{ghosts.map(({ key, pct, date }) => <li key={key}
       style={{ color: key === "lastYear" ? "#64748b" : "#e11d48" }}>{t(key === "lastYear" ? "ปีที่แล้ว {pct}%" : "ปี 2554 {pct}%", { pct: number.format(pct) })} · {dateLabel(date)}</li>)}</ul>}
     {mode !== "svg" && terrain && <p className="text-muted text-xs">{t("ภูมิประเทศขยายความสูง ×{n}", { n: 4 })} · AWS / Mapzen</p>}

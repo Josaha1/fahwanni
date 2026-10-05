@@ -55,7 +55,7 @@ const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve()
 
 beforeEach(() => {
   attributes = new Map(); fallback = { style: { visibility: "" } }; label = { hidden: true };
-  element = { style: {}, querySelector: (selector: string) => selector.includes("fallback") ? fallback : label,
+  element = { style: {}, dataset: {}, querySelector: (selector: string) => selector.includes("enable-tilt") ? null : selector.includes("fallback") ? fallback : label,
     setAttribute: (name: string, value: string) => attributes.set(name, value),
     removeAttribute: (name: string) => attributes.delete(name) } as unknown as HTMLElement;
   options = undefined; unregister = vi.fn(); hooks.controls = [];

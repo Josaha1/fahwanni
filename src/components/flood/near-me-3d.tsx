@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef } from "react";
+import { TiltButton } from "@/components/tilt-button";
 import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
 import { getSceneHost } from "@/lib/three/scene-host";
@@ -55,7 +56,7 @@ export function NearMe3D(props: NearMeProps) {
   }, [sceneProps, data, lite, reducedMotion]);
 
   const points = "points" in data.ring ? data.ring.points : [];
-  return <div ref={root} data-near-me-view="" className="relative h-[180px]" style={{ touchAction: "pan-y" }}
+  return <div ref={root} data-near-me-view="" data-tilt-state="drag" className="relative h-[180px]" style={{ touchAction: "pan-y" }}
     data-scene-state={JSON.stringify({ mode: "svg", terrain: false, ...data.state })}>
     <div data-near-me-fallback="" className="grid h-full grid-cols-2 gap-2">
       <svg role="img" aria-label={props.summaries[0]} viewBox="0 0 160 80" className="h-full w-full rounded-lg border border-[var(--border)]">
@@ -84,6 +85,7 @@ export function NearMe3D(props: NearMeProps) {
         {data.release.state === "data" ? data.release.ratio > 0 && <path d="M76 60Q110 52 137 66" fill="none" stroke="#38bdf8" strokeWidth={data.release.ratio * 10} /> : <text x="125" y="44" textAnchor="middle" fill="currentColor">—</text>}
       </svg>
     </div>
+    <div data-tilt-button-wrap="" className="absolute bottom-1 right-1"><TiltButton /></div>
     <span data-terrain-label="" hidden className="text-muted absolute left-2 top-1 text-xs">{t("ภูมิประเทศขยายความสูง ×{n}", { n: 4 })} · AWS / Mapzen</span>
   </div>;
 }

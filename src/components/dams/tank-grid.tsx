@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { VisualTransition } from "@/components/visual-transition";
 import Link from "next/link";
 import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
@@ -26,7 +27,7 @@ export function TankGrid({ dams, date, trend }: { dams: readonly Dam[]; date: st
         const name = t.locale === "en" ? entry.nameEn : entry.nameTh;
         const change = entry.change === null ? t("ยังเทียบเมื่อวานไม่ได้") : t("{arrow} เทียบเมื่อวาน", { arrow: entry.change > 0 ? "↑" : entry.change < 0 ? "↓" : "→" });
         return <Link key={entry.id} href={`/water/dam/${entry.id}`} className="h-[104px] min-w-0 rounded-lg border border-[var(--border)] p-1 text-center text-xs">
-          <div data-tank-view={entry.id} role="img" aria-label={summary} className="h-14 text-given" data-scene-state={JSON.stringify({ mode: "svg", ...entry.state })}><GridTankSvg entry={entry} reducedMotion={reducedMotion} /></div>
+          <VisualTransition name={`dam-${entry.id}`}><div data-tank-view={entry.id} role="img" aria-label={summary} className="h-14 text-given" data-scene-state={JSON.stringify({ mode: "svg", ...entry.state })}><GridTankSvg entry={entry} reducedMotion={reducedMotion} /></div></VisualTransition>
           <p className="truncate font-semibold leading-4" title={name}>{name}</p>
           <p className="tabular-nums leading-4"><span aria-label={entry.fill.state === "no-data" ? t("ไม่มีรายงาน") : undefined}>{entry.fill.state === "data" ? `${number.format(entry.fill.value)}%` : "—"}</span>{" "}<span className="text-muted" aria-label={change}>{entry.change === null ? "—" : entry.change > 0 ? "↑" : entry.change < 0 ? "↓" : "→"}</span></p>
         </Link>;

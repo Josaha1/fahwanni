@@ -10,6 +10,9 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { TiltButton } from "@/components/tilt-button";
+import { attachOrientation } from "@/lib/three/orientation";
+import { cameraTilt } from "@/lib/three/camera-tilt";
 import { useT } from "@/i18n/client";
 import { damSceneSummary } from "@/lib/chart-summaries";
 import type { DamHistory } from "@/lib/dams/history";
@@ -146,6 +149,13 @@ export function Dam3D(props: Props) {
       canvas.style.touchAction = "pan-y";
     }
 
+    const tiltTarget = new Vector3();
+    const tiltCamera = cameraTilt(camera, () => controls?.target ?? tiltTarget);
+    const disposeTilt = attachOrientation(canvas, canvas.parentElement?.querySelector<HTMLButtonElement>("button[data-enable-tilt]") ?? null, (tilt) => {
+      if (settings.current.reducedMotion || failed || contextLost) return;
+      tiltCamera(tilt); requestRender();
+    });
+
     function fail() {
       if (disposed || failed) return;
       failed = true;
@@ -162,6 +172,7 @@ export function Dam3D(props: Props) {
 
     function requestRender() {
       if (disposed || failed || contextLost || !visible || document.hidden || frame) return;
+      canvas.dataset.cameraPosition = JSON.stringify(camera.position.toArray());
       frame = requestAnimationFrame(render);
     }
 
@@ -251,6 +262,7 @@ export function Dam3D(props: Props) {
           fitted = model !== null;
         }
       }
+      tiltTarget.copy(center);
       camera.far = Math.max(distance + radius * 4, 120);
       if (!controls) camera.lookAt(center);
       camera.updateProjectionMatrix();
@@ -518,6 +530,7 @@ export function Dam3D(props: Props) {
 
     return () => {
       disposed = true;
+      disposeTilt();
       updateRef.current = null;
       cancelAnimationFrame(frame);
       themeObserver.disconnect();
@@ -546,8 +559,9 @@ export function Dam3D(props: Props) {
   }, []);
 
   return <div className="space-y-2" style={{ touchAction: "pan-y" }}>
-    <canvas ref={canvasRef} className="aspect-[3/2] w-full rounded-xl" style={{ touchAction: "pan-y" }}
+    <canvas ref={canvasRef} data-tilt-state="drag" className="aspect-[3/2] w-full rounded-xl" style={{ touchAction: "pan-y" }}
       role="img" aria-label={summary} />
+    <TiltButton />
     {!props.detail && <p className="text-muted text-xs">{summary}</p>}
   </div>;
 }
