@@ -28,8 +28,7 @@ export function mapOpenMeteoResults(data: unknown, provinces: Place[], limit = 8
   const seenNames = new Set(provinces.flatMap((p) => [p.name, p.admin ?? ""].map((name) => name.trim().toLocaleLowerCase())));
   const results: Place[] = [];
 
-  const ranked = [...data.results as OpenMeteoResult[]].sort((a, b) =>
-    Number(b?.country_code === "TH") - Number(a?.country_code === "TH"));
+  const ranked = (data.results as OpenMeteoResult[]).filter((item) => item?.country_code === "TH");
   for (const item of ranked) {
     if (!item || typeof item.id !== "number" || typeof item.name !== "string" ||
         !Number.isFinite(item.latitude) || !Number.isFinite(item.longitude)) continue;

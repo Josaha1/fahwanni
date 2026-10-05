@@ -14,7 +14,7 @@ class GeocodeUpstreamError extends Error {
 
 async function searchOpenMeteo(q: string, lang: string): Promise<unknown> {
   const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
-  url.search = new URLSearchParams({ name: q, count: "8", language: lang, format: "json" }).toString();
+  url.search = new URLSearchParams({ name: q, count: "8", language: lang, format: "json", countryCode: "TH" }).toString();
   const response = await fetch(url, { next: { revalidate: 86400 }, signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new GeocodeUpstreamError(response.status, response.headers?.get("Retry-After") ?? null);
   return response.json();
@@ -52,8 +52,7 @@ export async function GET(request: Request) {
     let data: unknown;
     for (const attempt of getGeocodeAttempts(q, lang)) {
       data = await searchOpenMeteo(attempt.name, attempt.language);
-      if (data && typeof data === "object" && "results" in data &&
-          Array.isArray(data.results) && data.results.length > 0) break;
+      if (mapOpenMeteoResults(data, provinces, 8, lang).length > 0) break;
     }
     const results = [...provinces, ...mapOpenMeteoResults(data, provinces, 8, lang)];
     cache.delete(key);

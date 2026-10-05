@@ -1,3 +1,5 @@
+import { FOCUS } from "../features";
+import { THAILAND_BOUNDS } from "../geo";
 import type { MapState } from "./map-state";
 
 export type UrlView = {
@@ -5,6 +7,7 @@ export type UrlView = {
   lon?: number;
   z?: number;
   layer?: MapState["primary"];
+  hiddenLayer?: boolean;
   /** Selected time in epoch ms. In the URL it is epoch minutes (`t=29318400`); older links used ISO. */
   t?: number;
   ov?: MapState["overlays"];
@@ -22,11 +25,11 @@ function boundedNumber(value: string | null, min: number, max: number): number |
   return Number.isFinite(number) && number >= min && number <= max ? number : undefined;
 }
 
-export function parseUrlView(search: string): UrlView {
+export function parseUrlView(search: string, focus: "flood" | "all" = FOCUS): UrlView {
   const params = new URLSearchParams(search);
   const view: UrlView = {};
-  const lat = boundedNumber(params.get("lat"), -5, 30);
-  const lon = boundedNumber(params.get("lon"), 80, 130);
+  const lat = boundedNumber(params.get("lat"), THAILAND_BOUNDS[0][1], THAILAND_BOUNDS[1][1]);
+  const lon = boundedNumber(params.get("lon"), THAILAND_BOUNDS[0][0], THAILAND_BOUNDS[1][0]);
   const z = boundedNumber(params.get("z"), 3, 17);
   const layer = params.get("layer");
   // `focus` was a temporary name for the same thing while the time bar was being built.
@@ -47,6 +50,11 @@ export function parseUrlView(search: string): UrlView {
   }
   // Older links turned dams on through `ov=dams` or `dam=`; both now mean water mode.
   if (params.get("mode") === "water" || view.dam || view.river || view.ov?.dams) view.mode = "water";
+  else if (params.get("mode") === "weather" || view.layer) view.mode = "weather";
+  if (focus === "flood" && view.layer && view.layer !== "rain") {
+    view.layer = "rain";
+    view.hiddenLayer = true;
+  }
   const wd = boundedNumber(params.get("wd"), 1, 7);
   if (view.mode === "water" && wd !== undefined && Number.isInteger(wd)) view.wd = wd;
   if (view.mode === "water" && params.get("routes") === "1") view.routes = true;
@@ -61,7 +69,7 @@ export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" |
   params.set("z", view.z.toFixed(1));
   params.set("layer", view.layer);
   if (view.t !== undefined) params.set("t", String(Math.round(view.t / 60_000)));
-  if (water) params.set("mode", "water");
+  if (view.mode) params.set("mode", view.mode);
   if (water && view.wd !== undefined && Number.isInteger(view.wd) && view.wd >= 1 && view.wd <= 7) params.set("wd", String(view.wd));
   if (water && view.routes) params.set("routes", "1");
   if (water && view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);

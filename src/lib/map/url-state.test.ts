@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { formatUrlView, parseUrlView } from "./url-state";
+import { formatUrlView, parseUrlView as parseView } from "./url-state";
+
+const parseUrlView = (search: string) => parseView(search, "all");
+
+describe("flood URLs", () => {
+  it("opens a hidden legacy layer as rain in weather mode", () => {
+    expect(parseView("?layer=pm25")).toEqual({ layer: "rain", hiddenLayer: true, mode: "weather" });
+  });
+  it("preserves explicit weather mode when sharing and lets empty URLs use defaults", () => {
+    expect(parseView("")).toEqual({});
+    expect(parseView("?mode=weather").mode).toBe("weather");
+  });
+});
 
 describe("map URL view", () => {
   it("round trips the view and keeps overlay order", () => {
     const view = { lat: 13.7, lon: 100.5, z: 8, layer: "temp" as const, t: Date.parse("2026-09-28T08:37:00.000Z"),
       ov: { wind: true, storms: true, quakes: true, dams: false, terrain: true } };
     expect(formatUrlView(view)).toBe("?lat=13.70&lon=100.50&z=8.0&layer=temp&t=29843077&ov=wind,storms,quakes,3d");
-    expect(parseUrlView(formatUrlView(view))).toEqual(view);
+    expect(parseUrlView(formatUrlView(view))).toEqual({ ...view, mode: "weather" });
   });
 
   it("reads t as epoch minutes, still accepts old ISO links and the temporary focus name", () => {
@@ -19,10 +31,10 @@ describe("map URL view", () => {
   });
 
   it("accepts inclusive bounds and rejects each invalid field independently", () => {
-    expect(parseUrlView("?lat=-5&lon=130&z=17&layer=pm25")).toEqual({ lat: -5, lon: 130, z: 17, layer: "pm25" });
-    expect(parseUrlView("?lat=-5.01&lon=130.01&z=17.1&layer=other&t=not-a-date")).toEqual({});
-    expect(parseUrlView("?lat=30&lon=80&z=3&layer=rain")).toEqual({ lat: 30, lon: 80, z: 3, layer: "rain" });
-    expect(parseUrlView("?layer=satellite")).toEqual({ layer: "satellite" });
+    expect(parseUrlView("?lat=5.6&lon=105.7&z=17&layer=pm25")).toEqual({ lat: 5.6, lon: 105.7, z: 17, layer: "pm25", mode: "weather" });
+    expect(parseUrlView("?lat=5.59&lon=105.71&z=17.1&layer=other&t=not-a-date")).toEqual({});
+    expect(parseUrlView("?lat=20.5&lon=97.3&z=3&layer=rain")).toEqual({ lat: 20.5, lon: 97.3, z: 3, layer: "rain", mode: "weather" });
+    expect(parseUrlView("?layer=satellite")).toEqual({ layer: "satellite", mode: "weather" });
   });
 
   it("ignores malformed numbers and unknown overlays", () => {
@@ -50,7 +62,7 @@ describe("map URL view", () => {
     const base = { lat: 16.6, lon: 99, z: 8, layer: "rain" as const,
       ov: { wind: true, storms: false, quakes: false, dams: true, terrain: false }, dam: "200101" };
     expect(formatUrlView({ ...base, mode: "water" })).toBe("?lat=16.60&lon=99.00&z=8.0&layer=rain&mode=water&dam=200101&ov=wind");
-    expect(formatUrlView({ ...base, mode: "weather" })).toBe("?lat=16.60&lon=99.00&z=8.0&layer=rain&ov=wind");
+    expect(formatUrlView({ ...base, mode: "weather" })).toBe("?lat=16.60&lon=99.00&z=8.0&layer=rain&mode=weather&ov=wind");
     expect(parseUrlView("?mode=water").mode).toBe("water");
     expect(parseUrlView("?mode=other").mode).toBeUndefined();
     expect(parseUrlView("?ov=wind,dams").mode).toBe("water");

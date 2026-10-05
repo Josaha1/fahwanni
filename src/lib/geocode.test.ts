@@ -3,14 +3,14 @@ import { getGeocodeAttempts, mapOpenMeteoResults } from "./geocode";
 import type { Place } from "./place";
 
 describe("mapOpenMeteoResults", () => {
-  it("maps fields and removes province coordinate and name duplicates", () => {
+  it("keeps only TH results and removes province coordinate and name duplicates", () => {
     const province: Place = { id: "chiang-mai", name: "เชียงใหม่", admin: "Chiang Mai", lat: 18.7877, lon: 98.9931, source: "province" };
     const data = { results: [
-      { id: 1, name: "Chiang Mai", latitude: 18.9, longitude: 99.2 },
-      { id: 2, name: "Other", latitude: 18.79, longitude: 98.99 },
+      { id: 1, country_code: "TH", name: "Chiang Mai", latitude: 18.9, longitude: 99.2 },
+      { id: 2, country_code: "TH", name: "Other", latitude: 18.79, longitude: 98.99 },
       { id: 3, name: "Paris", admin1: "Île-de-France", country: "France", latitude: 48.8566, longitude: 2.3522 },
     ] };
-    expect(mapOpenMeteoResults(data, [province])).toEqual([{ id: "open-meteo-3", name: "Paris", admin: "Île-de-France", country: "France", lat: 48.8566, lon: 2.3522, source: "search" }]);
+    expect(mapOpenMeteoResults(data, [province])).toEqual([]);
     expect(mapOpenMeteoResults(data, [province], 1)).toEqual([]);
   });
 });
@@ -53,9 +53,9 @@ describe("Open-Meteo ranking and display", () => {
     { id: 5, name: "Further", country_code: "ID", country: "Indonesia", latitude: -3, longitude: 103 },
   ] };
 
-  it("puts Thailand first while preserving order within each country group", () => {
+  it("keeps only Thailand in the published order", () => {
     expect(mapOpenMeteoResults(data, [], 8, "en").map((place) => place.id)).toEqual([
-      "open-meteo-2", "open-meteo-3", "open-meteo-4", "open-meteo-5",
+      "open-meteo-2", "open-meteo-3",
     ]);
   });
 

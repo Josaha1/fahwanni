@@ -5,19 +5,23 @@ import { toast } from "sonner";
 import { useT } from "@/i18n/client";
 import type { AirSnapshot } from "@/lib/air";
 import type { Place } from "@/lib/place";
-import { buildShareText } from "@/lib/share";
+import { buildFloodShareText, buildShareText, type FloodShareSummary } from "@/lib/share";
 import type { WeatherSnapshot } from "@/lib/weather/types";
-import { renderShareImage } from "./share/render-share-image";
 import { Menu } from "./ui/menu";
 
-export function ShareButton({ snapshot, air, place }: { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place }) {
+type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; flood?: never }
+  | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never };
+
+export function ShareButton({ snapshot, air, place, flood }: ShareProps) {
   const t = useT();
   const [making, setMaking] = useState(false);
 
   async function shareImage() {
     setMaking(true);
     try {
-      const blob = await renderShareImage(snapshot, air, place, t);
+      const blob = flood
+        ? await (await import("./share/render-summary-image")).renderSummaryImage(buildFloodShareText(flood, t), t.locale)
+        : await (await import("./share/render-share-image")).renderShareImage(snapshot, air, place, t);
       const file = new File([blob], "fah-wanni.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file] }); } catch { /* dismissed */ }
@@ -36,7 +40,7 @@ export function ShareButton({ snapshot, air, place }: { snapshot: WeatherSnapsho
   }
 
   function shareText() {
-    return `${buildShareText(snapshot, air, place, t.locale, t)}\n${window.location.href}`;
+    return `${flood ? buildFloodShareText(flood, t) : buildShareText(snapshot, air, place, t.locale, t)}\n${window.location.href}`;
   }
 
   async function share() {

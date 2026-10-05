@@ -23,3 +23,7 @@ export function parseLatLon(lat: unknown, lon: unknown): { lat: number; lon: num
 export function cacheKey(lat: number, lon: number, lang: "th" | "en"): string {
   return `${roundCoord(lat).toFixed(2)},${roundCoord(lon).toFixed(2)},${lang}`;
 }
+
+// The same Thailand envelope used by the nearby-water cards; this is a camera
+// boundary, while geocoding also checks the reported country code.
+export const THAILAND_BOUNDS: [[number, number], [number, number]] = [[97.3, 5.6], [105.7, 20.5]];

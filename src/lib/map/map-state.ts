@@ -1,3 +1,5 @@
+import { FOCUS } from "../features";
+
 export type MapState = {
   /** "weather": forecast layers + time bar; "water": dams and their downstream routes (observed daily data). */
   mode: "weather" | "water";
@@ -27,16 +29,17 @@ export type MapAction =
   | { type: "setWaterDay"; day: number }
   | { type: "toggleAllRoutes" };
 
-export function initialMapState(override?: Partial<Pick<MapState, "mode" | "waterDay" | "allRoutes" | "primary" | "overlays" | "timeMs" | "focus">>): MapState {
-  const mode = override?.mode ?? "weather";
+export function initialMapState(override?: Partial<Pick<MapState, "mode" | "waterDay" | "allRoutes" | "primary" | "overlays" | "timeMs" | "focus">>, focus: "flood" | "all" = FOCUS): MapState {
+  const mode = override?.mode ?? (focus === "flood" ? "water" : "weather");
   const waterDay = override?.waterDay ?? 0;
   return {
     mode,
     allRoutes: mode === "water" && override?.allRoutes === true,
     waterDay: mode === "water" && Number.isInteger(waterDay) && waterDay >= 0 && waterDay <= 7 ? waterDay : 0,
-    primary: override?.primary ?? "rain",
+    primary: focus === "flood" ? "rain" : override?.primary ?? "rain",
     rainOn: true,
     overlays: { wind: true, storms: true, quakes: true, dams: false, terrain: false, ...override?.overlays,
+      ...(focus === "flood" ? { wind: false, storms: false, quakes: false } : {}),
       ...(mode === "water" ? { dams: true } : {}) },
     timeMs: override?.timeMs ?? null,
     playing: false,
@@ -46,7 +49,7 @@ export function initialMapState(override?: Partial<Pick<MapState, "mode" | "wate
 
 export function mapReducer(state: MapState, action: MapAction): MapState {
   switch (action.type) {
-    case "setPrimary": return { ...state, primary: action.primary, playing: false };
+    case "setPrimary": return { ...state, primary: FOCUS === "flood" ? "rain" : action.primary, playing: false };
     case "toggleRain": return { ...state, rainOn: !state.rainOn, playing: false };
     case "toggleOverlay": return { ...state, overlays: { ...state.overlays, [action.key]: !state.overlays[action.key] },
       focus: action.key === "dams" && state.overlays.dams ? null : state.focus };

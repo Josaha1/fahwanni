@@ -4,7 +4,7 @@ import { TimeScrubber } from "@/components/time-scrubber";
 import { SourceTime } from "@/components/ui/source-time";
 import { reportedIndex } from "@/lib/timeline/reported";
 import { useFloodReplay } from "./use-flood-replay";
-import { isOn } from "@/lib/features";
+import { FOCUS, isOn } from "@/lib/features";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
@@ -139,9 +139,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const { mode, timeMs, playing, primary, rainOn, overlays, waterDay, allRoutes } = mapState;
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
-  const [rainAccumOn, setRainAccumOn] = useState(true);
+  const [rainAccumOn, setRainAccumOn] = useState(false);
   const [satFloodOn, setSatFloodOn] = useState(true);
-  const [reservoirsOn, setReservoirsOn] = useState(true);
+  const [reservoirsOn, setReservoirsOn] = useState(false);
   const [surfaceWaterOn, setSurfaceWaterOn] = useState(false);
   const [thermalOverride, setThermalOverride] = useState<boolean | null>(null);
   const [imergEnabled, setImergOn] = useState(false);
@@ -149,6 +149,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [satelliteTimes, setSatelliteTimes] = useState<{ himawari: string | null; imerg: string | null }>({ himawari: null, imerg: null });
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
   const { wind: windEnabled, storms: stormsOn, quakes: quakesEnabled, dams: damsOn, terrain: terrainOn } = overlays;
+  useEffect(() => {
+    if (urlView.hiddenLayer) toast(t("ชั้นข้อมูลนี้ปิดไว้ชั่วคราวช่วงน้ำท่วม"));
+  }, [urlView.hiddenLayer, t]);
   const windOn = isOn("windOverlay") && windEnabled;
   const quakesOn = isOn("quake") && quakesEnabled;
   const rainVisible = !water && primary === "rain" && rainOn;
@@ -246,7 +249,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const terrainOk = !lite && terrainAvailable(device.deviceMemory);
   const rainImageSize = lite || terrainOn ? 256 : 512;
   // Water replay uses only the past frames already present in the radar manifest.
-  const [waterRadar, setWaterRadar] = useState(false);
+  const [waterRadar, setWaterRadar] = useState(true);
   const waterRadarOn = water && waterRadar && frames.length > 0;
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, waterRadarOn ? replayRadarIndex : hasRadarFrame ? rainSource.index : -1,
     waterRadarOn || (rainVisible && hasRadarFrame), waterRadarOn ? 0.5 : rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
@@ -665,7 +668,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onChange: () => dispatch({ type: "toggleRain" }) }] : []),
     { feature: "windOverlay" as const, label: "ลม", checked: Boolean(wind) && windOn, disabled: !wind,
       onChange: () => dispatch({ type: "toggleOverlay", key: "wind" }) },
-    ...(storms.length > 0 ? [{ label: "พายุ", count: storms.length, checked: stormsOn,
+    ...(FOCUS === "all" && storms.length > 0 ? [{ label: "พายุ", count: storms.length, checked: stormsOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "storms" }) }] : []),
     ...(quakes.length > 0 ? [{ feature: "quake" as const, label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),

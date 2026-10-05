@@ -24,7 +24,7 @@ describe("GET /api/geocode", () => {
   it("places provinces first, requests eight Open-Meteo results, and deduplicates", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [
       { id: 1, name: "Chiang Mai", latitude: 18.7877, longitude: 98.9931 },
-      { id: 2, name: "Chiang Dao", admin1: "Chiang Mai", country: "Thailand", latitude: 19.365, longitude: 98.964 },
+      { id: 2, country_code: "TH", name: "Chiang Dao", admin1: "Chiang Mai", country: "Thailand", latitude: 19.365, longitude: 98.964 },
     ] }) });
     vi.stubGlobal("fetch", fetchMock);
     const response = await GET(request("q=Chiang&lang=en"));
@@ -36,6 +36,7 @@ describe("GET /api/geocode", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, s-maxage=86400");
     const url = new URL(fetchMock.mock.calls[0][0]);
     expect(url.searchParams.get("count")).toBe("8");
+    expect(url.searchParams.get("countryCode")).toBe("TH");
     expect(url.searchParams.get("language")).toBe("en");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ next: { revalidate: 86400 }, signal: expect.any(AbortSignal) });
   });
@@ -61,6 +62,20 @@ describe("GET /api/geocode", () => {
     ]);
   });
 
+  it("continues fallback when upstream returns only foreign matches", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
+        { id: 1, name: "Foreign", country_code: "ID", latitude: -1, longitude: 101 },
+      ] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
+        { id: 2, name: "Thai district", country_code: "TH", latitude: 13, longitude: 100 },
+      ] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await GET(request("q=foreign-unique&lang=th"));
+    expect((await response.json()).results.map((place: { name: string }) => place.name)).toEqual(["Thai district"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("stops when the district-prefixed query returns results", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [] }) })
@@ -79,11 +94,11 @@ describe("GET /api/geocode", () => {
     vi.setSystemTime(0);
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
-        { id: 123, name: "Old City", latitude: 20, longitude: 99 },
+        { id: 123, country_code: "TH", name: "Old City", latitude: 20, longitude: 99 },
       ] }) })
       .mockResolvedValueOnce({ ok: false, status: 429, headers: new Headers({ "Retry-After": "120" }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ results: [
-        { id: 124, name: "New City", latitude: 21, longitude: 100 },
+        { id: 124, country_code: "TH", name: "New City", latitude: 21, longitude: 100 },
       ] }) });
     vi.stubGlobal("fetch", fetchMock);
     const query = "q=K4-unique-city&lang=en";

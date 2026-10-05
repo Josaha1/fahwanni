@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { initialMapState, mapReducer } from "./map-state";
+import { initialMapState as initialState, mapReducer as reducer } from "./map-state";
+
+const initialMapState = (override?: Parameters<typeof initialState>[0]) => initialState(override, "all");
+const mapReducer = (state: Parameters<typeof reducer>[0], action: Parameters<typeof reducer>[1]) => reducer(state, action);
+
+describe("flood map defaults", () => {
+  it("opens an empty URL in water mode with dams and no weather overlays", () => {
+    expect(initialState()).toMatchObject({ mode: "water", primary: "rain", rainOn: true,
+      overlays: { dams: true, wind: false, storms: false, quakes: false, terrain: false } });
+  });
+  it("coerces hidden layers at initialization and after actions", () => {
+    expect(initialState({ mode: "weather", primary: "pm25" }).primary).toBe("rain");
+    expect(reducer(initialState(), { type: "setPrimary", primary: "temp" }).primary).toBe("rain");
+    expect(initialState({ mode: "weather" }).overlays.dams).toBe(false);
+  });
+});
 
 describe("map state", () => {
   it("starts with rain and the existing overlay defaults", () => {
@@ -22,10 +37,10 @@ describe("map state", () => {
     });
   });
 
-  it("sets each primary and stops playback", () => {
+  it("coerces each primary to rain and stops playback in flood focus", () => {
     for (const primary of ["temp", "pm25", "rain"] as const) {
       const state = { ...initialMapState(), playing: true };
-      expect(mapReducer(state, { type: "setPrimary", primary })).toEqual({ ...state, primary, playing: false });
+      expect(mapReducer(state, { type: "setPrimary", primary })).toEqual({ ...state, primary: "rain", playing: false });
     }
   });
 

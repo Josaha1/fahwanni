@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AttributionControl, Map, NavigationControl, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { version } from "maplibre-gl/package.json";
+import { THAILAND_BOUNDS } from "@/lib/geo";
 import { STYLE_URLS, type BaseTheme } from "@/lib/map/base-style";
 import { TERRAIN_ATTRIBUTION } from "@/lib/map/terrain";
 import { loadBaseStyle, useAppMapTheme } from "./use-base-style";
@@ -74,7 +75,7 @@ export function MapProvider({ containerRef, initialCenter, initialZoom = 6, chil
         minZoom: 3,
         maxZoom: 17,
         maxPitch: 60,
-        maxBounds: [[80, -5], [130, 30]],
+        maxBounds: THAILAND_BOUNDS,
         pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
         fadeDuration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 100,
         attributionControl: false,

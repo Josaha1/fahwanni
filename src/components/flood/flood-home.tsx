@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareButton } from "@/components/share-button";
 import { SpeakButton } from "@/components/speak-button";
 import { WarningHaptic } from "@/components/water/warning-haptic";
 import { warningKey } from "@/lib/tmd";
@@ -129,7 +130,14 @@ export function FloodHome() {
 
   return <main className="app-shell space-y-4" style={{ paddingBottom: "calc(var(--nav-h, 88px) + 2rem)" }}>
     <header>
-      <h1 id="flood-home-title" tabIndex={-1} className="text-2xl font-semibold">{t("สถานการณ์น้ำท่วมตอนนี้")}</h1>
+      <div className="flex items-start justify-between gap-2">
+        <h1 id="flood-home-title" tabIndex={-1} className="text-2xl font-semibold">{t("สถานการณ์น้ำท่วมตอนนี้")}</h1>
+        <ShareButton flood={{ eventProvinces: events.data ? affected.length : null, eventsAt: events.data?.fetchedAt,
+          warnings: warnings.data?.items.length ?? null, warningsAt: warnings.data?.items.length === 0 ? warnings.loadedAt ?? undefined : latestWarning,
+          satellitePoints: satellite.data && Object.values(satellite.data.regionCounts).some((counts) => counts.sampled > counts.noData + counts.insufficientData)
+            ? Object.values(satellite.data.regionCounts).reduce((sum, counts) => sum + counts.flood + counts.recurringFlood, 0) : null,
+          satelliteDate: satellite.data?.date }} />
+      </div>
       <p className="text-muted text-sm">{t.locale === "en" ? place.admin ?? place.name : place.name}</p>
     </header>
     <OfflineSupport />
