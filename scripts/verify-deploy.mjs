@@ -23,7 +23,7 @@ const paths = [
   "/water",
   "/water/dam/200101",
   "/api/flood-now",
-  "/api/rain-dams",
+  "/api/rain-dams?ids=200101,200102",
   "/api/weather?lat=13.75&lon=100.5&lang=th",
   "/api/radar",
   "/api/satellite",
