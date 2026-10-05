@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn } from "@/lib/features";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
@@ -162,7 +163,7 @@ export function WaterPage() {
       <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
       <TmdWarningList items={warnings.data.items} limit={3} />
     </section>}
-    <EnsoBadge />
+    {isOn("enso") && <EnsoBadge />}
     {events.data && events.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}>
       <h2 className="text-lg font-semibold">{t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}</h2>
       <FloodEventList payload={events.data} />

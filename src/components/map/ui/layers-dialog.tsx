@@ -1,3 +1,4 @@
+import { isOn, type Feature } from "@/lib/features";
 import type { ReactNode, RefObject } from "react";
 import { useT } from "@/i18n/client";
 import type { Dam } from "@/lib/dams/types";
@@ -5,7 +6,7 @@ import { formatFullDate } from "@/lib/format";
 import { filterDams, type DamFilter } from "@/lib/water/find";
 import type { WaterWatch } from "@/lib/water/watchlist";
 
-type SwitchRow = { label: string; count?: number; checked: boolean; onChange: () => void; disabled?: boolean };
+type SwitchRow = { feature?: Feature; label: string; count?: number; checked: boolean; onChange: () => void; disabled?: boolean };
 type WaterLayers = {
   dams: Dam[] | null;
   watch: WaterWatch;
@@ -62,15 +63,15 @@ export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSe
       <section className="mt-4" aria-labelledby="map-primary-title">
         <h3 id="map-primary-title" className="mb-2 text-sm font-semibold">{t("ชั้นหลัก")}</h3>
         {primaryPicker}
-        {thermalSeason && <p className="map-muted mt-2 text-xs">{t("จุดความร้อนจากดาวเทียม ~1 วัน")}</p>}
+        {isOn("fireHotspots") && thermalSeason && <p className="map-muted mt-2 text-xs">{t("จุดความร้อนจากดาวเทียม ~1 วัน")}</p>}
       </section>
       <section className="mt-4 border-t pt-3" style={{ borderColor: "var(--map-panel-border)" }} aria-labelledby="map-overlays-title">
         <h3 id="map-overlays-title" className="mb-2 text-sm font-semibold">{t("ซ้อนทับ")}</h3>
-        {thermalSeason && switchButton(thermal)}
-        {overlays.map(switchButton)}
-        {switchButton(imerg)}
-        {!thermalSeason && switchButton(thermal)}
-        {thermal.checked && <p className="map-muted mt-1 text-xs">{t("จุดความร้อนจากดาวเทียม VIIRS · ล่าช้า ~1 วัน · ไม่ใช่ทุกจุดคือไฟป่า")}</p>}
+        {isOn("fireHotspots") && thermalSeason && switchButton(thermal)}
+        {overlays.filter((row) => !row.feature || isOn(row.feature)).map(switchButton)}
+        {isOn("imerg") && switchButton(imerg)}
+        {isOn("fireHotspots") && !thermalSeason && switchButton(thermal)}
+        {isOn("fireHotspots") && thermal.checked && <p className="map-muted mt-1 text-xs">{t("จุดความร้อนจากดาวเทียม VIIRS · ล่าช้า ~1 วัน · ไม่ใช่ทุกจุดคือไฟป่า")}</p>}
       </section>
     </>}
     {mode === "water" && <>

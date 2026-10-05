@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn } from "@/lib/features";
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -111,27 +112,27 @@ export function WeatherApp() {
         </section>}
         <CurrentCard weather={weather} />
         {showStormBanner && <WaterNearYou place={place} onRiverStatus={onRiverStatus} />}
-        <SeasonChip lat={place.lat} lon={place.lon} />
-        <EnsoBadge compact />
-        {weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
+        {isOn("seasonChip") && <SeasonChip lat={place.lat} lon={place.lon} />}
+        {isOn("enso") && <EnsoBadge compact />}
+        {isOn("yesterday") && weather.snapshot && <YesterdayLine snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
         {weather.snapshot && <>
           <div className="flex flex-wrap gap-2">
             <ShareButton snapshot={weather.snapshot} air={weather.air} place={place} />
             <SpeakButton snapshot={weather.snapshot} air={weather.air} place={place} />
           </div>
           <AdviceStrip snapshot={weather.snapshot} air={weather.air} />
-          <BestTimeCard snapshot={weather.snapshot} air={weather.air} />
+          {isOn("bestTime") && <BestTimeCard snapshot={weather.snapshot} air={weather.air} />}
           <HourlyStrip snapshot={weather.snapshot} isDark={isDark} />
           <DailyList snapshot={weather.snapshot} isDark={isDark} />
-          <LongWeekendCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
-          <AqiCard air={weather.air} />
-          <AirportCard lat={place.lat} lon={place.lon} />
-          <MarineCard lat={place.lat} lon={place.lon} />
-          <FarmCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
-          <SunCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />
+          {isOn("longWeekend") && <LongWeekendCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
+          {isOn("pm25") && <AqiCard air={weather.air} />}
+          {isOn("airport") && <AirportCard lat={place.lat} lon={place.lon} />}
+          {isOn("marine") && <MarineCard lat={place.lat} lon={place.lon} />}
+          {isOn("farm") && <FarmCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
+          {isOn("sunMoon") && <SunCard snapshot={weather.snapshot} lat={place.lat} lon={place.lon} />}
           <AlertsCard alerts={weather.snapshot.alerts} timeZone={weather.snapshot.timeZone} />
-          <QuakeCard lat={place.lat} lon={place.lon} />
-          <FavouritesOverview current={place} onSelect={selectPlace} isDark={isDark} />
+          {isOn("quake") && <QuakeCard lat={place.lat} lon={place.lon} />}
+          {isOn("favouritesTable") && <FavouritesOverview current={place} onSelect={selectPlace} isDark={isDark} />}
         </>}
       </div>
       <section aria-label={t("เบอร์ฉุกเฉิน")} className="mt-8 border-t border-border pt-4">

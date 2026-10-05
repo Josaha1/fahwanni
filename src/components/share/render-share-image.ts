@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn } from "@/lib/features";
 import type { Locale, T } from "@/i18n/core";
 import type { AirSnapshot } from "@/lib/air";
 import { animSheet } from "@/lib/condition";
@@ -42,7 +43,7 @@ export async function renderShareImage(snapshot: WeatherSnapshot, air: AirSnapsh
   const ink = night ? "#EAF1FF" : "#1E2744";
   const soft = night ? "#B8C4E6" : "#4A5878";
 
-  const [title, main, ...rest] = buildShareText(snapshot, air, place, t.locale, t).split("\n");
+  const [title, main, ...rest] = buildShareText(snapshot, isOn("aqiInShare") ? air : undefined, place, t.locale, t).split("\n");
 
   ctx.fillStyle = soft;
   ctx.font = `600 50px ${family}`;

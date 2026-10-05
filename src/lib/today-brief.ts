@@ -1,3 +1,4 @@
+import { FOCUS, isOn } from "./features";
 import { TZDate } from "@date-fns/tz";
 import type { T } from "@/i18n/core";
 import { heatBand } from "./advise";
@@ -30,7 +31,7 @@ function rainWindows(hours: WeatherHour[], timeZone: string, nowIso: string): Ra
 }
 
 /** Selects only available, remaining local-day facts from the already loaded home data. */
-export function todayBrief(snapshot: WeatherSnapshot | undefined, riverStatus: RiverStatus | null, nowIso: string, t: T): Brief {
+export function todayBrief(snapshot: WeatherSnapshot | undefined, riverStatus: RiverStatus | null, nowIso: string, t: T, focus: "flood" | "all" = FOCUS): Brief {
   const result: Brief = {};
   if (snapshot) {
     const timeZone = snapshot.timeZone ?? "UTC";
@@ -47,7 +48,7 @@ export function todayBrief(snapshot: WeatherSnapshot | undefined, riverStatus: R
         ? t("ฝน: {time} น. โอกาส {chance}%", { time: label(best), chance: Math.round(best.chance) })
         : t("ฝน: น้อยสุด {best} · มากสุด {worst} น.", { best: label(best), worst: label(worst) });
     }
-    if (snapshot.heatIndexC !== undefined && Number.isFinite(snapshot.heatIndexC)) {
+    if (isOn("heatPrimary", focus) && snapshot.heatIndexC !== undefined && Number.isFinite(snapshot.heatIndexC)) {
       result.heat = t("ดัชนีความร้อน {temp}° · {band}", {
         temp: Math.round(snapshot.heatIndexC), band: heatBandWord(heatBand(snapshot.heatIndexC), t),
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn } from "@/lib/features";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
@@ -139,10 +140,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [reservoirsOn, setReservoirsOn] = useState(true);
   const [surfaceWaterOn, setSurfaceWaterOn] = useState(false);
   const [thermalOverride, setThermalOverride] = useState<boolean | null>(null);
-  const [imergOn, setImergOn] = useState(false);
+  const [imergEnabled, setImergOn] = useState(false);
+  const imergOn = isOn("imerg") && imergEnabled;
   const [satelliteTimes, setSatelliteTimes] = useState<{ himawari: string | null; imerg: string | null }>({ himawari: null, imerg: null });
   const focusRoute = useCallback((damId: string) => dispatch({ type: "setFocus", focus: { kind: "damRoute", damId } }), []);
-  const { wind: windOn, storms: stormsOn, quakes: quakesOn, dams: damsOn, terrain: terrainOn } = overlays;
+  const { wind: windEnabled, storms: stormsOn, quakes: quakesEnabled, dams: damsOn, terrain: terrainOn } = overlays;
+  const windOn = isOn("windOverlay") && windEnabled;
+  const quakesOn = isOn("quake") && quakesEnabled;
   const rainVisible = !water && primary === "rain" && rainOn;
   const isDesktop = useIsDesktop();
   const [sheetPosition, setSheetPosition] = useState<SheetPosition>(initialSheetPosition);
@@ -178,7 +182,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const nowMs = Date.parse(nowIso);
   const thermalSeason = thermalAnomaliesDefault(primary, nowMs);
-  const thermalOn = thermalOverride ?? thermalSeason;
+  const thermalOn = isOn("fireHotspots") && (thermalOverride ?? thermalSeason);
   useEffect(() => {
     if (water || (primary !== "satellite" && !imergOn)) return;
     const controller = new AbortController();
@@ -639,11 +643,11 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const layerOverlays = [
     ...(primary === "rain" ? [{ label: "เรดาร์ฝน", checked: radarAvailable && rainVisible, disabled: !radarAvailable,
       onChange: () => dispatch({ type: "toggleRain" }) }] : []),
-    { label: "ลม", checked: Boolean(wind) && windOn, disabled: !wind,
+    { feature: "windOverlay" as const, label: "ลม", checked: Boolean(wind) && windOn, disabled: !wind,
       onChange: () => dispatch({ type: "toggleOverlay", key: "wind" }) },
     ...(storms.length > 0 ? [{ label: "พายุ", count: storms.length, checked: stormsOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "storms" }) }] : []),
-    ...(quakes.length > 0 ? [{ label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
+    ...(quakes.length > 0 ? [{ feature: "quake" as const, label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),
   ];
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}

@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn } from "@/lib/features";
 import { useRef, useState, useSyncExternalStore } from "react";
 import { InstallButton } from "@/components/install-button";
 import { LanguageSwitch } from "@/components/language-switch";
@@ -88,13 +89,13 @@ export function SettingsSheet() {
             <button type="button" className="chip" aria-pressed={largeText} onClick={() => !largeText && toggleLargeText()}>{t("ตัวใหญ่")}</button>
           </div>
         </div>
-        <div>
+        {isOn("farm") && <div>
           <p className="mb-2 font-semibold">{t("โหมดเกษตรกร")}</p>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="chip" aria-pressed={!farmer} onClick={() => setFarmer(false)}>{t("ปิด")}</button>
             <button type="button" className="chip" aria-pressed={farmer} onClick={() => setFarmer(true)}>{t("เปิด")}</button>
           </div>
-        </div>
+        </div>}
         <div>
           <p className="mb-2 font-semibold">{t("ภาษา")}</p>
           <LanguageSwitch />

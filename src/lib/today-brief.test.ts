@@ -28,8 +28,15 @@ describe("todayBrief", () => {
   });
 
   it("uses the existing heat bands, including normal and danger", () => {
-    expect(todayBrief(snapshot([], 26), null, now, th).heat).toBe("ดัชนีความร้อน 26° · ปกติ");
-    expect(todayBrief(snapshot([], 42), null, now, th).heat).toBe("ดัชนีความร้อน 42° · อันตราย");
+    expect(todayBrief(snapshot([], 26), null, now, th, "all").heat).toBe("ดัชนีความร้อน 26° · ปกติ");
+    expect(todayBrief(snapshot([], 42), null, now, th, "all").heat).toBe("ดัชนีความร้อน 42° · อันตราย");
+  });
+
+  it("omits heat in flood focus while keeping rain and water", () => {
+    const brief = todayBrief(snapshot([hour(4, 80)], 42), "high", now, th, "flood");
+    expect(brief.heat).toBeUndefined();
+    expect(brief.rain).toBeDefined();
+    expect(brief.water).toBeDefined();
   });
 
   it("reports each river status as a model and translates the line", () => {
@@ -40,6 +47,6 @@ describe("todayBrief", () => {
   it("omits every line when its source data is absent", () => {
     expect(todayBrief(undefined, null, now, th)).toEqual({});
     expect(todayBrief(snapshot(), null, now, th)).toEqual({});
-    expect(todayBrief(snapshot([], 33), null, now, th)).toEqual({ heat: "ดัชนีความร้อน 33° · เตือนภัย" });
+    expect(todayBrief(snapshot([], 33), null, now, th, "all")).toEqual({ heat: "ดัชนีความร้อน 33° · เตือนภัย" });
   });
 });

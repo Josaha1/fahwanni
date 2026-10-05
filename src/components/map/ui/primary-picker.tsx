@@ -1,5 +1,6 @@
 "use client";
 
+import { isOn, type Feature } from "@/lib/features";
 import { useRef, type KeyboardEvent } from "react";
 import { useT } from "@/i18n/client";
 import type { PrimaryLayer } from "@/lib/map/legend";
@@ -15,9 +16,13 @@ export function PrimaryPicker({ primary, tempAvailable, cloudAvailable, pm25Load
 }) {
   const t = useT();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-  const options: PrimaryLayer[] = variant === "grid" ? ["rain", "temp", "heat", "pm25", "cloud", "satellite"] : [
+  const candidates: PrimaryLayer[] = variant === "grid" ? ["rain", "temp", "heat", "pm25", "cloud", "satellite"] : [
     "rain", ...(tempAvailable ? ["temp", "heat"] as const : []), "pm25", ...(cloudAvailable ? ["cloud"] as const : []), "satellite",
   ];
+  const features: Record<Exclude<PrimaryLayer, "rain">, Feature> = {
+    temp: "tempPrimary", heat: "heatPrimary", pm25: "pm25", cloud: "cloudPrimary", satellite: "himawari",
+  };
+  const options = candidates.filter((option) => option === "rain" || isOn(features[option]));
   const available = (option: PrimaryLayer) => option === "temp" || option === "heat" ? tempAvailable
     : option === "cloud" ? cloudAvailable : true;
   const labels: Record<PrimaryLayer, string> = { rain: "ฝน", temp: "อุณหภูมิ", heat: "ดัชนีความร้อน", pm25: "ฝุ่น PM2.5", cloud: "เมฆ", satellite: "ดาวเทียม" };
