@@ -7,6 +7,7 @@ import type { FloodRegion, DisplaySample, PixelCounts } from "@/lib/flood/viirs"
 
 export type FloodNowPayload = {
   date: string; regionCounts: Record<FloodRegion, PixelCounts>; provinceCounts: Record<string, PixelCounts>;
+  samples?: DisplaySample[];
   nearMe?: { verdict: "flood" | "not-seen" | "cloud-or-no-data"; samples?: DisplaySample[] };
 };
 export const floodRegions: Record<FloodRegion, string> = {

@@ -58,16 +58,19 @@ describe("FloodHome", () => {
     expect(english).toContain("1 villages · historical risk");
     expect(english).toContain("Previous day unavailable");
   });
-  it("shows national totals with English region names and defaults the province to the nearest one", () => {
+  it("shows national totals with map warnings and defaults the province to the nearest one", () => {
     const counts = { flood: 2, recurringFlood: 1, dry: 0, water: 0, insufficientData: 0, noData: 0, sampled: 3 };
-    ready("/api/flood-now", { date: "2026-10-05", regionCounts: { north: counts }, provinceCounts: {} });
+    ready("/api/flood-now", { date: "2026-10-05", regionCounts: { north: counts }, provinceCounts: { "chiang-mai": counts } });
     ready("/api/tmd-warnings", { items: [{ title: "Warning", description: "ภาคเหนือ", announcedAt: "2026-10-05T07:00:00+07:00" }] });
     ready("/api/flood-events", { fetchedAt: "2026-10-05T07:00:00+07:00", days: 90, sources: ["GDACS"], items: [] });
     const english = render("en");
-    expect(english).toContain("North: 3 sampling points");
-    expect(english).toContain("1 warnings");
+    expect(english).toContain("3 sampling points");
+    expect(english).toContain("1 regions with warnings");
     expect(english).toContain("0 provinces named in reports");
     expect(english).toContain('value="bangkok" selected=""');
-    expect(english).toContain("<p>North: Warning</p>");
+    expect(english).toContain('data-warned-region="north"');
+    expect(english.match(/data-province=/g)).toHaveLength(77);
+    expect(english).toContain("<details><summary");
+    expect(english).toContain("View list");
   });
 });

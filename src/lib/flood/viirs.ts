@@ -145,7 +145,7 @@ const regionProvinces = {
   south: "chumphon krabi nakhon-si-thammarat narathiwat pattani phang-nga phatthalung phuket ranong satun songkhla surat-thani trang yala",
 };
 export type FloodRegion = keyof typeof regionProvinces | "central";
-const regionByProvince = new Map<string, FloodRegion>(Object.entries(regionProvinces)
+export const regionByProvince = new Map<string, FloodRegion>(Object.entries(regionProvinces)
   .flatMap(([region, ids]) => ids.split(" ").map((id) => [id, region as FloodRegion] as const)));
 
 export function regionCounts(counts: Record<string, PixelCounts>): Record<FloodRegion, PixelCounts> {

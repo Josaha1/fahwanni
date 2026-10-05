@@ -1,4 +1,8 @@
 export const flood: Record<string, string> = {
+  "ดูรายการ": "View list",
+  "จุดตรวจ ไม่ใช่พื้นที่": "Sampling points, not area",
+  "{n} ภาคมีประกาศเตือน": "{n} regions with warnings",
+  "ขอบลาย = เหตุการณ์ 14 วัน · เส้นประ = ภาคมีประกาศเตือน TMD": "Hatched border: events in 14 days · Dashed border: TMD warning regions",
   "ไม่มีข้อมูลหมู่บ้านเสี่ยง ปภ.": "DDPM village risk data unavailable",
   "ไม่มีข้อมูลฝน": "Rain data unavailable",
   "ฝน {mm} มม.": "Rain {mm} mm",

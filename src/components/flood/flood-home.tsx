@@ -23,9 +23,10 @@ import { OfflineSupport } from "@/components/offline-support";
 import { FloodEventList, type FloodEventsPayload } from "@/components/water/flood-events";
 import { TmdWarningList } from "@/components/water/tmd-warnings";
 import type { PixelCounts } from "@/lib/flood/viirs";
+import { ThMap } from "@/components/visuals/th-map";
 import { NearMe3D, nearMeVisuals } from "./near-me-3d";
 import { rainGauge, streamRate, visualSummaryRain, visualSummarySatellite, visualSummaryStream, visualSummaryVillages } from "@/lib/visuals";
-import { eventProvinces, floodRegions, nearestRainStation, previousRelease, recentFloodEvents, riskBbox, warningRegions, type FloodNowPayload } from "./home-data";
+import { eventProvinces, nearestRainStation, previousRelease, recentFloodEvents, riskBbox, warningRegions, type FloodNowPayload } from "./home-data";
 
 const validWarnings = (value: TmdWarnings & { error?: string }) => Array.isArray(value?.items) && !value.error;
 const validEvents = (value: FloodEventsPayload) => Array.isArray(value?.items);
@@ -98,7 +99,7 @@ export function FloodHome() {
   const { place } = useLastPlace();
   const warnings = useWaterSource("/api/tmd-warnings", validWarnings);
   const events = useWaterSource("/api/flood-events", validEvents);
-  const satellite = useWaterSource("/api/flood-now", validFlood);
+  const satellite = useWaterSource("/api/flood-now?scope=th", validFlood);
   const rain = useWaterSource("/api/rain-risk", validRain);
   const dams = useWaterSource("/api/dams", validDams);
   const trend = useWaterSource("/api/dams-trend", validTrend);
@@ -113,7 +114,7 @@ export function FloodHome() {
   const rows = freshnessRows({ damsDate: dams.data?.dataDate, rainObservedAt: rain.data?.observedAt,
     satFloodDate: satellite.data?.date, warningAt: warnings.data?.items.length === 0 ? null : latestWarning,
   }).filter((row) => ["dams", "rain", "sat-flood", "warnings"].includes(row.key));
-  const number = new Intl.NumberFormat(t.intl);
+  const warnedRegions = [...new Set(warnings.data?.items.flatMap((item) => warningRegions(`${item.title} ${item.description}`)) ?? [])];
 
   function selectProvince(id: string) {
     const url = new URL(window.location.href);
@@ -144,33 +145,12 @@ export function FloodHome() {
     <MenuTip onClose={() => document.getElementById("flood-home-title")?.focus()} />
     <section className="placeholder-card space-y-3" aria-label={t("ทั้งประเทศ")}>
       <h2 className="text-lg font-semibold">{t("ทั้งประเทศ")}</h2>
-      <div className="space-y-1 text-sm">
-        <h3 className="font-semibold">{t("จังหวัดที่มีเหตุการณ์น้ำท่วม 14 วันล่าสุด")}</h3>
-        {events.data ? <><p>{t("{n} จังหวัดที่ระบุชื่อในรายงาน", { n: affected.length })}</p>
-          <SourceTime source="GLIDE / GDACS" time={events.data.fetchedAt} kind="daily" />
-          {affected.length > 0 && <div className="flex flex-wrap gap-2">{affected.map((entry) => <button key={entry.id} type="button" className="min-h-11 rounded-full border border-[var(--border)] px-3" onClick={() => selectProvince(entry.id)}>{t.locale === "en" ? entry.en : entry.th}</button>)}</div>}
-          <p className="text-muted text-xs">{t("นับเฉพาะชื่อจังหวัดในสถานที่ของรายงาน · รายงานที่ระบุเพียงประเทศไทยยังอยู่ในรายการเหตุการณ์")}</p>
-        </> : <SourceStatus status={events.status} />}
-      </div>
-      <div className="space-y-1 text-sm">
-        <h3 className="font-semibold">{t("จุดตรวจน้ำท่วมจากดาวเทียมตามภาค")}</h3>
-        {satellite.data ? <><p className="font-medium">{t("{n} จุดตรวจ", { n: number.format(Object.values(satellite.data.regionCounts).reduce((sum, counts) => sum + counts.flood + counts.recurringFlood, 0)) })}</p>
-          <ul className="grid grid-cols-2 gap-1">{Object.entries(floodRegions).map(([region, label]) => {
-          const counts = satellite.data!.regionCounts[region as keyof typeof floodRegions];
-          return <li key={region}>{t(label)}: {counts ? t("{n} จุดตรวจ", { n: number.format(counts.flood + counts.recurringFlood) }) : "—"}</li>;
-        })}</ul><SourceTime source="NASA VIIRS" date={satellite.data.date} kind="satellite" />
-          <p className="text-muted text-xs">{t("จุดตรวจไม่ใช่ขนาดพื้นที่น้ำท่วม · เมฆและข้อมูลไม่พออาจทำให้ไม่พบ")}</p>
-        </> : <SourceStatus status={satellite.status} />}
-      </div>
-      <div className="space-y-1 text-sm">
-        <h3 className="font-semibold">{t("ประกาศเตือน TMD ตามภาค")}</h3>
-        {warnings.data ? <><p>{t("{n} ประกาศเตือนภัย", { n: warnings.data.items.length })}</p>
-          <SourceTime source="TMD" time={warnings.data.items.length === 0 ? warnings.loadedAt : latestWarning} kind="daily" />
-          {warnings.data.items.length === 0 ? <p>{t("ไม่มีประกาศเตือนภัย")}</p> : <ul className="space-y-1">{warnings.data.items.map((item, index) => {
-          const regions = warningRegions(`${item.title} ${item.description}`);
-          return <li key={`${item.title}-${index}`}><p>{regions.length ? regions.map((region) => t(floodRegions[region])).join(" · ") : t("ประกาศไม่ได้ระบุภาค")}: {item.title}</p>
-            <SourceTime source="TMD" time={item.announcedAt} kind="daily" /></li>;
-        })}</ul>}</> : <SourceStatus status={warnings.status} />}
+      <ThMap counts={satellite.data?.provinceCounts ?? null} samples={satellite.data?.samples ?? []}
+        affected={affected.map((entry) => entry.id)} warnedRegions={warnedRegions} onSelect={selectProvince} />
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        <span><SourceTime source="NASA VIIRS" date={satellite.data?.date} kind="satellite" />{!satellite.data && <SourceStatus status={satellite.status} />}</span>
+        <span><SourceTime source="GLIDE / GDACS" time={events.data?.fetchedAt} kind="daily" />{!events.data && <SourceStatus status={events.status} />}</span>
+        <span><SourceTime source="TMD" time={warnings.data?.items.length === 0 ? warnings.loadedAt : latestWarning} kind="daily" />{!warnings.data && <SourceStatus status={warnings.status} />}</span>
       </div>
     </section>
     <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์ตามจังหวัด")}>
@@ -185,9 +165,12 @@ export function FloodHome() {
     </section>
     <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์ 90 วันล่าสุด")}>
       <h2 className="text-lg font-semibold">{t("เหตุการณ์ 90 วันล่าสุด")}</h2>
-      {events.data ? <><SourceTime source="GLIDE / GDACS" time={events.data.fetchedAt} kind="daily" />
-        {events.data.items.length ? <FloodEventList payload={events.data} /> : <p className="text-muted text-sm">{t("ไม่พบเหตุการณ์ในรายงาน 90 วันล่าสุด")}</p>}</>
-        : <p className="text-muted text-sm" role="status">{t(events.status === "loading" ? "กำลังโหลดเหตุการณ์น้ำท่วม…" : "ข้อมูลเหตุการณ์น้ำท่วมไม่พร้อมใช้งาน")}</p>}
+      <details>
+        <summary className="min-h-11 cursor-pointer text-sm">{t("ดูรายการ")}</summary>
+        {events.data ? <><SourceTime source="GLIDE / GDACS" time={events.data.fetchedAt} kind="daily" />
+          {events.data.items.length ? <FloodEventList payload={events.data} /> : <p className="text-muted text-sm">{t("ไม่พบเหตุการณ์ในรายงาน 90 วันล่าสุด")}</p>}</>
+          : <p className="text-muted text-sm" role="status">{t(events.status === "loading" ? "กำลังโหลดเหตุการณ์น้ำท่วม…" : "ข้อมูลเหตุการณ์น้ำท่วมไม่พร้อมใช้งาน")}</p>}
+      </details>
     </section>
     <div className="flex flex-wrap gap-3 text-sm">
       <Link className="inline-flex min-h-11 items-center text-given underline" href="/water">{t("ติดตามการระบายน้ำจากเขื่อน")}</Link>
