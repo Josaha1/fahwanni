@@ -46,7 +46,6 @@
 | เอลนีโญ / ลานีญา | NOAA CPC Oceanic Niño Index (`oni.ascii.txt`) | public domain |
 | ตรวจวัดจริงที่สนามบิน | aviationweather.gov METAR (34 สนามบินไทย; รายชื่อจาก OurAirports) | public domain · ผ่าน `/api/metar` (ไม่มี CORS) |
 | อุณหภูมิน้ำทะเล + ปะการังฟอกขาว | NOAA Coral Reef Watch v3.1 5 กม. (ERDDAP pacioos) | ใช้ได้ไม่จำกัด อ้างอิง NOAA CRW |
-| กล้องสดใกล้คุณ | Windy Webcams API v3 | ต้องมี `WINDY_WEBCAMS_KEY` (ฟรี) · ห้ามเก็บภาพ ต้องลิงก์กลับ Windy.com |
 | พิกัดเขื่อน | Wikidata (CC0), OpenStreetMap (ODbL) | |
 
 แอปใช้เฉพาะแหล่งที่ประกาศเงื่อนไขการใช้ไว้ — ไม่ใช้ข้อมูลสด ThaiWater (สสน.) และภาพ CCTV ของ กฟผ. จนกว่าจะได้รับอนุญาต (ร่างหนังสืออยู่ที่ `docs/permissions/data-requests.md`)

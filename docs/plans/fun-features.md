@@ -57,3 +57,5 @@ Google Pollen (no Thailand), Nager.Date holidays (no Thailand), wheretheiss.at (
 ## For you
 - Sign up for a free Windy Webcams key (api.windy.com) and add it as `WINDY_WEBCAMS_KEY` in Vercel + `.env.local` — I can't create accounts.
 - Optional later: OpenAQ key (ground PM2.5 stations; also free).
+
+> 2026-10-05: F5 (Windy webcams) removed at the user's request — "เอา windy ออกเลย ไม่ต้องการ sign up กับระบบอื่นๆ". No source that needs a sign-up.
