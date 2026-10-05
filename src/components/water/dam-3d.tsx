@@ -16,6 +16,7 @@ import type { DamHistory } from "@/lib/dams/history";
 import { damGhosts, damSceneColors, damStreams, waterLevel } from "@/lib/dams/model3d";
 import type { Dam } from "@/lib/dams/types";
 import { forceGlFromSearch, glTier, readRendererString, type GlTier } from "@/lib/three/gl-tier";
+import { applyLook, makeEnvironment } from "@/lib/three/look";
 import { cappedDpr, sampleFrame, type FrameWatchdog } from "@/lib/three/scene-logic";
 import { terrariumGrid, terrariumTile } from "@/lib/terrain/terrarium";
 
@@ -76,7 +77,10 @@ export function Dam3D(props: Props) {
     if (tier === "svg") { renderer.dispose(); settings.current.onFallback(); return; }
     renderer.setPixelRatio(cappedDpr(window.devicePixelRatio, tier));
 
+    applyLook(renderer);
+    let environment: ReturnType<typeof makeEnvironment> | null = makeEnvironment(renderer);
     const scene = new Scene();
+    scene.environment = environment.texture;
     const pivot = new Group();
     const ambient = new AmbientLight(0xffffff, 2);
     const hemisphere = new HemisphereLight(0xe6efff, 0x99836b, 0.5);
@@ -320,6 +324,9 @@ export function Dam3D(props: Props) {
     function onContextLost(event: Event) {
       event.preventDefault();
       contextLost = true;
+      scene.environment = null;
+      environment?.dispose();
+      environment = null;
       signals.contextLosses++;
       canvas.style.visibility = "hidden";
       cancelAnimationFrame(frame);
@@ -327,7 +334,14 @@ export function Dam3D(props: Props) {
       previousTime = 0;
       if (!settings.current.detail) fail(); else applyTier();
     }
-    function onContextRestored() { contextLost = false; canvas.style.visibility = ""; update(); }
+    function onContextRestored() {
+      if (disposed || failed || !contextLost) return;
+      environment = makeEnvironment(renderer);
+      scene.environment = environment.texture;
+      contextLost = false;
+      canvas.style.visibility = "";
+      update();
+    }
     const visibilityObserver = new IntersectionObserver((entries) => {
       visible = entries[0]?.isIntersecting ?? false;
       onVisibility();
@@ -523,6 +537,9 @@ export function Dam3D(props: Props) {
       if (model) disposeModel(model);
       if (terrainMesh) disposeModel(terrainMesh);
       flowTexture?.dispose();
+      scene.environment = null;
+      environment?.dispose();
+      environment = null;
       nodes = {};
       renderer.dispose();
     };

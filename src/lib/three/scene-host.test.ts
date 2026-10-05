@@ -1,10 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Camera, Scene } from "three";
+import * as look from "./look";
 import type { GlSignals } from "./gl-tier";
 import { getSceneHost, SceneHost, type SceneRenderer } from "./scene-host";
 
-const threeMock = vi.hoisted(() => ({ create: vi.fn() }));
-vi.mock("three", () => ({ WebGLRenderer: class { constructor() { return threeMock.create(); } } }));
+const threeMock = vi.hoisted(() => ({ create: vi.fn(), environments: [] as { texture: unknown; dispose: ReturnType<typeof vi.fn> }[] }));
+vi.mock("three", async (original) => ({ ...await original<typeof import("three")>(),
+  WebGLRenderer: class { constructor() { return threeMock.create(); } },
+  PMREMGenerator: class {
+    fromScene() {
+      const target = { texture: {}, dispose: vi.fn() };
+      threeMock.environments.push(target);
+      return target;
+    }
+    dispose = vi.fn();
+  },
+}));
 
 class TestElement extends EventTarget {
   attributes = new Map<string, string>();
@@ -51,7 +62,7 @@ let hosts: SceneHost[];
 let clock: number;
 
 function host(signals = normal) {
-  const result = new SceneHost(renderer, canvas.canvas, signals);
+  const result = new SceneHost(renderer, canvas.canvas, signals, undefined, look);
   hosts.push(result);
   return result;
 }
@@ -83,7 +94,9 @@ beforeEach(() => {
     cancelAnimationFrame: (id: number) => { frames.delete(id); },
   });
   doc = Object.assign(new EventTarget(), { hidden: false, body: { appendChild: vi.fn() }, createElement: vi.fn(() => canvas) });
+  threeMock.environments = [];
   renderer = {
+    toneMapping: 0, toneMappingExposure: 1, outputColorSpace: "",
     autoClear: true, setClearColor: vi.fn(), setPixelRatio: vi.fn(), setSize: vi.fn(),
     setScissorTest: vi.fn(), setViewport: vi.fn(), setScissor: vi.fn(), clear: vi.fn(), render: vi.fn(), dispose: vi.fn(),
   };
@@ -103,6 +116,39 @@ afterEach(() => {
 });
 
 describe("shared scene host with a mock renderer", () => {
+  it("shares one environment across views, regenerates after restore and disposes on SVG fallback", async () => {
+    const shared = host();
+    const a = view(), b = view();
+    const unregister = shared.registerView(a.element.element, a.options);
+    shared.registerView(b.element.element, b.options);
+    expect(threeMock.environments).toHaveLength(1);
+    const first = threeMock.environments[0];
+    expect(a.options.scene.environment).toBe(first.texture);
+    expect(b.options.scene.environment).toBe(first.texture);
+    unregister();
+    expect(a.options.scene.environment).toBeNull();
+    expect(first.dispose).not.toHaveBeenCalled();
+    canvas.dispatchEvent(new Event("webglcontextlost", { cancelable: true }));
+    expect(first.dispose).toHaveBeenCalledOnce();
+    expect(b.options.scene.environment).toBeNull();
+    canvas.dispatchEvent(new Event("webglcontextrestored"));
+    expect(threeMock.environments).toHaveLength(2);
+    const second = threeMock.environments[1];
+    expect(b.options.scene.environment).toBe(second.texture);
+    shared.markDirty();
+    expect(threeMock.environments).toHaveLength(2);
+    await shared.updateEnvironment({ ...environment, lite: true });
+    expect(second.dispose).toHaveBeenCalledOnce();
+    expect(b.options.scene.environment).toBeNull();
+    shared.dispose();
+    expect(second.dispose).toHaveBeenCalledOnce();
+  });
+
+  it("disposes its environment once on final cleanup", () => {
+    const shared = host();
+    shared.dispose(); shared.dispose();
+    expect(threeMock.environments[0].dispose).toHaveBeenCalledOnce();
+  });
   it("renders scissored visible views on demand and repaints clean views on a shared canvas", () => {
     const shared = host();
     const a = view(), b = view();
@@ -288,7 +334,7 @@ describe("shared scene host with a mock renderer", () => {
   });
 
   it("publishes custom state and updates the ladder when preferences change", async () => {
-    const shared = new SceneHost(renderer, canvas.canvas, normal, async () => ({ renderer, webgl2: true }));
+    const shared = new SceneHost(renderer, canvas.canvas, normal, async () => ({ renderer, webgl2: true, look }), look);
     hosts.push(shared);
     const a = view();
     shared.registerView(a.element.element, { ...a.options, state: { day: 1, mode: "invented" } });

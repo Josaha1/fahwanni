@@ -1,6 +1,7 @@
 import type { Camera, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import { forceGlFromSearch, glTier, readRendererString, type GlSignals, type GlTier } from "./gl-tier";
 import { cappedDpr, sampleFrame, scissorRects, shouldRender, type FrameWatchdog, type ViewFlags } from "./scene-logic";
+import type * as Look from "./look";
 import { writeSceneState, type SceneState } from "./scene-state";
 
 export type SceneEnvironment = Pick<GlSignals, "lite" | "reducedMotion" | "deviceMemory">;
@@ -15,8 +16,8 @@ export type ViewOptions = {
 };
 type View = ViewFlags & { options: ViewOptions; state: SceneState; frames: number; drawable: boolean };
 export type SceneRenderer = Pick<WebGLRenderer,
-  "autoClear" | "setClearColor" | "setPixelRatio" | "setSize" | "setScissorTest" | "setViewport" | "setScissor" | "clear" | "render" | "dispose">;
-type RendererInit = { renderer: SceneRenderer | null; webgl2: boolean; rendererString?: string | null };
+  "toneMapping" | "toneMappingExposure" | "outputColorSpace" | "autoClear" | "setClearColor" | "setPixelRatio" | "setSize" | "setScissorTest" | "setViewport" | "setScissor" | "clear" | "render" | "dispose">;
+type RendererInit = { renderer: SceneRenderer | null; webgl2: boolean; rendererString?: string | null; look?: typeof Look };
 
 /** Use getSceneHost in the browser; the constructor also accepts a mock renderer for unit tests. */
 export class SceneHost {
@@ -37,9 +38,10 @@ export class SceneHost {
   private performanceReduced = false;
   private initializing: Promise<RendererInit> | null = null;
   private canvasAttached = false;
+  private environment: ReturnType<typeof Look.makeEnvironment> | null = null;
 
   constructor(private renderer: SceneRenderer | null, readonly canvas: HTMLCanvasElement, signals: GlSignals,
-    private initialize?: (environment: SceneEnvironment) => Promise<RendererInit>) {
+    private initialize?: (environment: SceneEnvironment) => Promise<RendererInit>, private look?: typeof Look) {
     this.signals = { ...signals };
     this.mode = glTier(signals);
     Object.assign(canvas.style, { position: "fixed", inset: "0", width: "100%", height: "100%", pointerEvents: "none" });
@@ -47,6 +49,8 @@ export class SceneHost {
     if (renderer) {
       renderer.autoClear = false;
       renderer.setClearColor(0x000000, 0);
+      this.look?.applyLook(renderer);
+      if (this.look && this.mode !== "svg") this.environment = this.look.makeEnvironment(renderer as WebGLRenderer);
     }
     this.observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -78,6 +82,7 @@ export class SceneHost {
     if (this.disposed) throw new Error("SceneHost is disposed");
     if (this.views.has(element)) throw new Error("Scene view is already registered");
     const view: View = { options, state: options.state ?? {}, visible: false, dirty: true, animating: options.animating ?? false, frames: 0, drawable: true };
+    if (this.environment) options.scene.environment = this.environment.texture;
     this.views.set(element, view);
     this.observer.observe(element);
     this.resizeObserver.observe(element);
@@ -85,6 +90,7 @@ export class SceneHost {
     options.onTierChange?.(this.mode);
     return () => {
       if (this.views.get(element) !== view) return;
+      if (options.scene.environment === this.environment?.texture) options.scene.environment = null;
       this.views.delete(element);
       this.observer.unobserve(element);
       this.resizeObserver.unobserve(element);
@@ -132,11 +138,17 @@ export class SceneHost {
       this.initializing = null;
       if (this.disposed) { result.renderer?.dispose(); return; }
       this.renderer = result.renderer;
+      this.look = result.look ?? this.look;
       this.signals.webgl2 = result.webgl2;
       this.signals.rendererString = result.rendererString;
       if (this.renderer) {
         this.renderer.autoClear = false;
         this.renderer.setClearColor(0x000000, 0);
+        if (this.look) {
+          this.look.applyLook(this.renderer);
+          this.environment = this.look.makeEnvironment(this.renderer as WebGLRenderer);
+          for (const view of this.views.values()) view.options.scene.environment = this.environment.texture;
+        }
       }
       this.updateTier();
       this.markDirty();
@@ -155,6 +167,7 @@ export class SceneHost {
     this.canvas.hidden = this.mode === "svg" || this.contextLost || document.hidden || this.views.size === 0;
     if (this.mode === "svg") {
       this.cancel();
+      this.disposeEnvironment();
       this.renderer?.dispose();
       this.renderer = null;
       if (this.canvasAttached) this.canvas.remove();
@@ -275,6 +288,7 @@ export class SceneHost {
   private onContextLost = (event: Event): void => {
     event.preventDefault();
     this.contextLost = true;
+    this.disposeEnvironment();
     this.signals.contextLosses++;
     this.cancel();
     this.updateTier();
@@ -282,10 +296,23 @@ export class SceneHost {
   };
 
   private onContextRestored = (): void => {
+    if (this.renderer && this.look && this.contextLost) {
+      this.environment = this.look.makeEnvironment(this.renderer as WebGLRenderer);
+      for (const view of this.views.values()) view.options.scene.environment = this.environment.texture;
+    }
     this.contextLost = false;
     this.updateTier();
     this.invalidateLayout();
   };
+
+  private disposeEnvironment(): void {
+    if (!this.environment) return;
+    for (const view of this.views.values()) {
+      if (view.options.scene.environment === this.environment.texture) view.options.scene.environment = null;
+    }
+    this.environment.dispose();
+    this.environment = null;
+  }
 
   dispose(): void {
     if (this.disposed) return;
@@ -299,6 +326,7 @@ export class SceneHost {
     this.canvas.removeEventListener("webglcontextlost", this.onContextLost);
     this.canvas.removeEventListener("webglcontextrestored", this.onContextRestored);
     for (const element of this.views.keys()) element.removeAttribute("data-scene-state");
+    this.disposeEnvironment();
     this.views.clear();
     // Scenes, geometries and materials belong to their view, not to the shared host.
     this.renderer?.dispose();
@@ -313,6 +341,7 @@ async function initializeRenderer(canvas: HTMLCanvasElement, environment: SceneE
     ...environment, webgl2: false, contextLosses: 0, forceGl,
   };
   let renderer: WebGLRenderer | null = null;
+  let look: typeof Look | undefined;
   if (!signals.lite && !signals.reducedMotion) {
     try {
       const context = canvas.getContext("webgl2", { alpha: true, antialias: true });
@@ -320,13 +349,14 @@ async function initializeRenderer(canvas: HTMLCanvasElement, environment: SceneE
       signals.rendererString = readRendererString(context);
       if (context && glTier(signals) !== "svg") {
         const { WebGLRenderer } = await import("three");
+        look = await import("./look");
         renderer = new WebGLRenderer({ canvas, context, alpha: true, antialias: true });
       }
     } catch {
       signals.webgl2 = false;
     }
   }
-  return { renderer, webgl2: signals.webgl2, rendererString: signals.rendererString };
+  return { renderer, webgl2: signals.webgl2, rendererString: signals.rendererString, look };
 }
 
 async function createSceneHost(environment: SceneEnvironment): Promise<SceneHost> {
@@ -339,7 +369,7 @@ async function createSceneHost(environment: SceneEnvironment): Promise<SceneHost
   const result = await initialize(signals);
   signals.webgl2 = result.webgl2;
   signals.rendererString = result.rendererString;
-  return new SceneHost(result.renderer, canvas, signals, initialize);
+  return new SceneHost(result.renderer, canvas, signals, initialize, result.look);
 }
 
 /** Concurrent callers share one lazy import, renderer and fixed canvas. */

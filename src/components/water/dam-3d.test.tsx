@@ -7,6 +7,7 @@ import { Dam3D } from "./dam-3d";
 const harness = vi.hoisted(() => ({
   effects: [] as (() => void | (() => void))[], refs: [] as { current: unknown }[], cursor: 0,
   rendererString: "hardware", model: null as unknown, scene: null as unknown, controls: null as unknown,
+  environments: [] as { texture: unknown; dispose: ReturnType<typeof vi.fn> }[],
   render: vi.fn(), dispose: vi.fn(), dpr: vi.fn(), controlsDispose: vi.fn(),
 }));
 vi.mock("react", async (original) => ({ ...await original<typeof import("react")>(),
@@ -15,6 +16,14 @@ vi.mock("react", async (original) => ({ ...await original<typeof import("react")
 }));
 vi.mock("@/i18n/client", () => ({ useT: () => (key: string) => key }));
 vi.mock("three", async (original) => ({ ...await original<typeof import("three")>(),
+  PMREMGenerator: class {
+    fromScene() {
+      const target = { texture: {}, dispose: vi.fn() };
+      harness.environments.push(target);
+      return target;
+    }
+    dispose = vi.fn();
+  },
   WebGLRenderer: class {
     setPixelRatio = harness.dpr;
     setSize = vi.fn();
@@ -49,6 +58,7 @@ let props: React.ComponentProps<typeof Dam3D>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  harness.environments = [];
   harness.effects = []; harness.refs = []; harness.cursor = 0;
   harness.rendererString = "hardware"; harness.scene = null; harness.controls = null;
   frames = new Map(); clock = 0;
@@ -202,4 +212,24 @@ it("adds decoded terrain when available and disposes terrain, streams and contro
   expect(harness.controlsDispose).toHaveBeenCalledOnce();
   expect(harness.dispose).toHaveBeenCalledOnce();
   expect(frames.size).toBe(0);
+});
+
+it("sets the environment once, regenerates after restore and releases it on unmount", async () => {
+  await mount(); advance();
+  expect(harness.environments).toHaveLength(1);
+  const scene = harness.scene as Scene;
+  const first = harness.environments[0];
+  expect(scene.environment).toBe(first.texture);
+  update({ theme: "dark" }); advance();
+  expect(harness.environments).toHaveLength(1);
+  canvas.dispatchEvent(new Event("webglcontextlost", { cancelable: true }));
+  expect(first.dispose).toHaveBeenCalledOnce();
+  expect(scene.environment).toBeNull();
+  canvas.dispatchEvent(new Event("webglcontextrestored")); advance();
+  expect(harness.environments).toHaveLength(2);
+  const second = harness.environments[1];
+  expect(scene.environment).toBe(second.texture);
+  clean?.(); clean = undefined;
+  expect(second.dispose).toHaveBeenCalledOnce();
+  expect(scene.environment).toBeNull();
 });
