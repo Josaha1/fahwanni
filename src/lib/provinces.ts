@@ -83,6 +83,13 @@ export const provinces: Province[] = [
   { id: "bueng-kan", th: "บึงกาฬ", en: "Bueng Kan", lat: 18.3609, lon: 103.6464 },
 ];
 
+const shapeNameAliases: Record<string, string> = { phangnga: "phang-nga", lopburi: "lop-buri" };
+
+export function provinceIdFromShapeName(shapeName: string): string | null {
+  const name = shapeName.replace(/ Province$/i, "").trim().toLowerCase();
+  return shapeNameAliases[name] ?? provinces.find((province) => province.en.toLowerCase() === name)?.id ?? null;
+}
+
 export function searchProvinces(q: string, limit = 8): Place[] {
   const query = q.trim().replace(/^จังหวัด/, "").trim().toLocaleLowerCase();
   if (!query || limit <= 0) return [];

@@ -68,7 +68,11 @@ What-if simulation (flood-sim lib, depth layer, panel, flood probe/card, en/floo
 3. Routes + 4-tab nav: `/` FloodHome, `/dams`, `/dams/[id]`, `/rain`, `/forecast`, `/water` → 308 to `/`; bottom-nav (incl. new-dot logic),
    metadata, menu tip key reset, today-brief link, SW/version bump — Verify: build; `curl -sI /water` → 308 Location /; i18n.
 4. `SourceLine` + `staleness(date, kind, now)` (dams > 2 d, rain > 36 h, satellite > 3 d → amber "ข้อมูลเก่า") on every number — Verify: vitest water.
-5. Satellite-flood sampling: pure lib reading NASA GIBS flood tile pixels (CORS *) → near-me verdict (+ cloud/no-data) and a server
+5. Satellite-flood sampling:
+   **Decided by Claude (Codex asked for a Thailand mask):** province polygons from geoBoundaries `gbOpen/THA/ADM1` simplified
+   (77 provinces, ODbL via OpenStreetMap, file `public/data/th-provinces-adm1.geojson`, server-only use); a flood pixel counts for the
+   province whose polygon contains it; pixels outside all 77 polygons (neighbouring countries, sea) are ignored. Attribution: geoBoundaries / © OpenStreetMap.
+   pure lib reading NASA GIBS flood tile pixels (CORS *) → near-me verdict (+ cloud/no-data) and a server
    `/api/flood-now` national grid summary by region (6 h cache) — Verify: lib tests with fixture tiles; curl.
 6. FloodHome (`/`): warnings, ใกล้บ้านคุณ, ทั้งประเทศ, events, note, freshness, footer — Verify: Playwright 390 px: warning/near-me/map CTA within 760 px.
 7. Dams page + drill-down; trend API adds inflow — Verify: vitest dams; Playwright `/dams` and `/dams/200101`.
