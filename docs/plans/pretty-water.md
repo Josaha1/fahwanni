@@ -72,7 +72,9 @@ P2b. Pure geometry — `src/lib/dams/dam-geometry.ts` (+ test):
     - `extrudeFootprint`, `crestStrip` (road + parapet), `gateBays(n)` (symbolic), `reservoirShape(rings)`.
     - `concreteMaps(size)`: deterministic procedural streaks/joints.
     Verify: `npx vitest run --no-file-parallelism src/lib/dams`
-P2c. Dam scene — `src/components/water/dam-3d.tsx`, `src/lib/dams/model3d.ts`:
+P2c. **Decided by Claude (P2b leaves height null for 32/35 dams):** when OSM/table height is null, the scene height comes from the
+    Terrarium DEM (crest elevation − downstream valley floor), captioned "ความสูงประมาณจากภูมิประเทศ"; no metre figure is printed for it.
+    Dam scene — `src/components/water/dam-3d.tsx`, `src/lib/dams/model3d.ts`:
     - Drop GLTFLoader; load `/data/dam-geo/<id>.json`; mesh from P2b.
     - With no OSM footprint → straight wall of crest length, captioned "รูปทรงโดยประมาณ".
     - Round faded terrain, P1 look, lights per Fable.
