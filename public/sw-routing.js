@@ -5,6 +5,8 @@ self.fahRoute = function fahRoute(request, origin) {
   if (url.origin === "https://maps.gstatic.com") {
     return url.pathname.startsWith("/weather/") ? "static" : null;
   }
+  if (url.origin === "https://s3.amazonaws.com" && /^\/elevation-tiles-prod\/terrarium\/\d+\/\d+\/\d+\.png$/.test(url.pathname)) return "static";
+  if (url.origin === "https://gibs.earthdata.nasa.gov" && /^\/(?:wmts|twms|wms)\//.test(url.pathname)) return "static";
   if (url.origin !== origin) return null;
   if (["/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide", "/api/satellite", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
   if (url.pathname.startsWith("/api/")) return null;

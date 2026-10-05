@@ -1,4 +1,5 @@
 export const flood: Record<string, string> = {
+  "ไม่มีข้อมูลหมู่บ้านเสี่ยง ปภ.": "DDPM village risk data unavailable",
   "ไม่มีข้อมูลฝน": "Rain data unavailable",
   "ฝน {mm} มม.": "Rain {mm} mm",
   "ไม่มีข้อมูลปริมาณน้ำในเขื่อน": "Reservoir storage data unavailable",

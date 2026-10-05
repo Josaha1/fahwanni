@@ -5,7 +5,7 @@ import type { PixelCounts } from "@/lib/flood/viirs";
 import { distanceKm } from "@/lib/storms/normalize";
 import {
   provinceBins, rainGauge, satelliteRing, streamRate, tankFill,
-  visualSummaryProvince, visualSummaryRain, visualSummarySatellite, visualSummaryStream, visualSummaryTank,
+  visualSummaryProvince, visualSummaryRain, visualSummarySatellite, visualSummaryStream, visualSummaryTank, visualSummaryVillages,
 } from "./index";
 
 const counts = (flood: number, recurringFlood = 0): PixelCounts => ({
@@ -120,6 +120,7 @@ describe("one-line visual summaries", () => {
   it.each(["th", "en"] as const)("translates every data and no-data caption in %s", (locale) => {
     const t = translator(locale);
     const captions = [
+      ...[null, 0, 15].map((count) => visualSummaryVillages(count, t)),
       ...[null, 0, 35, 90, 250].map((mm) => visualSummaryRain(rainGauge(mm, 100), t)),
       ...[null, 0, 40, 70, 90, 105].map((pct) => visualSummaryTank(tankFill(pct, 120), t)),
       visualSummarySatellite(satelliteRing(null, null), t),

@@ -4,6 +4,10 @@ import type { provinceBins, rainGauge, satelliteRing, streamRate, tankFill } fro
 
 const number = (value: number, t: T) => new Intl.NumberFormat(intlOf(t), { maximumFractionDigits: 1 }).format(value);
 
+export function visualSummaryVillages(count: number | null, t: T): string {
+  return count === null ? t("ไม่มีข้อมูลหมู่บ้านเสี่ยง ปภ.") : t("{n} หมู่บ้าน · ความเสี่ยงจากประวัติ", { n: number(count, t) });
+}
+
 export function visualSummaryRain(gauge: ReturnType<typeof rainGauge>, t: T): string {
   if (gauge.state === "no-data") return t("ไม่มีข้อมูลฝน");
   const parts = [t("ฝน {mm} มม.", { mm: number(gauge.value, t) })];

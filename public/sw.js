@@ -27,7 +27,7 @@ async function cacheFirst(request) {
   const hit = await cache.match(request);
   if (hit) return hit;
   const res = await fetch(request);
-  // Weather icons may be opaque when requested across origins.
+  // Weather icons and satellite tiles may be opaque when requested across origins.
   if (res.ok || res.type === "opaque") await cache.put(request, res.clone()).catch(() => {});
   return res;
 }

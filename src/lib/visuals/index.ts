@@ -61,4 +61,4 @@ export function provinceBins(counts: PixelCounts | null) {
   return { state: "data" as const, count, bin };
 }
 
-export { visualSummaryRain, visualSummaryTank, visualSummarySatellite, visualSummaryProvince, visualSummaryStream } from "./summaries";
+export { visualSummaryRain, visualSummaryTank, visualSummarySatellite, visualSummaryProvince, visualSummaryStream, visualSummaryVillages } from "./summaries";

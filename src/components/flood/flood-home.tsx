@@ -22,6 +22,9 @@ import { MenuTip } from "@/components/menu-tip";
 import { OfflineSupport } from "@/components/offline-support";
 import { FloodEventList, type FloodEventsPayload } from "@/components/water/flood-events";
 import { TmdWarningList } from "@/components/water/tmd-warnings";
+import type { PixelCounts } from "@/lib/flood/viirs";
+import { NearMe3D, nearMeVisuals } from "./near-me-3d";
+import { rainGauge, streamRate, visualSummaryRain, visualSummarySatellite, visualSummaryStream, visualSummaryVillages } from "@/lib/visuals";
 import { eventProvinces, floodRegions, nearestRainStation, previousRelease, recentFloodEvents, riskBbox, warningRegions, type FloodNowPayload } from "./home-data";
 
 const validWarnings = (value: TmdWarnings & { error?: string }) => Array.isArray(value?.items) && !value.error;
@@ -30,7 +33,8 @@ const validRain = (value: RainRisk) => Array.isArray(value?.all);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validTrend = (value: DamTrend) => Array.isArray(value?.dates) && !!value?.release;
 const validFlood = (value: FloodNowPayload) => typeof value?.date === "string" && !!value?.regionCounts && !!value?.provinceCounts;
-const validNearFlood = (value: FloodNowPayload) => validFlood(value) && ["flood", "not-seen", "cloud-or-no-data"].includes(value.nearMe?.verdict ?? "");
+type NearFloodPayload = FloodNowPayload & { nearMe?: { counts: PixelCounts } };
+const validNearFlood = (value: NearFloodPayload) => validFlood(value) && ["flood", "not-seen", "cloud-or-no-data"].includes(value.nearMe?.verdict ?? "");
 const validRisk = (value: { points: FloodRiskPoint[] }) => Array.isArray(value?.points);
 function subscribeProvince(onChange: () => void) {
   window.addEventListener("popstate", onChange);
@@ -51,40 +55,40 @@ function NearHome({ place, rain, dams, trend }: { place: Place; rain: Load<RainR
   const station = nearestRainStation(rain.data?.all ?? [], place);
   const dam = nearestDams(dams.data?.dams ?? [], place, 1)[0]?.dam;
   const previous = dam ? previousRelease(trend.data, dam.id, dam.date) : null;
-  const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
-  const verdict = satellite.data?.nearMe?.verdict;
   const villages = risk.data?.points.filter((point) => distanceKm(place, point) <= 10);
 
+  const samples = satellite.data?.nearMe?.samples ?? null;
+  const counts = satellite.data?.nearMe?.counts ?? null;
+  const nearby = { place, date: satellite.data?.date, counts, samples, villages: villages ?? null,
+    station: station?.station ?? null, dam: dam ?? null, summaries: [] };
+  const summaries = [
+    visualSummarySatellite(nearMeVisuals(nearby).ring, t),
+    visualSummaryVillages(villages?.length ?? null, t),
+    [station ? (t.locale === "en" ? station.station.nameEn || station.station.nameTh : station.station.nameTh) : "",
+      visualSummaryRain(rainGauge(station?.station.rainMm ?? null, 100), t)].filter(Boolean).join(" · "),
+    [dam ? (t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh) : "",
+      visualSummaryStream(streamRate(dam?.releaseCms ?? null, "cms", 1000), t),
+      dam?.releaseCms !== null && dam?.releaseCms !== undefined && previous !== null
+        ? t("{arrow} เทียบเมื่อวาน", { arrow: dam.releaseCms > previous ? "↑" : dam.releaseCms < previous ? "↓" : "→" }) : t("ยังเทียบเมื่อวานไม่ได้")].filter(Boolean).join(" · "),
+  ];
+  const labels = [t("ดาวเทียมน้ำท่วมใกล้บ้าน"), t("หมู่บ้านเสี่ยง ปภ. ใกล้คุณ"), t("ฝน 24 ชม. สถานีใกล้สุด (TMD)"), t("เขื่อนต้นน้ำระบาย (เขื่อนใกล้สุด)")];
+  const times = [
+    <SourceTime key="satellite" source="NASA VIIRS" date={satellite.data?.date} kind="satellite" />,
+    <SourceTime key="villages" source="ปภ." kind="daily" />,
+    <SourceTime key="rain" source="TMD" time={rain.data?.observedAt} kind="rain24h" />,
+    <SourceTime key="dam" source="กรมชลประทาน" date={dam?.date} kind="daily" />,
+  ];
+  const statuses = [satellite, risk, rain, dams];
   return <section className="placeholder-card !p-4 space-y-2" aria-label={t("ใกล้บ้านคุณ")}>
     <h2 className="text-lg font-semibold">{t("ใกล้บ้านคุณ")}</h2>
-    <ul className="divide-y divide-[var(--border)] text-sm">
-      <li className="py-2">
-        {satellite.data ? <><p>{t(verdict === "flood" ? "ดาวเทียมเห็นน้ำท่วมในรัศมี 30 กม." : verdict === "not-seen" ? "ดาวเทียมไม่พบน้ำท่วมในรัศมี 30 กม." : "เมฆบัง/ข้อมูลไม่พอ")}</p>
-          <SourceTime source="NASA VIIRS" date={satellite.data.date} kind="satellite" /></>
-          : <><p className="font-medium">{t("ดาวเทียมน้ำท่วมใกล้บ้าน")}</p><SourceStatus status={satellite.status} /></>}
-      </li>
-      <li className="py-2">
-        <p className="font-medium">{t("หมู่บ้านเสี่ยง ปภ. ใกล้คุณ")}</p>
-        {villages ? <><p>{t("{n} หมู่บ้าน · ความเสี่ยงจากประวัติ", { n: villages.length })}</p>
-          <SourceTime source="ปภ." kind="daily" /></> : <SourceStatus status={risk.status} />}
-      </li>
-      <li className="py-2">
-        <p className="font-medium">{t("ฝน 24 ชม. สถานีใกล้สุด (TMD)")}</p>
-        {rain.data ? <>{station ? <p>{t("{name} · {mm} มม. · {km} กม.", {
-          name: t.locale === "en" ? station.station.nameEn || station.station.nameTh : station.station.nameTh,
-          mm: number.format(station.station.rainMm), km: number.format(station.km),
-        })}</p> : <p>{t("ไม่พบสถานีฝนที่มีข้อมูล")}</p>}
-          <SourceTime source="TMD" time={rain.data.observedAt} kind="rain24h" /></> : <SourceStatus status={rain.status} />}
-      </li>
-      <li className="py-2">
-        <p className="font-medium">{t("เขื่อนต้นน้ำระบาย (เขื่อนใกล้สุด)")}</p>
-        {dams.data ? <>{dam ? <><p>{t("{name} · {cms} ลบ.ม./วินาที", {
-          name: t.locale === "en" ? dam.nameEn || dam.nameTh : dam.nameTh,
-          cms: dam.releaseCms === null ? "—" : number.format(dam.releaseCms),
-        })}{dam.releaseCms !== null && previous !== null ? <> · {t("{arrow} เทียบเมื่อวาน", { arrow: dam.releaseCms > previous ? "↑" : dam.releaseCms < previous ? "↓" : "→" })}</> : <> · {t("ยังเทียบเมื่อวานไม่ได้")}</>}</p>
-          <SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" /></> : <p>{t("ไม่พบข้อมูลเขื่อน")}</p>}</> : <SourceStatus status={dams.status} />}
-      </li>
-    </ul>
+    <NearMe3D {...nearby} summaries={summaries} />
+    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+      {summaries.map((summary, index) => <div key={labels[index]} className="min-w-0">
+        <p className="truncate font-medium" title={labels[index]}>{labels[index]}</p>
+        <p className="truncate text-muted" title={summary}>{summary}</p>
+        <div className="leading-4">{times[index]}{!statuses[index].data && <div><SourceStatus status={statuses[index].status} /></div>}</div>
+      </div>)}
+    </div>
     <Link className="btn-primary flex min-h-11 items-center justify-center text-sm" href={`/map?lat=${place.lat}&lon=${place.lon}&mode=water`}>{t("ดูบนแผนที่")}</Link>
   </section>;
 }

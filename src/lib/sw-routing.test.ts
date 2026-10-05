@@ -31,3 +31,17 @@ describe("service worker routing", () => {
     expect(sandbox.self.fahWarmable!("/api/dams", origin)).toBe(false);
   });
 });
+
+it.each([
+  "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/9/398/235.png",
+  "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS/default/2026-10-05/GoogleMapsCompatible_Level9/7/50/99.png",
+  "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?REQUEST=GetMap",
+])("routes terrain and GIBS tiles through cacheFirst: %s", (url) => {
+  expect(route(url)).toBe("static");
+  expect(route(url, { method: "POST" })).toBeNull();
+});
+
+it("does not cache unrelated AWS or GIBS resources", () => {
+  expect(route("https://s3.amazonaws.com/other/image.png")).toBeNull();
+  expect(route("https://gibs.earthdata.nasa.gov/colormaps/map.xml")).toBeNull();
+});
