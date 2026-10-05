@@ -257,6 +257,8 @@ describe("shared scene host with a mock renderer", () => {
     tick(0);
     expect(shared.tier).toBe("svg");
     expect(a.element.state.mode).toBe("svg");
+    expect(renderer.dispose).toHaveBeenCalledOnce();
+    expect(canvas.remove).toHaveBeenCalledOnce();
     expect(canvas.hidden).toBe(true);
     expect(frames.size).toBe(0);
   });
@@ -285,16 +287,19 @@ describe("shared scene host with a mock renderer", () => {
     expect(a.element.state).toMatchObject({ mode: "svg", contextLosses: 2, contextLost: false });
   });
 
-  it("publishes custom state and updates the ladder when preferences change", () => {
-    const shared = host();
+  it("publishes custom state and updates the ladder when preferences change", async () => {
+    const shared = new SceneHost(renderer, canvas.canvas, normal, async () => ({ renderer, webgl2: true }));
+    hosts.push(shared);
     const a = view();
     shared.registerView(a.element.element, { ...a.options, state: { day: 1, mode: "invented" } });
     shared.setViewState(a.element.element, { day: 2, pct: 110 });
     expect(a.element.state).toMatchObject({ day: 2, pct: 110, mode: "full" });
-    shared.updateEnvironment({ ...environment, lite: true });
+    await shared.updateEnvironment({ ...environment, lite: true });
     expect(a.element.state.mode).toBe("svg");
+    expect(renderer.dispose).toHaveBeenCalledOnce();
+    expect(canvas.remove).toHaveBeenCalledOnce();
     expect(canvas.hidden).toBe(true);
-    shared.updateEnvironment(environment);
+    await shared.updateEnvironment(environment);
     TestObserver.instances[0].visible(a.element);
     tick(0);
     shared.setAnimating(a.element.element, true);
@@ -351,6 +356,7 @@ describe("lazy singleton", () => {
     expect(shared.tier).toBe("svg");
     expect(threeMock.create).not.toHaveBeenCalled();
     expect(canvas.getContext).not.toHaveBeenCalled();
+    expect(doc.body.appendChild).not.toHaveBeenCalled();
   });
 
   it("falls back on software GL, with the force override read from the URL", async () => {
@@ -359,6 +365,7 @@ describe("lazy singleton", () => {
     hosts.push(fallback);
     expect(fallback.tier).toBe("svg");
     expect(threeMock.create).not.toHaveBeenCalled();
+    expect(doc.body.appendChild).not.toHaveBeenCalled();
     fallback.dispose();
     browser.location.search = "?gl=force";
     const forced = await getSceneHost(environment);
@@ -384,9 +391,11 @@ describe("lazy singleton", () => {
     expect(renderer.render).toHaveBeenCalledTimes(1);
     await shared.updateEnvironment({ ...environment, lite: true });
     expect(shared.tier).toBe("svg");
+    expect(renderer.dispose).toHaveBeenCalledOnce();
+    expect(canvas.remove).toHaveBeenCalledOnce();
     await shared.updateEnvironment(environment);
     tick(16);
-    expect(threeMock.create).toHaveBeenCalledTimes(1);
+    expect(threeMock.create).toHaveBeenCalledTimes(2);
     expect(renderer.render).toHaveBeenCalledTimes(2);
   });
 
@@ -398,5 +407,6 @@ describe("lazy singleton", () => {
     hosts.push(shared);
     expect(shared.tier).toBe("svg");
     expect(canvas.hidden).toBe(true);
+    expect(doc.body.appendChild).not.toHaveBeenCalled();
   });
 });

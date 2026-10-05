@@ -36,6 +36,7 @@ export class SceneHost {
   private mode: GlTier;
   private performanceReduced = false;
   private initializing: Promise<RendererInit> | null = null;
+  private canvasAttached = false;
 
   constructor(private renderer: SceneRenderer | null, readonly canvas: HTMLCanvasElement, signals: GlSignals,
     private initialize?: (environment: SceneEnvironment) => Promise<RendererInit>) {
@@ -152,6 +153,17 @@ export class SceneHost {
 
   private syncCanvas(): void {
     this.canvas.hidden = this.mode === "svg" || this.contextLost || document.hidden || this.views.size === 0;
+    if (this.mode === "svg") {
+      this.cancel();
+      this.renderer?.dispose();
+      this.renderer = null;
+      if (this.canvasAttached) this.canvas.remove();
+      this.canvasAttached = false;
+      this.width = this.height = this.dpr = 0;
+    } else if (this.renderer && !this.canvasAttached) {
+      document.body.appendChild(this.canvas);
+      this.canvasAttached = true;
+    }
   }
 
   private updateTier(): void {
@@ -327,7 +339,6 @@ async function createSceneHost(environment: SceneEnvironment): Promise<SceneHost
   const result = await initialize(signals);
   signals.webgl2 = result.webgl2;
   signals.rendererString = result.rendererString;
-  document.body.appendChild(canvas);
   return new SceneHost(result.renderer, canvas, signals, initialize);
 }
 

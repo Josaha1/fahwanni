@@ -14,6 +14,7 @@ import { nearestProvince } from "@/lib/map/nearest";
 import { provinces } from "@/lib/provinces";
 import { distanceKm } from "@/lib/storms/normalize";
 import downstream from "../../../public/data/dam-downstream.json";
+import { TankGrid } from "./tank-grid";
 
 export const validTrend = (value: DamTrend) => Array.isArray(value?.dates) && !!value?.release && !!value?.inflow && !!value?.pct;
 function subscribeProvince(onChange: () => void) {
@@ -76,6 +77,7 @@ export function DrainagePillar({ dams, place }: { dams: Load<DamsPayload>; place
         <div><h3 className="font-semibold">{t("เขื่อนที่ระบายมากกว่าไหลเข้า")}</h3><p>{summary.releasingMore}</p><p className="text-muted">{missing(summary.missingComparison)}</p><SourceTime source="กรมชลประทาน" date={date} kind="daily" /></div>
       </div> : <p role="status" className="text-muted text-sm">{t(dams.status === "loading" ? "กำลังโหลดข้อมูลเขื่อน…" : "ข้อมูลเขื่อนไม่พร้อมใช้งาน")}</p>}
     </section>
+    <TankGrid dams={payload?.dams ?? []} date={date ?? null} trend={trend.data} />
     <section className="placeholder-card space-y-2" aria-label={t("เขื่อนใกล้คุณ")}>
       <h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
       <ul className="text-sm">{near.map(({ dam, km }) => <li key={dam.id}><Link href={`/water/dam/${dam.id}`} className="inline-flex min-h-11 items-center font-semibold text-given underline">{name(dam)} · {t("{km} กม.", { km: number.format(km) })}</Link><SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" /></li>)}</ul>
