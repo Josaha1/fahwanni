@@ -84,6 +84,9 @@ P2c. **Decided by Claude (P2b leaves height null for 32/35 dams):** when OSM/tab
     - Band colour → rim/label accent only; ghost levels as outlines.
     - Delete `public/models/dam.glb` and the Blender scripts.
     Verify: `npx vitest run --no-file-parallelism src/lib/dams src/components/water src/components/dams` + `test ! -f public/models/dam.glb` + `grep -rn "dam.glb\|GLTFLoader" src public scripts` empty; Claude Chrome screenshots of 200101 (arch), 200601 (> 100 %), one earth dam
+**P2c PARKED 2026-10-05** on branch `wip/osm-dam-scene` (renders but not acceptable: fragmented wall at Bhumibol, camera inside water at Pasak,
+    floating slab at Sirikit). User chose "ทำอย่างอื่นก่อน แล้วค่อยกลับมา": do P3, P4, visual-first V9–V11 + push first; then a new Fable design pass
+    for the OSM dam scene (camera, profiles, scale). `main` keeps the previous working dam scene.
 P2d. Caption + i18n: "รูปทรงเขื่อนและขอบอ่างจาก OpenStreetMap · ระดับน้ำเป็นสัญลักษณ์ตาม % กักเก็บ · ประตูน้ำเป็นสัญลักษณ์" + attribution. Verify: `node scripts/i18n-check.mjs`
 P3. Tanks → SVG glass:
     - New `src/components/dams/tank-svg.tsx`.
