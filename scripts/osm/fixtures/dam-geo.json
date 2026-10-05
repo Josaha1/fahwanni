@@ -1,0 +1,275 @@
+{
+  "note": "Synthetic, reduced out geom geometry and Wikidata P31 responses for offline tests only. Dam way IDs/tags/heights supplied in task; reservoir IDs, type entity IDs and all coordinates are invented fixtures, never publish.",
+  "overpass": {
+    "version": 0.6,
+    "generator": "offline fixture",
+    "elements": [
+      {
+        "type": "way",
+        "id": 36835245,
+        "nodes": [
+          1,
+          2,
+          3,
+          4,
+          1
+        ],
+        "tags": {
+          "name": "เขื่อนภูมิพล",
+          "name:en": "Bhumibol Dam",
+          "waterway": "dam",
+          "area": "yes",
+          "height": "154",
+          "material": "concrete",
+          "wikidata": "Q855098"
+        },
+        "geometry": [
+          {
+            "lon": 98.972,
+            "lat": 17.242
+          },
+          {
+            "lon": 98.973,
+            "lat": 17.242
+          },
+          {
+            "lon": 98.973,
+            "lat": 17.243
+          },
+          {
+            "lon": 98.972,
+            "lat": 17.243
+          },
+          {
+            "lon": 98.972,
+            "lat": 17.242
+          }
+        ]
+      },
+      {
+        "type": "way",
+        "id": 36814722,
+        "nodes": [
+          5,
+          6,
+          7,
+          8,
+          5
+        ],
+        "tags": {
+          "name": "เขื่อนสิริกิติ์",
+          "name:en": "Sirikit Dam",
+          "waterway": "dam",
+          "area": "yes",
+          "height": "113.6",
+          "wikidata": "Q339848"
+        },
+        "geometry": [
+          {
+            "lon": 100.563,
+            "lat": 17.764
+          },
+          {
+            "lon": 100.564,
+            "lat": 17.764
+          },
+          {
+            "lon": 100.564,
+            "lat": 17.765
+          },
+          {
+            "lon": 100.563,
+            "lat": 17.765
+          },
+          {
+            "lon": 100.563,
+            "lat": 17.764
+          }
+        ]
+      },
+      {
+        "type": "relation",
+        "id": 900000001,
+        "tags": {
+          "type": "multipolygon",
+          "natural": "water",
+          "water": "reservoir",
+          "name": "อ่างเก็บน้ำภูมิพล"
+        },
+        "members": [
+          {
+            "type": "way",
+            "ref": 900000011,
+            "role": "outer",
+            "geometry": [
+              {
+                "lon": 98.973,
+                "lat": 17.243
+              },
+              {
+                "lon": 98.973,
+                "lat": 17.242
+              },
+              {
+                "lon": 98.972,
+                "lat": 17.242
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "ref": 900000012,
+            "role": "inner",
+            "geometry": [
+              {
+                "lon": 98.9724,
+                "lat": 17.2424
+              },
+              {
+                "lon": 98.9724,
+                "lat": 17.2423
+              },
+              {
+                "lon": 98.9723,
+                "lat": 17.2423
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "ref": 900000013,
+            "role": "outer",
+            "geometry": [
+              {
+                "lon": 98.973,
+                "lat": 17.243
+              },
+              {
+                "lon": 98.972,
+                "lat": 17.243
+              },
+              {
+                "lon": 98.972,
+                "lat": 17.242
+              }
+            ]
+          },
+          {
+            "type": "way",
+            "ref": 900000014,
+            "role": "inner",
+            "geometry": [
+              {
+                "lon": 98.9724,
+                "lat": 17.2424
+              },
+              {
+                "lon": 98.9723,
+                "lat": 17.2424
+              },
+              {
+                "lon": 98.9723,
+                "lat": 17.2423
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "way",
+        "id": 900000002,
+        "tags": {
+          "natural": "water",
+          "water": "reservoir",
+          "name:en": "Sirikit Reservoir"
+        },
+        "geometry": [
+          {
+            "lon": 100.563,
+            "lat": 17.764
+          },
+          {
+            "lon": 100.564,
+            "lat": 17.764
+          },
+          {
+            "lon": 100.564,
+            "lat": 17.765
+          },
+          {
+            "lon": 100.563,
+            "lat": 17.765
+          },
+          {
+            "lon": 100.563,
+            "lat": 17.764
+          }
+        ]
+      }
+    ]
+  },
+  "wikidata": {
+    "entities": {
+      "Q855098": {
+        "id": "Q855098",
+        "claims": {
+          "P31": [
+            {
+              "rank": "normal",
+              "mainsnak": {
+                "snaktype": "value",
+                "property": "P31",
+                "datavalue": {
+                  "type": "wikibase-entityid",
+                  "value": {
+                    "entity-type": "item",
+                    "id": "Q900000001"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Q339848": {
+        "id": "Q339848",
+        "claims": {
+          "P31": [
+            {
+              "rank": "normal",
+              "mainsnak": {
+                "snaktype": "value",
+                "property": "P31",
+                "datavalue": {
+                  "type": "wikibase-entityid",
+                  "value": {
+                    "entity-type": "item",
+                    "id": "Q900000002"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Q900000001": {
+        "id": "Q900000001",
+        "labels": {
+          "en": {
+            "language": "en",
+            "value": "arch dam"
+          }
+        }
+      },
+      "Q900000002": {
+        "id": "Q900000002",
+        "labels": {
+          "en": {
+            "language": "en",
+            "value": "earth-fill dam"
+          }
+        }
+      }
+    }
+  }
+}
