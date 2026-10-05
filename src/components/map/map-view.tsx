@@ -1,5 +1,9 @@
 "use client";
 
+import { TimeScrubber } from "@/components/time-scrubber";
+import { SourceTime } from "@/components/ui/source-time";
+import { reportedIndex } from "@/lib/timeline/reported";
+import { useFloodReplay } from "./use-flood-replay";
 import { isOn } from "@/lib/features";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
@@ -177,10 +181,17 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   });
   const [pathData, setPathData] = useState<{ id: string; path: DamPath; downstream: Downstream } | null>(null);
   const [nowIso, setNowIso] = useState(() => new Date().toISOString());
-  const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : []), [manifest]);
+  const frames = useMemo(() => lastRadarFrames(manifest?.provider === "rainviewer" ? manifest.frames : [], 12), [manifest]);
   const radarAge = minutesSinceNewest(frames, nowIso);
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const nowMs = Date.parse(nowIso);
+  const floodReports = useFloodReplay(water && satFloodOn, nowMs);
+  const [scrubDay, setScrubDay] = useState<string | null>(null);
+  const floodDays = floodReports.map((report) => report.date);
+  const floodReport = floodReports[reportedIndex(floodDays, scrubDay)] ?? null;
+  const [radarDay, setRadarDay] = useState<string | null>(null);
+  const radarDays = frames.map((frame) => frame.time);
+  const replayRadarIndex = reportedIndex(radarDays, radarDay);
   const thermalSeason = thermalAnomaliesDefault(primary, nowMs);
   const thermalOn = isOn("fireHotspots") && (thermalOverride ?? thermalSeason);
   useEffect(() => {
@@ -234,10 +245,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = !lite && terrainAvailable(device.deviceMemory);
   const rainImageSize = lite || terrainOn ? 256 : 512;
-  // Water mode can overlay the newest radar frame ("ฝนตอนนี้") to spot heavy cells near dams and rivers.
+  // Water replay uses only the past frames already present in the radar manifest.
   const [waterRadar, setWaterRadar] = useState(false);
   const waterRadarOn = water && waterRadar && frames.length > 0;
-  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, waterRadarOn ? frames.length - 1 : hasRadarFrame ? rainSource.index : -1,
+  useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, waterRadarOn ? replayRadarIndex : hasRadarFrame ? rainSource.index : -1,
     waterRadarOn || (rainVisible && hasRadarFrame), waterRadarOn ? 0.5 : rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
   useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && (rainSource.kind === "model" || (rainSource.kind === "blend" && rainSource.modelOpacity > 0)), series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: rainSource.kind === "blend" ? rainSource.modelOpacity : 1, size: rainImageSize });
   useTimeImageLayer(mapInstance, { id: "temp", enabled: !water && primary === "temp", series: windSeries, timeMs: effectiveTime, nowMs, kind: "temp", grid: scalarGrid, beforeSymbol: true, opacity: 1, size: 256 });
@@ -260,7 +271,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
   useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
-  useSatelliteFloodLayer(mapInstance, water && satFloodOn, nowMs);
+  useSatelliteFloodLayer(mapInstance, water && satFloodOn, floodReport);
   const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
     ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);
@@ -594,8 +605,17 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       <span aria-hidden="true">{visibleSheetPosition === "half" ? "⌄" : "⌃"}</span>
     </button>}
   </div>;
-  const waterStepper = <WaterDayStepper day={waterDay} nowMs={nowMs} playing={water && playing} reducedMotion={reducedMotion}
-    onChange={(day) => { dispatch({ type: "stop" }); dispatch({ type: "setWaterDay", day }); }} onTogglePlay={() => dispatch({ type: "togglePlay" })} />;
+  const waterStepper = <div className="space-y-2"><WaterDayStepper day={waterDay} nowMs={nowMs} playing={water && playing} reducedMotion={reducedMotion}
+    onChange={(day) => { dispatch({ type: "stop" }); dispatch({ type: "setWaterDay", day }); }} onTogglePlay={() => dispatch({ type: "togglePlay" })} />
+    {water && satFloodOn && <div data-replay="satellite">
+      <TimeScrubber days={floodDays} day={floodReport?.date ?? null} onChange={setScrubDay} label={t("น้ำท่วมจากดาวเทียม")} reducedMotion={reducedMotion} satellite />
+      <SourceTime source="NASA LANCE / GIBS" date={floodReport?.date} kind="satellite" nowMs={nowMs} />
+    </div>}
+    {waterRadarOn && <div data-replay="radar" data-frame-index={replayRadarIndex}>
+      <TimeScrubber days={radarDays} day={frames[replayRadarIndex]?.time ?? null} onChange={setRadarDay} label={t("เวลาเรดาร์")} showTime reducedMotion={reducedMotion} />
+      <SourceTime source="RainViewer" time={frames[replayRadarIndex]?.time} kind="rain24h" nowMs={nowMs} />
+    </div>}
+  </div>;
   const details = <div>
     {primary === "heat" && locationHeat !== null && <p className="mt-2 text-sm font-semibold" aria-live="polite">
       {t("ดัชนีความร้อนที่ตำแหน่งคุณ ~{v}° · {band}", { v: Math.round(locationHeat), band: heatBandWord(heatBand(locationHeat), t) })}
@@ -651,7 +671,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),
   ];
   const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
-    probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
+    probe={probe} favourites={favourites} onClose={close} frame={waterRadarOn ? frames[replayRadarIndex] : hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} reservoirs={reservoirs.points} floodEvents={floodEvents?.items ?? null} floodRisk={floodRisk.points} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
@@ -753,7 +773,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     legend={!isDesktop && showLegend ? <LegendChip variant="strip" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} /> : null}
     details={details} card={card} water={waterPanel || null} riverFooter={water && probe?.kind === "river"}
     freshness={<DataFreshness nowMs={nowMs} rows={freshnessRows({ radarTime: frames.at(-1)?.time, modelFetchedAt, damsDate: dams?.dataDate,
-      satFloodDate: water && satFloodOn ? floodDate(nowMs) : undefined,
+      satFloodDate: water && satFloodOn ? floodReport?.date : undefined,
       thermalDate: !water && thermalOn ? floodDate(nowMs) : undefined,
       himawariTime: !water && primary === "satellite" ? satelliteTimes.himawari : undefined,
       imergTime: !water && imergOn ? satelliteTimes.imerg : undefined,

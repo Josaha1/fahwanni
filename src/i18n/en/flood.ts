@@ -1,4 +1,5 @@
 export const flood: Record<string, string> = {
+  "ดาวเทียมมีข้อมูลเพียง {n} วันในสัปดาห์นี้": "Satellite data is available for only {n} {n:day|days} this week",
   "ดูรายการ": "View list",
   "จุดตรวจ ไม่ใช่พื้นที่": "Sampling points, not area",
   "{n} ภาคมีประกาศเตือน": "{n} regions with warnings",

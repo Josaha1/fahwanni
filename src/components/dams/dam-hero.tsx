@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
+import { TimeScrubber } from "@/components/time-scrubber";
 import { SourceTime } from "@/components/ui/source-time";
 import type { Dam3D } from "@/components/water/dam-3d";
 import { damGhosts, damStreams, reportedDamDays } from "@/lib/dams/model3d";
@@ -77,9 +78,8 @@ export function DamHero({ dam, trend, history }: Props) {
     {ghosts.length > 0 && <ul className="flex flex-wrap gap-3 text-xs">{ghosts.map(({ key, pct, date }) => <li key={key}
       style={{ color: key === "lastYear" ? "#64748b" : "#e11d48" }}>{t(key === "lastYear" ? "ปีที่แล้ว {pct}%" : "ปี 2554 {pct}%", { pct: number.format(pct) })} · {dateLabel(date)}</li>)}</ul>}
     {mode !== "svg" && terrain && <p className="text-muted text-xs">{t("ภูมิประเทศขยายความสูง ×{n}", { n: 4 })} · AWS / Mapzen</p>}
-    <label className="block text-sm">{t("วัน")}: {selectedDate}<input type="range" min="0" max={Math.max(0, days.length - 1)} step="1"
-      value={index} disabled={days.length < 2} aria-label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")}
-      aria-valuetext={selectedDate} className="block min-h-11 w-full" onChange={(event) => setDay(days[Number(event.target.value)].date)} /></label>
+    <TimeScrubber days={days.map((entry) => entry.date)} day={selected.date} onChange={setDay}
+      label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")} reducedMotion={reducedMotion} />
     <p className="text-muted text-xs">{summary}</p>
     <div className="flex flex-wrap gap-3 text-xs"><span>{t("ระบาย (ลบ.ม./วินาที)")}: {selected.releaseCms == null ? "—" : number.format(selected.releaseCms)}</span>
       <span>{t("ไหลเข้า (ลบ.ม./วินาที)")}: {selected.inflowCms == null ? "—" : number.format(selected.inflowCms)}</span></div>

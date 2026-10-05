@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { isValidElement, type ChangeEvent, type ReactElement } from "react";
+import { isValidElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/i18n/client";
 import { translator } from "@/i18n/core";
 import fixture from "@/lib/dams/fixture-rid.json";
 import { parseRidDams } from "@/lib/dams/rid";
 import { tankFill, visualSummaryTank } from "@/lib/visuals";
+import { TimeScrubber } from "@/components/time-scrubber";
 import { DamHero, DamTank } from "./dam-hero";
 
 const scrubber = vi.hoisted(() => ({ day: null as string | null, nullStates: 0 }));
@@ -35,7 +36,8 @@ it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber 
   expect(html).toContain(`<p class="text-muted text-xs">${summary}</p>`);
   expect(html).toContain('type="range" min="0" max="2"');
   expect(html).toContain(`aria-valuetext="${date}"`);
-  expect(html).toContain(`${translator(locale)("วัน")}: ${date}<input`);
+  expect(html).toContain('data-scrub-day="2026-10-05"');
+  expect(html).toContain('data-scrub-index="2"');
   expect(html).not.toContain(`<li>${translator(locale)("100% เต็มความจุ")}</li>`);
   expect(html).toContain('fill="currentColor">100%</text>');
   expect(html).not.toMatch(/>[^<]*\d{4}-\d{2}-\d{2}/);
@@ -49,12 +51,11 @@ it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber 
 });
 
 it.each(["th", "en"] as const)("keeps latest-day staleness but removes it during intentional %s replay", (locale) => {
-  let changeDay: ((event: ChangeEvent<HTMLInputElement>) => void) | undefined;
+  let changeDay: ((day: string) => void) | undefined;
   function Hero() {
     const tree = DamHero({ dam, trend, history });
-    const label = tree.props.children.find((child: unknown) => isValidElement(child) && child.type === "label") as ReactElement<{ children: unknown[] }>;
-    const input = label.props.children.find((child) => isValidElement(child) && child.type === "input") as ReactElement<{ onChange: typeof changeDay }>;
-    changeDay = input.props.onChange;
+    const control = tree.props.children.find((child: unknown) => isValidElement(child) && child.type === TimeScrubber) as ReactElement<{ onChange: typeof changeDay }>;
+    changeDay = control.props.onChange;
     return tree;
   }
   const render = () => {
@@ -64,12 +65,13 @@ it.each(["th", "en"] as const)("keeps latest-day staleness but removes it during
   const old = locale === "th" ? "ข้อมูลเก่า" : "Old data";
   expect(render()).toContain(old);
   expect(render()).toContain("text-amber-600");
-  changeDay!({ target: { value: "0" } } as ChangeEvent<HTMLInputElement>);
+  changeDay!("2026-10-02");
   const html = render();
   const date = locale === "th" ? "2 ต.ค." : "2 Oct";
   const t = translator(locale);
   const summary = `${visualSummaryTank(tankFill(80, 121), t)} · ${t("ข้อมูลวันที่ {date}", { date })}`;
-  expect(html).toContain(`${t("วัน")}: ${date}<input`);
+  expect(html).toContain('data-scrub-day="2026-10-02"');
+  expect(html).toContain('data-scrub-index="0"');
   expect(html).toContain(`aria-valuetext="${date}"`);
   expect(html).toContain(`aria-label="${summary}"`);
   expect(html).toContain(`<p class="text-muted text-xs">${summary}</p>`);
@@ -80,7 +82,7 @@ it.each(["th", "en"] as const)("keeps latest-day staleness but removes it during
   expect(html).not.toContain(`<li>${t("100% เต็มความจุ")}</li>`);
   expect(html).toContain('fill="currentColor">100%</text>');
   expect(html).toContain('value="0"');
-  changeDay!({ target: { value: "2" } } as ChangeEvent<HTMLInputElement>);
+  changeDay!(dam.date);
   expect(render()).toContain(old);
 });
 
