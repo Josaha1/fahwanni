@@ -1,0 +1,16 @@
+export const flood: Record<string, string> = {
+  "ท่วมตอนนี้": "Flood now",
+  "ระบายน้ำ": "Releases",
+  "ฟ้าวันนี้ · น้ำท่วม": "Fah Wanni · Flooding",
+  "ไม่มีประกาศเตือนภัย · กรมอุตุฯ {time}": "No warnings · TMD {time}",
+  "กำลังโหลดประกาศเตือนภัย…": "Loading warnings…",
+  "ข้อมูลประกาศเตือนภัยไม่พร้อมใช้งาน": "Warning data is unavailable",
+  "กำลังโหลดเหตุการณ์น้ำท่วม…": "Loading flood events…",
+  "ข้อมูลเหตุการณ์น้ำท่วมไม่พร้อมใช้งาน": "Flood event data is unavailable",
+  "หน้าแรกแสดงประกาศเตือนภัยและเหตุการณ์น้ำท่วมที่รายงาน": "The home tab shows warnings and reported flood events",
+  "ดูท่วมตอนนี้": "See flooding now",
+  "ระบายน้ำและฝน": "Releases and rain",
+  "แท็บระบายน้ำแสดงข้อมูลเขื่อน ส่วนแท็บฝนแสดงพยากรณ์อากาศ": "Releases shows dam data. Rain shows the weather forecast",
+  "ดูการระบายน้ำ": "See dam releases",
+  "เปิดแท็บแผนที่ แล้วแตะปุ่มชั้นข้อมูลเพื่อเลือกข้อมูลที่อยากดู": "Open Map, then tap Layers to choose what to show",
+};

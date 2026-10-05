@@ -4,6 +4,7 @@ import { isOn } from "@/lib/features";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useT } from "@/i18n/client";
+import { useWaterSource, type Load } from "@/hooks/use-water-source";
 import { useLastPlace } from "@/hooks/use-favourites";
 import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, oldestDifferentDamDate, waterSummary } from "@/lib/dams/summary";
@@ -25,23 +26,6 @@ import { EnsoBadge } from "@/components/enso-badge";
 import { DamRowHeader } from "./dam-row";
 import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
 import { TideChart } from "./tide-chart";
-type Load<T> = { status: "loading" | "ready" | "error"; data: T | null };
-
-function useWaterSource<T>(url: string, valid: (value: T) => boolean): Load<T> {
-  const [state, setState] = useState<Load<T>>({ status: "loading", data: null });
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch(url, { signal: controller.signal }).then(async (response) => {
-      if (!response.ok) throw new Error(String(response.status));
-      const value = await response.json() as T;
-      if (!valid(value)) throw new Error("Invalid response");
-      if (!controller.signal.aborted) setState({ status: "ready", data: value });
-    }).catch(() => { if (!controller.signal.aborted) setState({ status: "error", data: null }); });
-    return () => controller.abort();
-  }, [url, valid]);
-  return state;
-}
-
 const validRivers = (value: RiversPayload) => Array.isArray(value?.points);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validRain = (value: RainRisk) => Array.isArray(value?.stations);

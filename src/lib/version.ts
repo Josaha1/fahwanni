@@ -1,3 +1,5 @@
+export const APP_VERSION = "2";
+
 /**
  * Reload when the server runs a different build than the one this page was loaded from,
  * but never while the user is in the middle of a sheet (form) — try again on the next check.

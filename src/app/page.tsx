@@ -1,5 +1,5 @@
-import { WeatherApp } from "@/components/weather-app";
+import { FloodHome } from "@/components/flood/flood-home";
 
 export default function HomePage() {
-  return <WeatherApp />;
+  return <FloodHome />;
 }

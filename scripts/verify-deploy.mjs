@@ -19,6 +19,8 @@ const { version } = JSON.parse(await readFile(new URL("../node_modules/maplibre-
 const paths = [
   "/",
   "/map",
+  "/rain",
+  "/water",
   "/api/weather?lat=13.75&lon=100.5&lang=th",
   "/api/radar",
   "/api/satellite",

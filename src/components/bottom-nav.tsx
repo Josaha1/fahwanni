@@ -76,28 +76,35 @@ export function BottomNav() {
   return (
     <nav ref={navRef} className="bottom-nav flex gap-2" aria-label={t("นำทางหลัก")}
       style={onMap ? { backgroundColor: colors.bg, borderColor: colors.panelBorder, backdropFilter: "blur(12px)" } : undefined}>
-      <Link href="/" aria-current={pathname === "/" ? "page" : undefined} className="nav-tab min-w-0 flex-1 gap-1 text-foreground"
+      <Link href="/" aria-current={pathname === "/" ? "page" : undefined} className="nav-tab min-w-0 flex-1 flex-col gap-1 text-foreground"
         style={onMap ? { color: colors.label, backgroundColor: "transparent" } : undefined}>
         <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17a5 5 0 0 1 3-9 7 7 0 0 1 13 2 4 4 0 0 1 1 7H3Z" />
-          <path d="M8 20h8" />
+          <path d="m4 11 8-7 8 7M7 9v6M17 9v6" />
+          <path d="M2 17c2-2 4 2 6 0s4 2 6 0 4 2 8 0M2 21c2-2 4 2 6 0s4 2 6 0 4 2 8 0" />
         </svg>
-        {t("พยากรณ์")}
+        <span className="max-w-full break-words text-center leading-tight">{t("ท่วมตอนนี้")}</span>
       </Link>
-      <Link href="/water" aria-current={pathname === "/water" ? "page" : undefined} className="nav-tab relative min-w-0 flex-1 gap-1 text-foreground">
+      <Link href="/water" aria-current={pathname === "/water" ? "page" : undefined} className="nav-tab relative min-w-0 flex-1 flex-col gap-1 text-foreground">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2C9 6 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-4-9-7-13Z" />
+          <path d="M4 15 8 4h8l4 11M7 8h10M5 12h14M12 12v7m-3-3 3 3 3-3M2 22c2-2 4 2 6 0s4 2 6 0 4 2 8 0" />
         </svg>
-        {t("น้ำ")}
+        <span className="max-w-full break-words text-center leading-tight">{t("ระบายน้ำ")}</span>
         {news && <span className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-[var(--missed)]" aria-label={t("มีข้อมูลใหม่")} />}
       </Link>
-      <Link href="/map" aria-current={pathname === "/map" ? "page" : undefined} className="nav-tab min-w-0 flex-1 gap-1 text-foreground"
+      <Link href="/rain" aria-current={pathname === "/rain" ? "page" : undefined} className="nav-tab min-w-0 flex-1 flex-col gap-1 text-foreground">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 15a5 5 0 0 1 3-9 7 7 0 0 1 13 2 4 4 0 0 1 1 7H3Z" />
+          <path d="m8 18-1 3m6-3-1 3m6-3-1 3" />
+        </svg>
+        <span className="max-w-full break-words text-center leading-tight">{t("ฝน")}</span>
+      </Link>
+      <Link href="/map" aria-current={pathname === "/map" ? "page" : undefined} className="nav-tab min-w-0 flex-1 flex-col gap-1 text-foreground"
         style={onMap ? { color: colors.border, backgroundColor: colors.panelBorder } : undefined}>
         <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" />
           <path d="M9 3v15M15 6v15" />
         </svg>
-        {t("แผนที่")}
+        <span className="max-w-full break-words text-center leading-tight">{t("แผนที่")}</span>
       </Link>
     </nav>
   );

@@ -42,7 +42,8 @@ const mitr = Mitr({
 });
 
 export const metadata: Metadata = {
-  title: "ฟ้าวันนี้",
+  title: "ฟ้าวันนี้ · สถานการณ์น้ำท่วม",
+  description: "ฟ้าวันนี้ · สถานการณ์น้ำท่วม",
   appleWebApp: { capable: true, title: "ฟ้าวันนี้", statusBarStyle: "default" },
 };
 

@@ -200,7 +200,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         <div className="flex justify-between gap-3"><dt>{t("ลม")}</dt><dd className="text-right font-semibold">{breeze ? t("{wind} {speed} กม./ชม. จากทิศ{bearing}", { wind: windWord(breeze.speedKmh, t), speed: breeze.speedKmh, bearing: bearingWord(breeze.fromDeg, t) }) : t("ไม่ทราบ")}</dd></div>
       </dl>
       {probe.kind === "point" && <PointDayChart hours={pointHours(windSeries, Math.max(timeMs, nowMs), probe.lon, probe.lat, geo)} />}
-      <button type="button" className="map-chip mt-3 w-full" onClick={() => { setPlace(point); router.push("/"); }}>{t("ดูพยากรณ์เต็ม")}</button>
+      <button type="button" className="map-chip mt-3 w-full" onClick={() => { setPlace(point); router.push("/rain"); }}>{t("ดูพยากรณ์เต็ม")}</button>
     </>}
     {storm && <div className="mt-2 space-y-1 text-sm">
       {storm.windKmh !== undefined && <p>{t("ลมสูงสุด {speed} กม./ชม.", { speed: storm.windKmh })}</p>}

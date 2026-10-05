@@ -1,4 +1,4 @@
-const menuTipKey = "fah-tip-menu-v1";
+const menuTipKey = "fah-tip-menu-v2";
 
 export function shouldShowMenuTip() {
   try {

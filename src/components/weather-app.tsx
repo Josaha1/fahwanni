@@ -9,7 +9,6 @@ import { AdviceStrip } from "@/components/advice-strip";
 import { AlertsCard } from "@/components/alerts-card";
 import { AqiCard } from "@/components/aqi-card";
 import { MarineCard } from "@/components/marine-card";
-import { MenuTip } from "@/components/menu-tip";
 import { FarmCard } from "@/components/farm-card";
 import { LongWeekendCard } from "@/components/long-weekend-card";
 import { QuakeCard } from "@/components/quake-card";
@@ -95,7 +94,6 @@ export function WeatherApp() {
         <h1 id="home-title" className="text-3xl" tabIndex={-1}>{t("ฟ้าวันนี้")}</h1>
         <SettingsSheet />
       </div>
-      <MenuTip onClose={() => (document.getElementById("home-today-essentials") ?? document.getElementById("home-title"))?.focus()} />
       <OfflineSupport />
       <LocationBar place={place} locale={t.locale} onSearch={() => setSearchOpen(true)} onGps={locate} locating={locating} />
       <FavouritesRow place={place} onSelect={selectPlace} />
