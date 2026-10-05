@@ -1,5 +1,6 @@
 "use client";
 
+import { DrainagePillar } from "@/components/dams/drainage-pillar";
 import { isOn } from "@/lib/features";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
@@ -140,9 +141,10 @@ export function WaterPage() {
 
   return <main className="app-shell space-y-4" style={{ paddingBottom: "calc(var(--nav-h, 88px) + 2rem)" }}>
     <header className="flex flex-wrap items-center justify-between gap-x-3">
-      <h1 className="text-2xl font-semibold">{t("สถานการณ์น้ำ · {place}", { place: place.name })}</h1>
+      <h1 className="text-2xl font-semibold">{t("การระบายน้ำจากเขื่อน")}</h1>
       <Link className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2" href="/map?mode=water">{t("ดูบนแผนที่")}</Link>
     </header>
+    <DrainagePillar dams={dams} place={place} />
     {warnings.data && warnings.data.items.length > 0 && <section className="placeholder-card space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
       <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
       <TmdWarningList items={warnings.data.items} limit={3} />

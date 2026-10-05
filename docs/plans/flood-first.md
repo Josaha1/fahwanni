@@ -77,7 +77,8 @@ What-if simulation (flood-sim lib, depth layer, panel, flood probe/card, en/floo
 6. **Decided by Claude (Codex asked):** `/api/rain-risk` drops stations ≤ 35 mm, so `RainRisk` gains `all: [{id,nameTh,nameEn,provinceTh,lat,lon,rainMm}]`
    (every reporting station with valid TH coordinates, incl. 0 mm); `stations` (heavy only) unchanged. Nearest station + task 8 use `all`.
    FloodHome (`/`): warnings, ใกล้บ้านคุณ, ทั้งประเทศ, events, note, freshness, footer — Verify: Playwright 390 px: warning/near-me/map CTA within 760 px.
-7. Dams page + drill-down; trend API adds inflow — Verify: vitest dams; Playwright `/dams` and `/dams/200101`.
+7. **Decided by Claude (routes merged after Fable's 2nd report):** the dams pillar is the existing `/water` page (top section added), drill-down = `/water/dam/[id]`; no `/dams` route.
+   Dams page + drill-down; trend API adds inflow — Verify: vitest dams; Playwright `/dams` and `/dams/200101`.
 8. Rain page: TMD stations national/region/near, radar thumb, model accumulation 1/3/7 d at place + per dam area — Verify: lib tests; Playwright `/rain`.
 9. Map defaults (water mode, default layers, rain-only weather mode) + Thailand clamp (map bounds, geocoding TH only) — Verify: map-state/url-state tests (`?layer=pm25` → rain; empty URL → water mode).
 10. Share flood summary (text + image), i18n sweep, README, verify-deploy paths (/dams, /rain, /forecast, /api/flood-now), push, live screenshots, memory.

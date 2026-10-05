@@ -25,6 +25,8 @@ it("loads dated RID reports, skips a failed date, and caches the trend for six h
   expect(trend.dates).not.toContain("2026-09-25");
   expect(trend.dates.at(-1)).toBe(fixture.date);
   expect(trend.pct["200101"]).toHaveLength(7);
+  expect(trend.inflow["200101"]).toHaveLength(7);
+  expect(trend.inflow["200101"].at(-1)).toEqual(expect.any(Number));
   expect(fetchMock).toHaveBeenCalledTimes(8);
   expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/public/2026-09-22"), expect.objectContaining({ next: { revalidate: 21600 } }));
   vi.setSystemTime(new Date("2026-09-29T17:59:59+07:00"));

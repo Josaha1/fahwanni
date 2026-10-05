@@ -13,7 +13,7 @@ describe("FloodHome data", () => {
     expect(nearestRainStation([], station)).toBeNull();
   });
   it("compares only the previous calendar day's release, including zero", () => {
-    const trend = { dates: ["2026-10-01", "2026-10-03"], pct: {}, release: { dam: [0, 20] } };
+    const trend = { dates: ["2026-10-01", "2026-10-03"], pct: {}, inflow: {}, release: { dam: [0, 20] } };
     expect(previousRelease(trend, "dam", "2026-10-02")).toBe(0);
     expect(previousRelease(trend, "dam", "2026-10-04")).toBe(20);
     expect(previousRelease(trend, "dam", "2026-10-03")).toBeNull();

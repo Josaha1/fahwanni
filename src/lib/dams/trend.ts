@@ -5,6 +5,8 @@ export interface DamTrend {
   pct: Record<string, (number | null)[]>;
   /** Release m³/s per report date; null when the dam did not report that day (never a back-filled value). */
   release: Record<string, (number | null)[]>;
+  /** Inflow m³/s; absent or back-filled reports remain null. */
+  inflow: Record<string, (number | null)[]>;
 }
 
 export function trendDates(dataDate: string, days = 7): string[] {
@@ -20,14 +22,22 @@ export function buildTrend(reports: { date: string; dams: Dam[] }[]): DamTrend {
   const ids = new Set(ordered.flatMap(({ dams }) => dams.map(({ id }) => id)));
   const pct: DamTrend["pct"] = {};
   const release: DamTrend["release"] = {};
+  const inflow: DamTrend["inflow"] = {};
   for (const id of ids) {
-    pct[id] = ordered.map(({ dams }) => dams.find((dam) => dam.id === id)?.storagePct ?? null);
+    pct[id] = ordered.map(({ date, dams }) => {
+      const dam = dams.find((entry) => entry.id === id);
+      return dam && dam.date === date ? dam.storagePct : null;
+    });
+    inflow[id] = ordered.map(({ date, dams }) => {
+      const dam = dams.find((entry) => entry.id === id);
+      return dam && dam.date === date ? dam.inflowCms : null;
+    });
     release[id] = ordered.map(({ date, dams }) => {
       const dam = dams.find((entry) => entry.id === id);
       return dam && dam.date === date ? dam.releaseCms : null;
     });
   }
-  return { dates, pct, release };
+  return { dates, pct, release, inflow };
 }
 
 export function trendDelta(values: (number | null)[]): number | null {

@@ -30,11 +30,14 @@ describe("dam history", () => {
     const today = parseRidDams(fixture);
     const [first, second] = today.dams;
     const trend = buildTrend([
-      { date: "2026-09-29", dams: [{ ...first, date: "2026-09-29", releaseCms: 10 }, { ...second, date: "2026-09-29", releaseCms: 5 }] },
+      { date: "2026-09-29", dams: [{ ...first, date: "2026-09-29", releaseCms: 10, inflowCms: 20 }, { ...second, date: "2026-09-29", releaseCms: 5, inflowCms: 7 }] },
       // morning back-fill: `second` still carries yesterday's report
-      { date: "2026-09-30", dams: [{ ...first, date: "2026-09-30", releaseCms: 12 }, { ...second, date: "2026-09-29", releaseCms: 5 }] },
+      { date: "2026-09-30", dams: [{ ...first, date: "2026-09-30", releaseCms: 12, inflowCms: null }, { ...second, date: "2026-09-29", releaseCms: 5, inflowCms: 7 }] },
     ]);
     expect(trend.release[first.id]).toEqual([10, 12]);
     expect(trend.release[second.id]).toEqual([5, null]);
+    expect(trend.inflow[first.id]).toEqual([20, null]);
+    expect(trend.inflow[second.id]).toEqual([7, null]);
+    expect(trend.pct[second.id]).toEqual([second.storagePct, null]);
   });
 });

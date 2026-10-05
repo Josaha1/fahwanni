@@ -5,6 +5,7 @@ import { sumRelease } from "./observed";
 const trend: DamTrend = {
   dates: ["2026-09-24", "2026-09-25", "2026-09-30"],
   pct: {},
+  inflow: {},
   release: { a: [10, null, 30], b: [5, 6, 7] },
 };
 
