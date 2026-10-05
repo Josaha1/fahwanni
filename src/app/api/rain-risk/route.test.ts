@@ -10,7 +10,10 @@ it("returns TMD stations and caches the response for 30 minutes", async () => {
   const fetchMock = vi.fn(async () => Response.json(fixture));
   vi.stubGlobal("fetch", fetchMock);
   const first = await GET();
-  expect((await first.json()).stations).toHaveLength(6);
+  const payload = await first.json();
+  expect(payload.stations).toHaveLength(6);
+  expect(payload.all).toHaveLength(124);
+  expect(payload.all.some((station: { rainMm: number }) => station.rainMm === 0)).toBe(true);
   expect(first.headers.get("Cache-Control")).toBe("public, s-maxage=1800, stale-while-revalidate=3600");
   expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("WeatherToday/V2/"), expect.objectContaining({ next: { revalidate: 1800 } }));
   vi.setSystemTime(30 * 60 * 1000 - 1);
