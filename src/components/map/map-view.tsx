@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
@@ -88,8 +87,6 @@ import { useProbe } from "./use-probe";
 import { captureMapBlob, mapSourceLine, renderMapShareImage } from "@/components/share/render-map-share";
 import { damLegendStrip, legendFor } from "@/lib/map/legend";
 
-const FloodDepthPanel = dynamic(() => import("./ui/flood-depth-panel").then((module) => module.FloodDepthPanel), { ssr: false });
-
 function initialSheetPosition(): SheetPosition {
   try {
     const saved = localStorage.getItem("fah-map-sheet");
@@ -161,15 +158,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [makingImage, setMakingImage] = useState(false);
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
-  const [floodOn, setFloodOn] = useState(false);
-  const [floodDepth, setFloodDepth] = useState(1.0);
-  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, floodOn: floodOn && !lite, onRoute: focusRoute });
+  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
   if (lite && buildings3dOn) setBuildings3dOn(false);
-  if (lite && floodOn) setFloodOn(false);
-  const toggleFlood = () => {
-    if (!floodOn) setBuildings3dOn(true);
-    setFloodOn((on) => !on);
-  };
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
       const saved = Number(localStorage.getItem("fah-map-play-speed"));
@@ -239,23 +229,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const interpolatedWindField = useMemo(() => windFieldAt(windSeries, windMinute, scalarGrid), [windSeries, windMinute]);
   const windField = interpolatedWindField ?? (wind ? fieldFromGrid(wind, windHour) : null);
   const terrainOk = !lite && terrainAvailable(device.deviceMemory);
-  const [floodGround, setFloodGround] = useState<{ probe: typeof probe; elevation: number | null } | null>(null);
-  useEffect(() => {
-    if (!mapInstance || probe?.kind !== "flood" || !floodOn || !terrainOn || !terrainOk) return;
-    let active = true;
-    const update = () => {
-      if (!active) return;
-      const terrain = mapInstance.getTerrain();
-      const elevation = terrain ? mapInstance.queryTerrainElevation([probe.lon, probe.lat]) : null;
-      // MapLibre reports the displayed height, including the terrain's visual exaggeration.
-      const ground = elevation === null ? null : elevation / (terrain?.exaggeration ?? 1);
-      setFloodGround((current) => current?.probe === probe && current.elevation === ground ? current : { probe, elevation: ground });
-    };
-    queueMicrotask(update);
-    mapInstance.on("sourcedata", update);
-    mapInstance.on("terrain", update);
-    return () => { active = false; mapInstance.off("sourcedata", update); mapInstance.off("terrain", update); };
-  }, [mapInstance, probe, floodOn, terrainOn, terrainOk]);
   const rainImageSize = lite || terrainOn ? 256 : 512;
   // Water mode can overlay the newest radar frame ("ฝนตอนนี้") to spot heavy cells near dams and rivers.
   const [waterRadar, setWaterRadar] = useState(false);
@@ -407,7 +380,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   // A newly opened card expands the sheet once; after that the user can collapse it (the card title
   // stays visible at the top of the collapsed sheet).
   const visibleSheetPosition = sheetPosition;
-  const probeKey = probe ? (probe.kind === "point" || probe.kind === "flood" ? `${probe.kind}:${probe.lat},${probe.lon}` : `${probe.kind}:${probe.id}`) : null;
+  const probeKey = probe ? (probe.kind === "point" ? `${probe.kind}:${probe.lat},${probe.lon}` : `${probe.kind}:${probe.id}`) : null;
   const [expandedFor, setExpandedFor] = useState<string | null>(null);
   if (probeKey !== expandedFor) {
     // Adjusting state while rendering (React's documented pattern) instead of in an effect.
@@ -673,12 +646,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     ...(quakes.length > 0 ? [{ label: "แผ่นดินไหว", count: quakes.length, checked: quakesOn,
       onChange: () => dispatch({ type: "toggleOverlay", key: "quakes" }) }] : []),
   ];
-  const card = probe && (probe.kind !== "flood" || (floodOn && !lite)) && <PointCard key={probe.kind === "point" || probe.kind === "flood" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
+  const card = probe && <PointCard key={probe.kind === "point" ? `${probe.kind}-${probe.lat}-${probe.lon}` : `${probe.kind}-${probe.id}`}
     probe={probe} favourites={favourites} onClose={close} frame={hasRadarFrame ? frames[rainSource.index] : frames.at(-1)} wind={wind} windHour={windHour} windField={windField} windSeries={windSeries} pm25Series={pm25Series}
     timeMs={effectiveTime} nowMs={nowMs} timeLabel={timeLabelText(t, effectiveTime, domain, { radarTime: hasRadarFrame ? rainSource.frameTime : undefined, primary, satelliteTime: satelliteTimes.himawari, lastAvailable: primary === "pm25" ? pm25LastAvailable ?? undefined : undefined })} storms={storms} quakes={quakes} dams={dams} damsTrend={damsTrend} damsHistory={damsHistory} rainRisk={rainRisk} rivers={rivers} riversStatus={riversStatus} reservoirs={reservoirs.points} floodEvents={floodEvents?.items ?? null} floodRisk={floodRisk.points} waterDay={waterDay}
     watch={watch} onToggleWatch={toggleDamWatch} onToggleRiverWatch={toggleRiverWatch}
-    floodSimulation={probe.kind === "flood" ? { depth: floodDepth, buildingHeight: probe.buildingHeight ?? null,
-      groundElevation: floodGround?.probe === probe ? floodGround.elevation : null, terrainOn: terrainOn && terrainOk } : null}
     downstream={probe.kind === "dam" && activePathId === probe.id ? activePath?.downstream ?? null : null}
     pathActive={probe.kind === "dam" && activePathId === probe.id} pathLoading={probe.kind === "dam" && activePathId === probe.id && pathLoading} onTogglePath={togglePath}
     onSelectDam={(id) => select({ kind: "dam", id })} />;
@@ -715,7 +686,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const changeMode = useCallback((next: typeof mode) => {
     if (next === mode) return;
     // A weather card does not belong in water mode; water source cards close in weather mode.
-    if (probe && probe.kind !== "flood" && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir" || probe.kind === "floodEvent" || probe.kind === "floodRisk")) close();
+    if (probe && (next === "water") !== (probe.kind === "dam" || probe.kind === "rain" || probe.kind === "river" || probe.kind === "reservoir" || probe.kind === "floodEvent" || probe.kind === "floodRisk")) close();
     dispatch({ type: "setMode", mode: next });
   }, [mode, probe, close]);
   const openShortcuts = () => {
@@ -793,7 +764,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <p id={mapSummaryId} className="sr-only" aria-live="polite" aria-atomic="true">{mapSummary}</p>
     {mapInstance && wind && windOn && !water && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
-    {floodOn && !lite && <FloodDepthPanel map={mapInstance} depth={floodDepth} onDepth={setFloodDepth} onClose={() => setFloodOn(false)} />}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
     <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn, surfaceWater: water && surfaceWaterOn, reservoirs: water && reservoirsOn && reservoirs.status === "ready", floodEvents: water && floodEventsOn && Boolean(floodEvents?.items.length), floodRisk: water && floodRiskOn, thermal: !water && thermalOn, imerg: !water && imergOn }}
@@ -817,7 +787,6 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
       buildings3d={!lite ? { label: "อาคาร 3 มิติ", checked: buildings3dOn, onChange: () => setBuildings3dOn((on) => !on) } : null}
-      flood={!lite ? { label: "จำลองน้ำท่วม (ความลึกจากพื้น)", checked: floodOn, onChange: toggleFlood } : null}
       lite={{ label: "โหมดประหยัด (ลดภาพเคลื่อนไหว)", checked: lite, onChange: toggleLite }} automaticLite={lite && liteOverride === null && automaticLite}
       fullscreen={immersive} onFullscreen={toggleFullscreen}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />

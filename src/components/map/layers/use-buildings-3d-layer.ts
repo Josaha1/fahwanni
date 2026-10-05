@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import type { FillLayerSpecification, Map } from "maplibre-gl";
 import type { BaseTheme } from "@/lib/map/base-style";
-import { buildings3dLayer } from "@/lib/map/flood-sim";
+import { buildings3dLayer } from "@/lib/map/buildings-3d";
 import { useStyleEffect } from "../use-style-effect";
 
 export function useBuildings3dLayer(map: Map | null, enabled: boolean, theme: BaseTheme): void {

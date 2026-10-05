@@ -26,7 +26,7 @@ const FILTERS: { filter: DamFilter; label: string }[] = [
   { filter: "release", label: "ระบายมาก" }, { filter: "watched", label: "ติดตาม" },
 ];
 
-export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSeason, imerg, waterLayers, terrain, buildings3d, flood, lite, automaticLite, fullscreen, onFullscreen,
+export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSeason, imerg, waterLayers, terrain, buildings3d, lite, automaticLite, fullscreen, onFullscreen,
   onOpenLegend, dialogRef, triggerRef }: {
   mode: "weather" | "water";
   primaryPicker: ReactNode;
@@ -37,7 +37,6 @@ export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSe
   waterLayers: WaterLayers;
   terrain: SwitchRow | null;
   buildings3d: SwitchRow | null;
-  flood: SwitchRow | null;
   lite: SwitchRow;
   automaticLite: boolean;
   fullscreen: boolean;
@@ -119,7 +118,6 @@ export function LayersDialog({ mode, primaryPicker, overlays, thermal, thermalSe
         {switchButton(buildings3d)}
         <p className="map-muted mt-1 text-xs">{t("ซูมเข้าเพื่อเห็นอาคาร · ความสูงอาคารจาก OpenStreetMap หลายหลังยังไม่มีข้อมูลความสูง")}</p>
       </>}
-      {flood && switchButton(flood)}
       {switchButton(lite)}
       {automaticLite && <p className="map-muted mt-1 text-xs">{t("เปิดอัตโนมัติเพราะเครื่องนี้ตั้งลดภาพเคลื่อนไหว/หน่วยความจำน้อย")}</p>}
       {switchButton({ label: "เต็มจอ", checked: fullscreen, onChange: onFullscreen })}
