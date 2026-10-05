@@ -7,9 +7,11 @@ import { parseRidDams } from "@/lib/dams/rid";
 import { DAM_REGISTRY } from "@/lib/dams/registry";
 import { visualSummaryTank } from "@/lib/visuals";
 import { tankGridData } from "./tank-grid-data";
-import { GridTankSvg, TankGrid } from "./tank-grid";
+import { TankGrid } from "./tank-grid";
+import { GridTankSvg } from "./tank-svg";
 
-vi.mock("@/hooks/use-lite", () => ({ useLite: () => ({ lite: true, reducedMotion: false }) }));
+const motion = vi.hoisted(() => ({ reducedMotion: false }));
+vi.mock("@/hooks/use-lite", () => ({ useLite: () => ({ lite: true, ...motion }) }));
 const parsed = parseRidDams(fixture);
 const date = parsed.dataDate!;
 const first = { ...parsed.dams[0], storagePct: 110, releaseCms: 1500, inflowCms: 500 };
@@ -42,15 +44,14 @@ it.each(["th", "en"] as const)("renders 35 compact SVG cards with accessible cap
     expect(cards[index]).toBe(`${name}${entry.fill.state === "data" ? "110%" : "—"} —`);
   }
   expect(html).not.toContain("<text");
+  expect(html).not.toContain("<canvas");
 });
 
 it("keeps >100% above the crest, caps streams and distinguishes a reported zero from missing", () => {
   const entries = tankGridData([first, { ...parsed.dams[1], storagePct: 0, releaseCms: 0, inflowCms: null }], date, null);
   const entry = entries.find((entry) => entry.id === first.id)!;
   const html = renderToStaticMarkup(<GridTankSvg entry={entry} />);
-  const fill = html.match(/data-tank-fill=""[^>]+y="([^"]+)"[^>]+height="([^"]+)"/)!;
-  expect(Number(fill[1])).toBeCloseTo(30);
-  expect(Number(fill[2])).toBeCloseTo(110);
+  expect(html).toContain('data-tank-fill="" d="M42 30 ');
   expect(html).toContain('y1="40" y2="40"');
   expect(html).toContain('data-stream="release"');
   expect(html).toContain('stroke-width="6"');
@@ -60,7 +61,7 @@ it("keeps >100% above the crest, caps streams and distinguishes a reported zero 
   expect(zero.state).toMatchObject({ pct: 0, release: 0, inflow: null });
   expect(renderToStaticMarkup(<GridTankSvg entry={zero} />)).not.toContain('data-stream=');
   const missing = entries.find((entry) => entry.fill.state === "no-data")!;
-  expect(renderToStaticMarkup(<GridTankSvg entry={missing} />)).toContain(`fill="url(#missing-${missing.id})"`);
+  expect(renderToStaticMarkup(<GridTankSvg entry={missing} />)).toMatch(/fill="url\(#missing-[^)]+\)"/);
 });
 
 it("uses only today's RID reports and exact yesterday for arrows", () => {
@@ -72,4 +73,14 @@ it("uses only today's RID reports and exact yesterday for arrows", () => {
   expect(stale).toHaveLength(DAM_REGISTRY.length);
   expect(stale.every((entry) => entry.state.pct === null && entry.change === null)).toBe(true);
   expect(tankGridData([], null, null).every((entry) => entry.fill.state === "no-data")).toBe(true);
+});
+
+it("keeps the grid SVG-only and removes wave animation when reduced motion is requested", () => {
+  motion.reducedMotion = true;
+  try {
+    const html = renderToStaticMarkup(<LocaleProvider locale="th"><TankGrid dams={[first]} date={date} trend={null} /></LocaleProvider>);
+    expect(html).not.toContain('class="tank-wave"');
+    expect(html).not.toContain("<canvas");
+    expect(html.match(/&quot;mode&quot;:&quot;svg&quot;/g)).toHaveLength(35);
+  } finally { motion.reducedMotion = false; }
 });

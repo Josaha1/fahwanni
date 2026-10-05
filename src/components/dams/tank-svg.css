@@ -1,0 +1,6 @@
+.tank-wave { animation: tank-wave 4s linear infinite; }
+@keyframes tank-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-76px); }
+}
+@media (prefers-reduced-motion: reduce) { .tank-wave { animation: none; } }
