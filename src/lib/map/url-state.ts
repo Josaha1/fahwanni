@@ -27,7 +27,7 @@ export function parseUrlView(search: string): UrlView {
   const view: UrlView = {};
   const lat = boundedNumber(params.get("lat"), -5, 30);
   const lon = boundedNumber(params.get("lon"), 80, 130);
-  const z = boundedNumber(params.get("z"), 3, 12);
+  const z = boundedNumber(params.get("z"), 3, 17);
   const layer = params.get("layer");
   // `focus` was a temporary name for the same thing while the time bar was being built.
   const time = params.get("t") ?? params.get("focus");

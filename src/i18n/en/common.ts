@@ -583,6 +583,8 @@ export const common: Record<string, string> = {
   "แสดงปุ่มลัด": "Show keyboard shortcuts",
   "น้ำ": "Water",
   "แผนที่ 3 มิติ": "3D map",
+  "อาคาร 3 มิติ": "3D buildings",
+  "ซูมเข้าเพื่อเห็นอาคาร · ความสูงอาคารจาก OpenStreetMap หลายหลังยังไม่มีข้อมูลความสูง": "Zoom in to see buildings · Building heights from OpenStreetMap; many buildings still have no height data",
   "โหมดประหยัด (ลดภาพเคลื่อนไหว)": "Lite mode (less motion)",
   "เปิดอัตโนมัติเพราะเครื่องนี้ตั้งลดภาพเคลื่อนไหว/หน่วยความจำน้อย": "Turned on automatically because this device requests less motion or has limited resources",
   "% ความจุ": "% of capacity",

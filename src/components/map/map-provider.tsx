@@ -72,7 +72,7 @@ export function MapProvider({ containerRef, initialCenter, initialZoom = 6, chil
         center,
         zoom,
         minZoom: 3,
-        maxZoom: 12,
+        maxZoom: 17,
         maxPitch: 60,
         maxBounds: [[80, -5], [130, 30]],
         pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),

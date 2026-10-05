@@ -43,6 +43,8 @@ Always labelled **"ภาพจำลองสมมติ ไม่ใช่ก
 ## Tasks (one at a time — Codex again from today, Claude verifies)
 1. `src/lib/map/flood-sim.ts` + tests: grid, floor reached, Terrarium decode, depth colours, relief gate, layer specs.
 2. 3D buildings layer + hide flat buildings + switch "อาคาร 3 มิติ" in the layers dialog.
+   **Decided by Claude (Codex asked):** map `maxZoom` 12 → 17 in `src/components/map/map-provider.tsx` (12 had no stated reason;
+   buildings need ≥ 14; weather rasters are coarse anyway, radar keeps its own maxZoom).
 3. Mode A water + wet band; flood panel (slider, presets, caveat); off in lite.
 4. Flood tap card (new probe kind that works in water mode).
 5. Mode B (relief-gated) + % line.

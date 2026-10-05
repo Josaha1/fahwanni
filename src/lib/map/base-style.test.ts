@@ -52,7 +52,7 @@ describe.each(["light", "dark"] as const)("baseStyle %s", (theme) => {
       const fonts = symbol.layout?.["text-font"];
       if (fonts !== undefined) {
         if (!Array.isArray(fonts)) throw new Error(`Expected font list: ${original.id}`);
-        for (const font of fonts) expect(available.has(font)).toBe(true);
+        for (const font of fonts) expect(available.has(String(font))).toBe(true);
       }
       expect(symbol.paint?.["text-color"]).toBe(/^place_(country|state|city)/.test(original.id) ? BASE[theme].label : BASE[theme].labelMuted);
       expect(symbol.paint?.["text-halo-color"]).toBe(BASE[theme].halo);

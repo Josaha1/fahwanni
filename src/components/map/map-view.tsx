@@ -60,6 +60,7 @@ import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
 import { readWatch, refreshWatch, toggleWatch, writeWatch } from "@/lib/water/watchlist";
 import type { Dam } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
+import { useBuildings3dLayer } from "./layers/use-buildings-3d-layer";
 import { usePlateLayer } from "./layers/use-plate-layer";
 import { usePlaceMarker } from "./layers/use-place-marker";
 import { useFavouriteLayer } from "./layers/use-favourite-layer";
@@ -157,6 +158,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [immersive, setImmersive] = useState(false);
   const [makingImage, setMakingImage] = useState(false);
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
+  const [buildings3dOn, setBuildings3dOn] = useState(false);
+  if (lite && buildings3dOn) setBuildings3dOn(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
       const saved = Number(localStorage.getItem("fah-map-play-speed"));
@@ -244,6 +247,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useStormLayer(mapInstance, storms, !water && stormsOn, selectStorm);
   useQuakeLayer(mapInstance, quakes, !water && quakesOn);
   useTerrainLayer(mapInstance, terrainOn && terrainOk, reducedMotion);
+  useBuildings3dLayer(mapInstance, buildings3dOn && !lite, theme);
+  useEffect(() => {
+    if (mapInstance && buildings3dOn && !lite && mapInstance.getPitch() === 0) {
+      mapInstance.easeTo({ pitch: 55, duration: reducedMotion ? 0 : 800 });
+    }
+  }, [mapInstance, buildings3dOn, lite, reducedMotion]);
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
   useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
@@ -777,6 +786,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
         surfaceWater: { label: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", checked: surfaceWaterOn, onChange: () => setSurfaceWaterOn((on) => !on) },
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
+      buildings3d={!lite ? { label: "อาคาร 3 มิติ", checked: buildings3dOn, onChange: () => setBuildings3dOn((on) => !on) } : null}
       lite={{ label: "โหมดประหยัด (ลดภาพเคลื่อนไหว)", checked: lite, onChange: toggleLite }} automaticLite={lite && liteOverride === null && automaticLite}
       fullscreen={immersive} onFullscreen={toggleFullscreen}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
