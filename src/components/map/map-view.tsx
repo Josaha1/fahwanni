@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
@@ -87,6 +88,8 @@ import { useProbe } from "./use-probe";
 import { captureMapBlob, mapSourceLine, renderMapShareImage } from "@/components/share/render-map-share";
 import { damLegendStrip, legendFor } from "@/lib/map/legend";
 
+const FloodDepthPanel = dynamic(() => import("./ui/flood-depth-panel").then((module) => module.FloodDepthPanel), { ssr: false });
+
 function initialSheetPosition(): SheetPosition {
   try {
     const saved = localStorage.getItem("fah-map-sheet");
@@ -159,7 +162,14 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [makingImage, setMakingImage] = useState(false);
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
+  const [floodOn, setFloodOn] = useState(false);
+  const [floodDepth, setFloodDepth] = useState(1.0);
   if (lite && buildings3dOn) setBuildings3dOn(false);
+  if (lite && floodOn) setFloodOn(false);
+  const toggleFlood = () => {
+    if (!floodOn) setBuildings3dOn(true);
+    setFloodOn((on) => !on);
+  };
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
       const saved = Number(localStorage.getItem("fah-map-play-speed"));
@@ -764,6 +774,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     <p id={mapSummaryId} className="sr-only" aria-live="polite" aria-atomic="true">{mapSummary}</p>
     {mapInstance && wind && windOn && !water && status === "ready" && <WindCanvas map={mapInstance} field={windField} animate={motion.animate} count={motion.count} />}
     {!isDesktop && <div className="map-search-position"><MapSearchPill placeName={placeName} /></div>}
+    {floodOn && !lite && <FloodDepthPanel map={mapInstance} depth={floodDepth} onDepth={setFloodDepth} onClose={() => setFloodOn(false)} />}
     <ModeSwitch mode={mode} onChange={changeMode} />
     {isDesktop && !water && showLegend && <LegendChip variant="floating" primary={mapState.primary} rainMode={legendRainMode} buttonRef={legendButton} onOpen={openLegend} />}
     <LegendDialog mode={mode} primary={mapState.primary} rainMode={legendRainMode} active={{ wind: !water && windOn && Boolean(wind), storms: !water && stormsOn && storms.length > 0, quakes: !water && quakesOn && quakes.length > 0, favourites: !water && favourites.length > 0, dams: water && damsStatus === "ready" && Boolean(dams), rivers: water && riversStatus === "ready" && Boolean(rivers), allRoutes: water && allRoutes, rainRisk: water && rainRiskStatus === "ready" && Boolean(rainRisk), rainAccum: water && rainAccumOn, satFlood: water && satFloodOn, surfaceWater: water && surfaceWaterOn, reservoirs: water && reservoirsOn && reservoirs.status === "ready", floodEvents: water && floodEventsOn && Boolean(floodEvents?.items.length), floodRisk: water && floodRiskOn, thermal: !water && thermalOn, imerg: !water && imergOn }}
@@ -787,6 +798,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       }}
       terrain={terrainOk ? { label: "แผนที่ 3 มิติ", checked: terrainOn, onChange: () => dispatch({ type: "toggleOverlay", key: "terrain" }) } : null}
       buildings3d={!lite ? { label: "อาคาร 3 มิติ", checked: buildings3dOn, onChange: () => setBuildings3dOn((on) => !on) } : null}
+      flood={!lite ? { label: "จำลองน้ำท่วม (ความลึกจากพื้น)", checked: floodOn, onChange: toggleFlood } : null}
       lite={{ label: "โหมดประหยัด (ลดภาพเคลื่อนไหว)", checked: lite, onChange: toggleLite }} automaticLite={lite && liteOverride === null && automaticLite}
       fullscreen={immersive} onFullscreen={toggleFullscreen}
       onOpenLegend={openLegendFromLayers} dialogRef={layersDialog} triggerRef={layersButton} />
