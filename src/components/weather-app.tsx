@@ -42,10 +42,12 @@ const bangkok: Place = {
   lat: 13.75, lon: 100.50, source: "province",
 };
 
+const RainPillar = dynamic(() => import("@/components/rain/rain-pillar").then((module) => module.RainPillar), { ssr: false });
+
 const StormBanner = dynamic(() => import("@/components/storm-banner").then((module) => module.StormBanner), { ssr: false });
 const WaterNearYou = dynamic(() => import("@/components/water-near-you").then((module) => module.WaterNearYou), { ssr: false });
 
-export function WeatherApp() {
+export function WeatherApp({ rainPillar = false }: { rainPillar?: boolean }) {
   const t = useT();
   const { place, setPlace } = useLastPlace();
   const weather = useWeather(place, t.locale);
@@ -99,6 +101,7 @@ export function WeatherApp() {
       <FavouritesRow place={place} onSelect={selectPlace} />
       {searchOpen && <SearchBox locale={t.locale} onSelect={selectPlace} onClose={() => setSearchOpen(false)} />}
       <div className="space-y-4">
+        {rainPillar && <RainPillar place={place} />}
         {showStormBanner && <StormBanner place={place} />}
         {(brief.rain || brief.heat || brief.water) && <section className="placeholder-card" aria-label={t("วันนี้ต้องรู้")}>
           <h2 id="home-today-essentials" className="text-xl" tabIndex={-1}>{t("วันนี้ต้องรู้")}</h2>

@@ -1,0 +1,7 @@
+.rain-station-dot { display: block; border: 2px solid white; border-radius: 50%; }
+.rain-station-pulse { animation: rain-station-pulse ease-out infinite; }
+@keyframes rain-station-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(56 189 248 / 0); }
+  50% { box-shadow: 0 0 0 calc(12px * var(--rain-pulse)) rgb(56 189 248 / 0.35); }
+}
+@media (prefers-reduced-motion: reduce) { .rain-station-pulse { animation: none; } }

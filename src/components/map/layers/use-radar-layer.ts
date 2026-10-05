@@ -23,7 +23,7 @@ export function useRadarLayer(map: Map | null, frames: RadarFrame[], maxZoom: nu
       if (live.getPaintProperty(id, "raster-opacity") !== nextOpacity) live.setPaintProperty(id, "raster-opacity", nextOpacity);
     });
   }, (live) => {
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < frames.length; index++) {
       const id = idFor(index);
       if (live.getLayer(id)) live.removeLayer(id);
       if (live.getSource(id)) live.removeSource(id);

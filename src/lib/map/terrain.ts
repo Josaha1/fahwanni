@@ -1,4 +1,5 @@
 export const TERRAIN_SOURCE = "terrain-dem";
+export const HILLSHADE_SOURCE = "hillshade-dem";
 export const HILLSHADE_LAYER = "terrain-hillshade";
 
 export const terrainSource = {

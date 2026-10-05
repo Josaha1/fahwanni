@@ -1,4 +1,6 @@
 import { after } from "next/server";
+import { parseLatLon } from "@/lib/geo";
+import { placeTotals } from "@/lib/rain/summary";
 import { fetchWindDays } from "@/lib/wind/client";
 import { toLegacyGrid, type ForecastDay } from "@/lib/wind/days";
 import { WeatherCache } from "@/lib/weather/cache";
@@ -18,12 +20,17 @@ function refresh(): Promise<ForecastDay[] | null> {
 }
 
 export async function GET(request?: Request) {
+  const params = request ? new URL(request.url).searchParams : null;
+  const rain = params?.get("rain") === "1";
+  const place = rain ? parseLatLon(params?.get("lat"), params?.get("lon")) : null;
+  if (rain && (!place || place.lat < 5.5 || place.lat > 20.5 || place.lon < 97.3 || place.lon > 105.7)) return Response.json({ error: "bad_request" }, { status: 400 });
   const rawDay = request ? new URL(request.url).searchParams.get("day") : null;
   if (rawDay !== null && !/^(0|[1-9]\d*)$/.test(rawDay)) {
     return Response.json({ error: "day" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
   const day = rawDay === null ? null : Number(rawDay);
   const respond = (days: ForecastDay[]) => {
+    if (rain && place) return Response.json({ ...placeTotals(days, place), place }, { headers });
     if (day === null) return Response.json(toLegacyGrid(days, Date.now()), { headers });
     const selected = days.find((entry) => entry.day === day);
     return selected ? Response.json(selected, { headers }) :
