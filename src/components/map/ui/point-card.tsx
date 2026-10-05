@@ -11,6 +11,7 @@ import { pm25Level } from "@/lib/air-level";
 import { type HourlySeries } from "@/lib/timeline/store";
 import { modelRainLevelAt, pointHours, seriesValueAt } from "@/lib/timeline/values";
 import { PointDayChart } from "./point-day-chart";
+import { SourceTime } from "@/components/ui/source-time";
 import { ChartTable } from "@/components/ui/chart-table";
 import { damSparklineSummary, dayLabel } from "@/lib/chart-summaries";
 import { WIND_BBOX, WIND_NX, WIND_NY } from "@/lib/wind/constants";
@@ -246,7 +247,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>
       {pathActive && downstream && <DownstreamDetails downstream={downstream} />}
-      <p className="map-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: damDate(dam.date, t.locale) })} · {t("ที่มา: กรมชลประทาน")}{dams?.stale && <span className="map-warning"> {t("(ข้อมูลอาจล่าช้า)")}</span>}</p>
+      <p><SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" nowMs={nowMs} className="map-muted" /></p>
       <details className="rounded-xl border p-2" style={{ borderColor: "var(--map-panel-border)" }}>
         <summary className="cursor-pointer font-semibold">{t("รายละเอียดเพิ่มเติม")}</summary>
         <div className="mt-2 space-y-3">
@@ -270,8 +271,7 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
       <p className="text-xl font-semibold">{t("{mm} มม. ใน 24 ชม.", { mm: number.format(rainStation.rainMm) })}</p>
       <p className="font-semibold" style={{ color: rainStation.category === "veryHeavy" ? "#6b21a8" : "#a855f7" }}>{t(rainStation.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก")}</p>
       <span className="map-water-badge">{t("สังเกต")}</span>
-      {rainRisk?.observedAt && <p className="map-muted">{t("ถึง {time} น. {date}", { time: formatTime(rainRisk.observedAt, "Asia/Bangkok", t.locale), date: formatFullDate(rainRisk.observedAt, "Asia/Bangkok", t.locale) })}</p>}
-      <p className="map-muted text-xs">{t("ที่มา: กรมอุตุนิยมวิทยา")}</p>
+      <p><SourceTime source="TMD" time={rainRisk?.observedAt} kind="rain24h" nowMs={nowMs} className="map-muted" /></p>
       <p className="map-muted text-xs">{t("ฝนเข้าเกณฑ์ฝนหนักไม่ได้แปลว่ามีน้ำท่วม")}</p>
     </div>}
     {river && <RiverDetails point={river} upstream={upstream} mapCard showDisclaimers={false} waterDay={waterDay} dams={dams?.dams ?? []} onSelectDam={onSelectDam} />}

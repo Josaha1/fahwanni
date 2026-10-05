@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/i18n/client";
+import { SourceTime } from "@/components/ui/source-time";
 import { formatFullDate } from "@/lib/format";
 import type { FloodEvent, FloodEventType } from "@/lib/water/flood-events";
 
@@ -34,7 +35,7 @@ export function FloodEventItem({ event, muted = "text-muted", border = "var(--bo
       <p className={`${muted} text-xs`}>{t("ข้อความจากแหล่งข้อมูล (ภาษาอังกฤษ)")}</p>
     </details>}
     <a className="mt-1 inline-block text-xs underline" href={event.url} target="_blank" rel="noopener noreferrer">
-      {t(event.source === "gdacs" ? "ที่มา: GDACS" : "ที่มา: GLIDE (ADRC) ผ่าน HDX")}
+      <SourceTime source={event.source === "gdacs" ? "GDACS" : "GLIDE (ADRC) / HDX"} date={event.date} kind="daily" className={muted} />
     </a>
   </article>;
 }

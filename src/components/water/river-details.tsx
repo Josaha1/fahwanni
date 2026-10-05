@@ -7,6 +7,7 @@ import { formatFullDate } from "@/lib/format";
 import { riverColors } from "@/lib/rivers/colors";
 import { rareLevelWord, riverAtDay, statusWord } from "@/lib/rivers/status";
 import type { ObservedRelease, RareLevel, RiverGauge, RiverStatus, RiverTrend } from "@/lib/rivers/types";
+import { SourceTime } from "@/components/ui/source-time";
 import { ChartTable } from "@/components/ui/chart-table";
 import { RiverChart, type RiverChartDay } from "./river-chart";
 
@@ -61,6 +62,7 @@ export function RiverRowHeader({ point, km, waterDay = 0, watched = false, onTog
           </span>
           {km !== undefined && <span className="text-muted">{t("{km} กม.", { km: number.format(km) })}</span>}
         </span>
+        {selected && <SourceTime source="GloFAS / Open-Meteo" date={selected.date} kind="model" />}
       </span>
       <span className="shrink-0" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
       <span className="sr-only">{t(expanded ? "ย่อรายละเอียด" : "ขยายรายละเอียด")}</span>
@@ -90,7 +92,7 @@ export function RiverDetails({ point, upstream, mapCard = false, waterDay = 0, e
   const trend = waterDay === 0 ? detail.trend : next && next.value > selected.value * 1.1 ? "rising" : next && next.value < selected.value * 0.9 ? "falling" : "steady";
   return <div id={detailsId ?? riverDetailsId(point.id)} hidden={!expanded} className="mt-1 space-y-1 text-sm">
     {showSummary && <p><span className="font-semibold" style={{ color: riverColors[selected.status] }}>{t(statusWord(selected.status))}</span> · {t("{value} ลบ.ม./วินาที (แบบจำลอง)", { value: number.format(selected.value) })} <span aria-label={t(trend === "rising" ? "กำลังเพิ่ม" : trend === "falling" ? "กำลังลด" : "คงที่")}>{trend === "rising" ? "↗" : trend === "falling" ? "↘" : "→"}</span></p>}
-    {showDate && <p className={`${muted} text-xs`}>{waterDay > 0 ? t("{date} (พยากรณ์)", { date: riverDateLabel(selected.date, t.locale) }) : t("ข้อมูลวันที่ {date}", { date: riverDateLabel(selected.date, t.locale) })}</p>}
+    {showDate && <p><SourceTime source="GloFAS / Open-Meteo" date={selected.date} kind="model" className={muted} /></p>}
     <RiverChart days={detail.days} color={riverColors[selected.status]} selectedIndex={waterDay > 0 ? waterDay - 1 : undefined} />
     <p className={`${muted} text-xs`}>{t("เส้น: ปริมาณน้ำไหลผ่านแบบจำลอง · แถบ: ช่วงปกติ p25–p75")}</p>
     {gauge && <GaugeLine gauge={gauge} muted={muted} />}
@@ -127,6 +129,7 @@ function UpstreamDams({ point, dams, muted, onSelectDam, damHref }: {
       return <li key={dam.id}>
         {onSelectDam ? <button type="button" className="text-left underline underline-offset-2" onClick={() => onSelectDam(dam.id)}>{label}</button>
           : damHref ? <a className="underline underline-offset-2" href={damHref(dam.id)}>{label}</a> : label}
+        <div><SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" className={muted} /></div>
       </li>;
     })}</ul>
     {rows.length > shown.length && <p className={`${muted} text-xs`}>{t("และอีก {n} เขื่อน", { n: rows.length - shown.length })}</p>}
@@ -142,7 +145,7 @@ function GaugeLine({ gauge, muted }: { gauge: RiverGauge; muted: string }) {
       name: gauge.name, month: gaugeMonth, min: gaugeNumber.format(gauge.levelMsl.min),
       max: gaugeNumber.format(gauge.levelMsl.max), mean: gaugeNumber.format(gauge.levelMsl.mean),
     })}{gauge.bankMsl !== null && ` ${t("(ตลิ่ง {bank} ม.รทก.)", { bank: gaugeNumber.format(gauge.bankMsl) })}`}
-    {` · ${t("ข้อมูลย้อนหลังจาก สสน. · CC BY-NC")}`}
+    {" · "}<SourceTime source="สสน. · CC BY-NC" date={gauge.month} kind="monthly" className={muted} />
   </p>;
 }
 
@@ -174,6 +177,8 @@ function ObservedRowHeader({ point, km, watched = false, onToggleWatch, expanded
           <span className="text-muted">{t("วัดจริง")}</span>
           {km !== undefined && <span className="text-muted">{t("{km} กม.", { km: number.format(km) })}</span>}
         </span>
+        {today ? <SourceTime source="กรมชลประทาน" date={today.date} kind="daily" />
+          : point.gauge && <SourceTime source="สสน. · CC BY-NC" date={point.gauge.month} kind="monthly" />}
       </span>
       <span className="shrink-0" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
       <span className="sr-only">{t(expanded ? "ย่อรายละเอียด" : "ขยายรายละเอียด")}</span>
@@ -202,17 +207,19 @@ function ObservedDetails({ point, mapCard, expanded, detailsId, dams, onSelectDa
         names: releaseDams.map(damName).join(" + "), date: riverDateLabel(release.today.date, t.locale), value: number.format(release.today.totalCms),
       })}</p>
       {release.today.missing.length > 0 && <p className={`${muted} text-xs`}>{t("({names} ไม่รายงานวันนี้)", { names: release.today.missing.map(damName).join(", ") })}</p>}
+      <p><SourceTime source="กรมชลประทาน" date={release.today.date} kind="daily" className={muted} /></p>
       <p className={`${muted} text-xs`}>{t("วัดที่เขื่อน (กรมชลประทาน) — ไม่ใช่ปริมาณน้ำที่ไหลผ่าน{station}", { station })}</p>
       {days.length >= 2 && <ReleaseChart days={days} />}
     </> : releaseDams.length ? <p className={`${muted} text-xs`}>{t("ยังไม่มีข้อมูลการระบายของเขื่อนวันนี้")}</p>
       : <p className={`${muted} text-xs`}>{t("ยังไม่มีข้อมูลรายวันสำหรับจุดนี้")}</p>}
     {point.gauge ? <GaugeLine gauge={point.gauge} muted={muted} />
-      : <p className={`${muted} text-xs`}>{t("สถานีวัดระดับน้ำของจุดนี้ไม่มีข้อมูลที่ใช้ได้เดือนนี้")}</p>}
+      : <p className={`${muted} text-xs`}>{t("สถานีของจุดนี้ไม่มีข้อมูลที่ใช้ได้เดือนนี้")}</p>}
     {releaseDams.length > 0 && <ul className="space-y-1 pt-1">{releaseDams.map((id) => {
       const entry = release?.dams.find((dam) => dam.damId === id);
       const label = t("เขื่อน{name} · ระบาย {value} ลบ.ม./วินาที", { name: damName(id), value: entry?.releaseCms == null ? "—" : number.format(entry.releaseCms) });
       return <li key={id}>{onSelectDam ? <button type="button" className="text-left underline underline-offset-2" onClick={() => onSelectDam(id)}>{label}</button>
-        : damHref ? <a className="underline underline-offset-2" href={damHref(id)}>{label}</a> : label}</li>;
+        : damHref ? <a className="underline underline-offset-2" href={damHref(id)}>{label}</a> : label}
+        <div><SourceTime source="กรมชลประทาน" date={entry?.date} kind="daily" className={muted} /></div></li>;
     })}</ul>}
   </div>;
 }

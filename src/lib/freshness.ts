@@ -8,6 +8,32 @@ export type FreshnessInput = {
 };
 export type FreshnessRow = { key: string; label: string; source: string; time: number | null; daily: boolean; none?: boolean };
 
+export type FreshnessKind = "daily" | "rain24h" | "satellite" | "monthly" | "model";
+
+/** Date-only reports and timestamps without an offset use the publishing agency's Thai timezone. */
+export function sourceTimeMs(dateOrIso: string | Date | number | null | undefined): number | null {
+  if (dateOrIso === null || dateOrIso === undefined || dateOrIso === "") return null;
+  let time: number;
+  if (typeof dateOrIso === "number") time = dateOrIso;
+  else if (dateOrIso instanceof Date) time = dateOrIso.getTime();
+  else {
+    const iso = dateOrIso.trim().replace(" ", "T");
+    time = Date.parse(/^\d{4}-\d{2}$/.test(iso) ? `${iso}-01T00:00:00+07:00`
+      : /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00+07:00`
+        : /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(iso) ? `${iso}+07:00` : iso);
+  }
+  return Number.isFinite(time) ? time : null;
+}
+
+export function staleness(dateOrIso: string | Date | number | null | undefined, kind: FreshnessKind, nowMs: number): "fresh" | "yesterday" | "old" {
+  const time = sourceTimeMs(dateOrIso);
+  if (time === null || kind === "monthly" || kind === "model") return "fresh";
+  const age = nowMs - time;
+  const hour = 3_600_000;
+  if (kind === "daily") return age > 48 * hour ? "old" : age > 24 * hour ? "yesterday" : "fresh";
+  return age > (kind === "rain24h" ? 36 : 72) * hour ? "old" : "fresh";
+}
+
 const day = (date: string | null | undefined) => date ? Date.parse(`${date}T07:00:00+07:00`) : null;
 const at = (iso: string | null | undefined) => {
   const time = iso ? Date.parse(iso.includes("T") || iso.includes("+") ? iso : iso.replace(" ", "T") + "+07:00") : NaN;

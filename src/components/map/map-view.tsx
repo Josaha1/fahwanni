@@ -78,7 +78,7 @@ import { PrimaryPicker } from "./ui/primary-picker";
 import { LegendChip } from "./ui/legend-chip";
 import { WaterPanel } from "./ui/water-panel";
 import { DataFreshness } from "./ui/data-freshness";
-import { freshnessRows } from "@/lib/map/freshness";
+import { freshnessRows } from "@/lib/freshness";
 import { WaterDayStepper, waterDate } from "./ui/water-day-stepper";
 import { LegendDialog } from "./ui/legend-dialog";
 import { LayersDialog } from "./ui/layers-dialog";

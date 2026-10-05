@@ -4,7 +4,7 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import { useWaterSource } from "@/hooks/use-water-source";
 import { useT } from "@/i18n/client";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
-import { formatTime } from "@/lib/format";
+import { SourceTime } from "@/components/ui/source-time";
 import type { TmdWarnings } from "@/lib/tmd";
 import { MenuTip } from "@/components/menu-tip";
 import { OfflineSupport } from "@/components/offline-support";
@@ -31,9 +31,7 @@ export function FloodHome() {
       {warnings.data ? warnings.data.items.length > 0 ? <>
         <h2 className="text-lg font-semibold">{t("ประกาศเตือนภัยกรมอุตุฯ")}</h2>
         <TmdWarningList items={warnings.data.items} limit={3} />
-      </> : <p className="text-muted text-sm">{t("ไม่มีประกาศเตือนภัย · กรมอุตุฯ {time}", {
-        time: warnings.loadedAt ? formatTime(warnings.loadedAt, "Asia/Bangkok", t.locale) : "—",
-      })}</p> : <p className="text-muted text-sm" role="status">{t(warnings.status === "loading" ? "กำลังโหลดประกาศเตือนภัย…" : "ข้อมูลประกาศเตือนภัยไม่พร้อมใช้งาน")}</p>}
+      </> : <p className="text-muted text-sm">{t("ไม่มีประกาศเตือนภัย")} · <SourceTime source="TMD" time={warnings.loadedAt} kind="daily" /></p> : <p className="text-muted text-sm" role="status">{t(warnings.status === "loading" ? "กำลังโหลดประกาศเตือนภัย…" : "ข้อมูลประกาศเตือนภัยไม่พร้อมใช้งาน")}</p>}
     </section>
     <section className="placeholder-card space-y-2" aria-label={t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}>
       <h2 className="text-lg font-semibold">{t("เหตุการณ์น้ำท่วม/ภัยพิบัติ")}</h2>

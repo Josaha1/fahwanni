@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { ageMinutes, freshnessRows } from "./freshness";
+import { ageMinutes, freshnessRows, sourceTimeMs, staleness } from "./freshness";
+
+describe("staleness", () => {
+  const at = Date.parse("2026-10-04T00:00:00+07:00");
+  const hour = 3_600_000;
+  it.each([
+    [24, "fresh"], [24 + 1 / hour, "yesterday"], [48, "yesterday"], [48 + 1 / hour, "old"],
+  ] as const)("daily after %s hours is %s", (hours, expected) => {
+    expect(staleness("2026-10-04", "daily", at + hours * hour)).toBe(expected);
+  });
+  it.each([["rain24h", 36], ["satellite", 72]] as const)("%s becomes old strictly after %s hours", (kind, hours) => {
+    expect(staleness(new Date(at), kind, at + hours * hour)).toBe("fresh");
+    expect(staleness(new Date(at), kind, at + hours * hour + 1)).toBe("old");
+  });
+  it("never marks a monthly report or a model stale", () => {
+    expect(staleness("2026-07", "monthly", at)).toBe("fresh");
+    expect(staleness("2020-01-01", "model", at)).toBe("fresh");
+  });
+  it("parses Thai local timestamps independently of the machine timezone", () => {
+    expect(sourceTimeMs("2026-10-04 14:00:00")).toBe(Date.parse("2026-10-04T07:00:00Z"));
+    expect(sourceTimeMs("2026-10-04T14:00")).toBe(Date.parse("2026-10-04T07:00:00Z"));
+    expect(sourceTimeMs("2026-10-04T07:00:00Z")).toBe(Date.parse("2026-10-04T07:00:00Z"));
+    expect(sourceTimeMs("invalid")).toBeNull();
+    expect(staleness(null, "daily", at)).toBe("fresh");
+    expect(staleness(at + hour, "daily", at)).toBe("fresh");
+  });
+});
 
 describe("data freshness", () => {
   it("lists every source with a parsed time, unknown as null", () => {

@@ -2,7 +2,7 @@
 
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
-import { ageMinutes, type FreshnessRow } from "@/lib/map/freshness";
+import { ageMinutes, staleness, type FreshnessKind, type FreshnessRow } from "@/lib/freshness";
 
 /** "ข้อมูลล่าสุด": when each source last changed — answers "why hasn't it updated?". */
 export function DataFreshness({ rows, nowMs }: { rows: FreshnessRow[]; nowMs: number }) {
@@ -14,13 +14,17 @@ export function DataFreshness({ rows, nowMs }: { rows: FreshnessRow[]; nowMs: nu
       const age = ageMinutes(row.time, nowMs);
       const iso = row.time === null ? null : new Date(row.time).toISOString();
       const date = iso ? formatFullDate(iso, "Asia/Bangkok", t.locale) : null;
+      const kind: FreshnessKind = row.key === "rain" ? "rain24h" : row.key === "sat-flood" ? "satellite"
+        : row.key === "model" || row.key === "rivers" ? "model" : "daily";
+      const old = row.time !== null && staleness(row.time, kind, nowMs) === "old";
       const when = row.none ? t("ไม่มีประกาศในขณะนี้") : iso === null ? t("ยังไม่ได้โหลด")
+        : old ? t("ข้อมูลเก่า ({date})", { date: date! })
         : row.daily ? t("ข้อมูลวันที่ {date}", { date: date! })
           : date === today ? t("{time} น.", { time: formatTime(iso, "Asia/Bangkok", t.locale) })
             : `${date} ${t("{time} น.", { time: formatTime(iso, "Asia/Bangkok", t.locale) })}`;
       return <li key={row.key} className="flex justify-between gap-3">
         <span className="min-w-0">{t(row.label)}<span className="map-muted block text-xs">{row.source}{row.daily ? ` · ${t("ออกวันละครั้ง")}` : ""}</span></span>
-        <span className="shrink-0 text-right">{when}{age !== null && !row.daily && <span className="map-muted block text-xs">{t(age < 1 ? "เมื่อสักครู่" : age < 60 ? "{n} นาทีที่แล้ว" : "{h} ชม. ที่แล้ว", { n: age, h: Math.round(age / 60) })}</span>}</span>
+        <span className={`shrink-0 text-right${old ? " text-amber-600 dark:text-amber-400" : ""}`}>{when}{age !== null && !row.daily && <span className="map-muted block text-xs">{t(age < 1 ? "เมื่อสักครู่" : age < 60 ? "{n} นาทีที่แล้ว" : "{h} ชม. ที่แล้ว", { n: age, h: Math.round(age / 60) })}</span>}</span>
       </li>;
     })}</ul>
   </details>;

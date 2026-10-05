@@ -9,7 +9,7 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import type { DamsPayload } from "@/lib/dams/client";
 import { nearestDams, oldestDifferentDamDate, waterSummary } from "@/lib/dams/summary";
 import { EMERGENCY_NUMBERS } from "@/lib/emergency";
-import { formatFullDate } from "@/lib/format";
+import { SourceTime } from "@/components/ui/source-time";
 import { nearestProvince } from "@/lib/map/nearest";
 import type { Place } from "@/lib/place";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
@@ -24,7 +24,7 @@ import { TmdWarningList } from "./tmd-warnings";
 import { FloodEventList, type FloodEventsPayload } from "./flood-events";
 import { EnsoBadge } from "@/components/enso-badge";
 import { DamRowHeader } from "./dam-row";
-import { RiverDetails, RiverRowHeader, riverDateLabel, type RiversPayload } from "./river-details";
+import { RiverDetails, RiverRowHeader, type RiversPayload } from "./river-details";
 import { TideChart } from "./tide-chart";
 const validRivers = (value: RiversPayload) => Array.isArray(value?.points);
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
@@ -174,7 +174,7 @@ export function WaterPage() {
     </section>}
     <section className="placeholder-card space-y-3" aria-label={t("แม่น้ำใกล้คุณ")}>
       <div><h2 className="text-lg font-semibold">{t("แม่น้ำใกล้คุณ")}</h2>
-        {rivers.data?.today && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date} · แบบจำลอง GloFAS", { date: riverDateLabel(rivers.data.today, t.locale) })}</p>}
+        {rivers.data?.today && <p><SourceTime source="GloFAS / Open-Meteo" date={rivers.data.today} kind="model" /></p>}
       </div>
       {sourceLine(rivers.status, "กำลังโหลดข้อมูลแม่น้ำ…", "ข้อมูลแม่น้ำไม่พร้อมใช้งาน")}
       {rivers.data && <>
@@ -198,10 +198,7 @@ export function WaterPage() {
     {showTideForPlace(place) && <TideSection />}
     <section className="placeholder-card space-y-2" aria-label={t("เขื่อนใกล้คุณ")}>
       <div><h2 className="text-lg font-semibold">{t("เขื่อนใกล้คุณ")}</h2>
-        {dams.data?.dataDate && <p className="text-muted text-xs">{t("ข้อมูลกรมชลประทาน · ข้อมูลวันที่ {date}", { date: riverDateLabel(dams.data.dataDate, t.locale) })}{oldestDamDate && ` ${t("(บางเขื่อนใช้ข้อมูล {date})", {
-          date: new Intl.DateTimeFormat(t.intl, { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Bangkok" })
-            .format(new Date(`${oldestDamDate}T12:00:00+07:00`)),
-        })}`}</p>}
+        {dams.data?.dataDate && <p><SourceTime source="กรมชลประทาน" date={dams.data.dataDate} kind="daily" />{oldestDamDate && <> · <SourceTime source="กรมชลประทาน" date={oldestDamDate} kind="daily" /></>}</p>}
       </div>
       {sourceLine(dams.status, "กำลังโหลดข้อมูลเขื่อน…", "ข้อมูลเขื่อนไม่พร้อมใช้งาน")}
       {summary && <>
@@ -212,8 +209,8 @@ export function WaterPage() {
     <section className={rainNear.length ? "placeholder-card space-y-2" : "space-y-2"} aria-label={t("ฝนหนัก 24 ชม. ใกล้คุณ")}>
       <h2 className="text-lg font-semibold">{t("ฝนหนัก 24 ชม. ใกล้คุณ")}</h2>
       {sourceLine(rain.status, "กำลังโหลดข้อมูลฝนหนัก…", "ข้อมูลฝนหนักไม่พร้อมใช้งาน")}
-      {rain.data && (rainNear.length ? <ul className="space-y-2 text-sm">{rainNear.map((station) => <li key={station.id} className="flex justify-between gap-2"><span>{t.locale === "en" ? station.nameEn || station.nameTh : station.nameTh}</span><span>{t("{mm} มม. · {category}", { mm: oneDecimal.format(station.rainMm), category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span></li>)}</ul> : <p className="text-muted text-sm">{t("ไม่มีสถานีฝนหนักภายใน 150 กม.")}</p>)}
-      {rain.data?.observedAt && <p className="text-muted text-xs">{t("ข้อมูลวันที่ {date}", { date: formatFullDate(rain.data.observedAt, "Asia/Bangkok", t.locale) })}</p>}
+      {rain.data && (rainNear.length ? <ul className="space-y-2 text-sm">{rainNear.map((station) => <li key={station.id} className="flex justify-between gap-2"><span>{t.locale === "en" ? station.nameEn || station.nameTh : station.nameTh}<span className="block"><SourceTime source="TMD" time={rain.data?.observedAt} kind="rain24h" /></span></span><span>{t("{mm} มม. · {category}", { mm: oneDecimal.format(station.rainMm), category: t(station.category === "veryHeavy" ? "ฝนหนักมาก" : "ฝนหนัก") })}</span></li>)}</ul> : <p className="text-muted text-sm">{t("ไม่มีสถานีฝนหนักภายใน 150 กม.")}</p>)}
+      {!rainNear.length && rain.data?.observedAt && <p><SourceTime source="TMD" time={rain.data.observedAt} kind="rain24h" /></p>}
     </section>
     <footer className="space-y-2 border-t border-[var(--border)] pt-4 text-sm" aria-label={t("เบอร์ฉุกเฉิน")}>
       <h2 className="text-lg font-semibold">{t("เบอร์ฉุกเฉิน")}</h2>

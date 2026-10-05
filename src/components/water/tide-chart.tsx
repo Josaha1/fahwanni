@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/i18n/client";
+import { SourceTime } from "@/components/ui/source-time";
 import { highTides, type TideSeries } from "@/lib/tide/tide";
 
 export function TideChart({ series }: { series: TideSeries }) {
@@ -53,7 +54,7 @@ export function TideChart({ series }: { series: TideSeries }) {
     </svg>
     {peaks.length > 0 && <div className="text-sm"><p className="font-semibold">{t("น้ำขึ้นสูงถัดไป")}</p>
       <ul className="flex flex-wrap gap-x-4 gap-y-1">{peaks.slice(0, 4).map(({ time, height }) => <li key={time}>{t("{time} น. · {h} ม.", { time: dayClock(time), h: meters(height) })}</li>)}</ul></div>}
-    <p className="text-muted text-xs">{t("ระดับน้ำทะเลที่ปากแม่น้ำเจ้าพระยา · แบบจำลอง Open-Meteo · ไม่ใช่ตารางน้ำทางการของกรมอุทกศาสตร์")}</p>
-    <p className="text-muted text-xs">{t("น้ำขึ้นสูงร่วมกับน้ำเหนือมากอาจทำให้ระดับน้ำริมเจ้าพระยาสูงขึ้น")}</p>
+    <p><SourceTime source="Open-Meteo" time={shown[0].time} kind="model" nowMs={now} /> · <span className="text-muted text-xs">{t("ไม่ใช่ตารางน้ำทางการของกรมอุทกศาสตร์")}</span></p>
+    <p className="text-muted text-xs">{t("น้ำขึ้นสูงร่วมกับน้ำเหนือมากอาจทำให้น้ำริมเจ้าพระยาเพิ่มขึ้น")}</p>
   </div>;
 }
