@@ -1,6 +1,6 @@
 import {
-  AmbientLight, BufferGeometry, CanvasTexture, CircleGeometry, DirectionalLight, DoubleSide,
-  Float32BufferAttribute, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera,
+  AmbientLight, BufferGeometry, CanvasTexture, CircleGeometry, Color, DirectionalLight, DoubleSide,
+  Float32BufferAttribute, Fog, HemisphereLight, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera,
   PlaneGeometry, Points, PointsMaterial, RingGeometry, Scene, Sprite, SpriteMaterial,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -22,8 +22,19 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
   controls.minPolarAngle = Math.PI / 12; controls.maxPolarAngle = Math.PI / 2.5;
   element.style.touchAction = "pan-y";
   controls.update();
-  scene.add(new AmbientLight(0xffffff, 2));
-  const sun = new DirectionalLight(0xffffff, 2);
+  // Keep even the furthest orbit inside fog near; the radial alpha supplies the rim fade at every zoom.
+  const background = new Color(getComputedStyle(element).getPropertyValue("--background").trim());
+  scene.fog = new Fog(background, controls.maxDistance + 1, controls.maxDistance + 50);
+  let edgeMaterial: MeshBasicMaterial | undefined;
+  const themeObserver = new MutationObserver(() => {
+    background.set(getComputedStyle(element).getPropertyValue("--background").trim());
+    (scene.fog as Fog).color.copy(background);
+    edgeMaterial?.color.copy(background);
+    host.markDirty(element);
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  scene.add(new AmbientLight(0xffffff, 0.4), new HemisphereLight(0xe6efff, 0x99836b, 0.8));
+  const sun = new DirectionalLight(0xffffff, 2.5);
   sun.position.set(-30, 70, 20); scene.add(sun);
   const geometries: BufferGeometry[] = [];
   const materials: (MeshBasicMaterial | MeshStandardMaterial | PointsMaterial | SpriteMaterial)[] = [];
@@ -61,7 +72,7 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = home ? "#0f172a" : "#fff"; ctx.fillRect(27, 36, 10, 20);
     const texture = new CanvasTexture(canvas); textures.push(texture);
-    const material = new SpriteMaterial({ map: texture, depthWrite: false }); materials.push(material);
+    const material = new SpriteMaterial({ map: texture, depthWrite: false, fog: false }); materials.push(material);
     const sprite = new Sprite(material); sprite.position.set(x, height(x, z) + 1.6, z); sprite.scale.set(4, 4, 1); scene.add(sprite);
   }
   function stream(point: { lat: number; lon: number }, ratio: number, jet: boolean) {
@@ -73,7 +84,7 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
     if (ratio <= 0) return;
     const geometry = new BufferGeometry(); geometries.push(geometry);
     geometry.setAttribute("position", new Float32BufferAttribute(new Float32Array(Math.ceil(ratio * 80) * 3), 3));
-    const material = new PointsMaterial({ color: "#38bdf8", size: 0.35, transparent: true, opacity: 0.9, depthWrite: false }); materials.push(material);
+    const material = new PointsMaterial({ color: "#38bdf8", size: 0.35, transparent: true, opacity: 0.9, depthWrite: false, fog: false }); materials.push(material);
     const points = new Points(geometry, material); points.frustumCulled = false; scene.add(points);
     particles.push({ points, x, z, y: height(x, z) + 0.4, jet });
   }
@@ -113,13 +124,34 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
         if (triangle.every((v) => Math.hypot(positions.getX(v), positions.getZ(v)) <= 30)) kept.push(...triangle);
       }
       geometry.setIndex(kept); geometry.computeVertexNormals();
-      const material = new MeshStandardMaterial({ color: "#668e80", roughness: 1, side: DoubleSide }); materials.push(material);
-      scene.add(new Mesh(geometry, material));
+      let minHeight = Infinity, maxHeight = -Infinity;
+      for (let i = 0; i < positions.count; i++) {
+        if (Math.hypot(positions.getX(i), positions.getZ(i)) > 30) continue;
+        minHeight = Math.min(minHeight, positions.getY(i));
+        maxHeight = Math.max(maxHeight, positions.getY(i));
+      }
+      const range = maxHeight - minHeight;
+      const green = new Color("#7fa36b"), dark = new Color("#294d3d"), high = new Color("#746b60");
+      const colour = new Color(), colours: number[] = [];
+      for (let i = 0; i < positions.count; i++) {
+        // A small local relief stays green rather than stretching DEM noise across the palette.
+        const relative = range / 4 * 1000 < 20 ? 0 : MathUtils.clamp((positions.getY(i) - minHeight) / range, 0, 1);
+        if (relative <= 0.65) colour.copy(green).lerp(dark, relative / 0.65);
+        else colour.copy(dark).lerp(high, (relative - 0.65) / 0.35);
+        // Finish before the clipped triangle boundary so its ~1 km steps cannot form a hard edge.
+        const alpha = 1 - MathUtils.smoothstep(Math.hypot(positions.getX(i), positions.getZ(i)), 25, 29);
+        colours.push(colour.r, colour.g, colour.b, alpha);
+      }
+      geometry.setAttribute("color", new Float32BufferAttribute(colours, 4));
+      const material = new MeshStandardMaterial({ vertexColors: true, transparent: true, depthWrite: false, roughness: 1, side: DoubleSide }); materials.push(material);
+      // Transparent terrain must draw before the decals and sprites on the far side too.
+      const ground = new Mesh(geometry, material); ground.renderOrder = -1; scene.add(ground);
       // Pixels are ~1 km; decals are drawn larger than that so they stay visible at phone size.
       const decalGeometry = new CircleGeometry(0.9, 12); geometries.push(decalGeometry); decalGeometry.rotateX(-Math.PI / 2);
-      const floodMaterial = new MeshBasicMaterial({ color: "#fb923c", transparent: true, opacity: 0.9, depthWrite: false, side: DoubleSide }); materials.push(floodMaterial);
-      const haloMaterial = new MeshBasicMaterial({ color: "#fb923c", transparent: true, opacity: 0.18, depthWrite: false, side: DoubleSide }); materials.push(haloMaterial);
-      const stippleMaterial = new MeshBasicMaterial({ color: "#e5e7eb", transparent: true, opacity: 0.75, depthWrite: false, side: DoubleSide }); materials.push(stippleMaterial);
+      const floodMaterial = new MeshBasicMaterial({ color: "#fb923c", transparent: true, opacity: 0.9, depthWrite: false, side: DoubleSide, fog: false }); materials.push(floodMaterial);
+      const haloMaterial = new MeshBasicMaterial({ color: "#fb923c", transparent: true, opacity: 0.18, depthWrite: false, side: DoubleSide, fog: false }); materials.push(haloMaterial);
+      const stippleMaterial = new MeshBasicMaterial({ color: "#e2e8f0", transparent: true, opacity: 0.85, depthWrite: false, side: DoubleSide, fog: false, toneMapped: false }); materials.push(stippleMaterial);
+      const stippleBorderMaterial = new MeshBasicMaterial({ color: "#334155", transparent: true, opacity: 0.85, depthWrite: false, side: DoubleSide, fog: false, toneMapped: false }); materials.push(stippleBorderMaterial);
       for (const point of "points" in data.ring ? data.ring.points : []) {
         if (point.kind === "dry" || point.kind === "water") continue;
         const { x, z } = terrainPosition(props.place, point);
@@ -127,6 +159,9 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
         if (flood) {
           const halo = new Mesh(decalGeometry, haloMaterial); halo.scale.setScalar(2.5);
           halo.position.set(x, height(x, z) + 0.03, z); scene.add(halo);
+        } else {
+          const border = new Mesh(decalGeometry, stippleBorderMaterial); border.scale.setScalar(0.62);
+          border.position.set(x, height(x, z) + 0.035, z); scene.add(border);
         }
         const dot = new Mesh(decalGeometry, flood ? floodMaterial : stippleMaterial);
         dot.position.set(x, height(x, z) + (flood ? 0.06 : 0.04), z);
@@ -134,7 +169,7 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
         scene.add(dot);
       }
       const edgeGeometry = new RingGeometry(29.6, 30, 96); geometries.push(edgeGeometry); edgeGeometry.rotateX(-Math.PI / 2);
-      const edgeMaterial = new MeshBasicMaterial({ color: "#38bdf8", transparent: true, opacity: 0.7, depthWrite: false, side: DoubleSide }); materials.push(edgeMaterial);
+      edgeMaterial = new MeshBasicMaterial({ color: background, transparent: true, opacity: 0.15, depthWrite: false, side: DoubleSide, fog: false, toneMapped: false }); materials.push(edgeMaterial);
       const edge = new Mesh(edgeGeometry, edgeMaterial); edge.position.y = 0.3; scene.add(edge);
       for (const village of props.villages ?? []) { const { x, z } = terrainPosition(props.place, village); glyph(x, z, false); }
       glyph(0, 0, true);
@@ -165,7 +200,7 @@ export function attachNearMe(host: SceneHost, element: HTMLElement, props: NearM
   show();
   void load();
   return () => {
-    disposed = true; abort.abort(); unregister(); controls.removeEventListener("change", change); controls.dispose();
+    disposed = true; abort.abort(); unregister(); themeObserver.disconnect(); controls.removeEventListener("change", change); controls.dispose();
     geometries.forEach((geometry) => geometry.dispose()); materials.forEach((material) => material.dispose()); textures.forEach((texture) => texture.dispose());
     fallback.style.visibility = ""; label.hidden = true; element.removeAttribute("role"); element.removeAttribute("aria-label");
     writeSceneState(element, { mode: "svg", terrain: false, ...data.state });
