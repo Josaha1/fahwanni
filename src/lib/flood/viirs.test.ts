@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { provinces, provinceIdFromShapeName } from "../provinces";
 import { prepareProvinceMask, provinceAt, provinceIndexAt, type ProvinceGeoJson, type ProvinceMask } from "./mask";
 import { decodePalettePng } from "./png";
-import { classifyPixel, nearMe, pixelPosition, provinceCounts, regionCounts, sampleTiles, thailandTiles, type FloodSample, type FloodTile } from "./viirs";
+import { distanceKm } from "../storms/normalize";
+import { classifyPixel, nationalSamples, nearMe, pixelPosition, provinceCounts, regionCounts, sampleTiles, thailandTiles, type FloodSample, type FloodTile } from "./viirs";
 
 const geojson = JSON.parse(readFileSync("public/data/th-provinces-adm1.geojson", "utf8")) as ProvinceGeoJson;
 const masks = prepareProvinceMask(geojson);
@@ -136,6 +137,59 @@ it("uses a 30 km circle and gives flood priority over cloud/no-data, with honest
   expect(nearMe([], place).verdict).toBe("cloud-or-no-data");
   expect(nearMe([sample("insufficient-data"), ...Array.from({ length: 5 }, () => sample("flood"))], place).verdict).toBe("flood");
   expect(nearMe(Array.from({ length: 5 }, () => sample("recurring-flood")), place).verdict).toBe("flood");
+});
+
+describe("display samples", () => {
+  const place = { lat: 13.7, lon: 100.5 };
+  const sample = (kind: FloodSample["kind"], i = 0): FloodSample => ({
+    lat: 13.7000123 + i * 0.0001, lon: 100.5000567, provinceId: "bangkok", kind,
+  });
+  const points = (kind: FloodSample["kind"], length: number) => Array.from({ length }, (_, i) => sample(kind, i));
+  const rounded = ({ lat, lon, kind }: FloodSample) => ({ lat: Number(lat.toFixed(4)), lon: Number(lon.toFixed(4)), kind });
+
+  it("filters display kinds and radius before rounding, while counting every in-radius kind", () => {
+    const boundary = { ...sample("flood"), lat: 13.96 };
+    const radius = distanceKm(place, boundary);
+    const input = [...["flood", "recurring-flood", "water", "insufficient-data", "dry", "no-data"].map((kind) => sample(kind as FloodSample["kind"])),
+      boundary, { ...boundary, lat: 13.961 }];
+    const original = structuredClone(input);
+    expect(nearMe(input, place, radius)).toMatchObject({ sampleCap: 400, thinned: false,
+      counts: { sampled: 7, flood: 2, recurringFlood: 1, dry: 1, water: 1, insufficientData: 1, noData: 1 },
+      samples: [rounded(input[0]), rounded(input[1]), rounded(boundary), rounded(input[2]), rounded(input[3])],
+    });
+    expect(input).toEqual(original);
+    expect(nearMe([], place)).toMatchObject({ samples: [], sampleCap: 400, thinned: false });
+  });
+
+  it("retains every flood detection and evenly thins other points into the remaining budget", () => {
+    const other = [...points("water", 300), ...points("insufficient-data", 300)];
+    const priority = [...points("flood", 50), ...points("recurring-flood", 50)];
+    const result = nearMe([...other, ...points("dry", 500), ...priority], place);
+    expect(result).toMatchObject({ sampleCap: 400, thinned: true, verdict: "flood",
+      counts: { sampled: 1200, flood: 50, recurringFlood: 50, water: 300, insufficientData: 300, dry: 500 } });
+    expect(result.samples).toEqual([...priority.map(rounded), ...Array.from({ length: 300 }, (_, i) => rounded(other[Math.floor(i * 599 / 299)]))]);
+  });
+
+  it("thins only flood detections when they alone exceed the cap", () => {
+    const priority = Array.from({ length: 800 }, (_, i) => sample(i % 2 ? "recurring-flood" : "flood", i));
+    const result = nearMe([...points("water", 500), ...priority], place);
+    expect(result.samples).toEqual(Array.from({ length: 400 }, (_, i) => rounded(priority[Math.floor(i * 799 / 399)])));
+    expect(result).toMatchObject({ sampleCap: 400, thinned: true, counts: { sampled: 1300, flood: 400, recurringFlood: 400, water: 500 } });
+  });
+
+  it.each([399, 400, 401])("handles %i flood detections with zero or one remaining slot", (length) => {
+    const result = nearMe([...points("flood", length), sample("water")], place);
+    expect(result.samples).toHaveLength(400);
+    expect(result.samples.filter((point) => point.kind === "flood")).toHaveLength(Math.min(length, 400));
+    expect(result.thinned).toBe(length >= 400);
+  });
+
+  it.each([0, 3000, 6001])("sends only national flood kinds with even decimation for %i detections", (length) => {
+    const priority = Array.from({ length }, (_, i) => sample(i % 2 ? "recurring-flood" : "flood", i));
+    const result = nationalSamples([...points("dry", 100), ...points("water", 100), ...points("insufficient-data", 100), sample("no-data"), ...priority]);
+    expect(result).toEqual({ sampleCap: 3000, thinned: length > 3000, samples: length <= 3000
+      ? priority.map(rounded) : Array.from({ length: 3000 }, (_, i) => rounded(priority[Math.floor(i * (length - 1) / 2999)])) });
+  });
 });
 
 it.each([

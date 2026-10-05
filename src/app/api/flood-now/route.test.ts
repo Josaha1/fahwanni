@@ -70,6 +70,40 @@ it("serves marked stale data after six hours and keeps it if NASA fails", async 
   expect((await (await GET(request())).json()).stale).toBe(true);
 });
 
+it("opts into capped national samples with either query and keeps all counts and the near-me verdict unchanged", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => tileResponse()));
+  const viirs = await import("@/lib/flood/viirs");
+  const samples = Array.from({ length: 6500 }, (_, i) => ({
+    lat: 13.7279123 + i * 0.000001, lon: 100.5241567, provinceId: "bangkok",
+    kind: i < 500 ? "dry" as const : i % 2 ? "flood" as const : "recurring-flood" as const,
+  }));
+  const sampling = vi.spyOn(viirs, "sampleTiles").mockReturnValue(samples);
+  try {
+    const { GET } = await import("./route");
+    const original = await (await GET(request("?lat=13.7279&lon=100.5241"))).json();
+    expect(original.samples).toBeUndefined();
+    expect(original.sampleCap).toBeUndefined();
+    expect(original.thinned).toBeUndefined();
+    expect(original.nearMe).toMatchObject({ sampleCap: 400, thinned: true, verdict: "flood",
+      counts: { sampled: 6500, dry: 500, flood: 3000, recurringFlood: 3000 } });
+    expect(original.nearMe.samples).toHaveLength(400);
+    for (const query of ["scope=th", "samples=th"]) {
+      const payload = await (await GET(request(`?lat=13.7279&lon=100.5241&${query}`))).json();
+      expect(payload).toMatchObject({ sampleCap: 3000, thinned: true });
+      expect(payload.samples).toHaveLength(3000);
+      expect(payload.samples.every((point: { lat: number; lon: number; kind: string }) =>
+        (point.kind === "flood" || point.kind === "recurring-flood") &&
+        point.lat === Number(point.lat.toFixed(4)) && point.lon === Number(point.lon.toFixed(4)) &&
+        Object.keys(point).length === 3)).toBe(true);
+      expect(payload).toEqual({ ...original, samples: payload.samples, sampleCap: 3000, thinned: true });
+    }
+    const unrequested = await (await GET(request("?scope=near&samples=true"))).json();
+    expect(unrequested.samples).toBeUndefined();
+    expect(unrequested.provinceCounts.bangkok.sampled).toBe(6500);
+    expect(unrequested.regionCounts.central.sampled).toBe(6500);
+  } finally { sampling.mockRestore(); }
+});
+
 it("fetches a new observation date after UTC midnight and never relabels yesterday's cache", async () => {
   vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-05T23:59:59Z"));
   const fetchMock = vi.fn(async () => tileResponse()); vi.stubGlobal("fetch", fetchMock);

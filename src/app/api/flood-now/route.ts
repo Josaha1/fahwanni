@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { parseLatLon } from "@/lib/geo";
 import { prepareProvinceMask, type ProvinceGeoJson, type ProvinceMask } from "@/lib/flood/mask";
 import { decodePalettePng } from "@/lib/flood/png";
-import { countsByProvince, FLOOD_ATTRIBUTION, nearMe, regionCounts, sampleTiles, SAMPLING_ZOOM, thailandTiles, type FloodSample, type FloodTile } from "@/lib/flood/viirs";
+import { countsByProvince, FLOOD_ATTRIBUTION, nationalSamples, nearMe, regionCounts, sampleTiles, SAMPLING_ZOOM, thailandTiles, type FloodSample, type FloodTile } from "@/lib/flood/viirs";
 import { floodDate, gibsTileUrl } from "@/lib/map/gibs";
 import { WeatherCache } from "@/lib/weather/cache";
 
@@ -87,5 +87,6 @@ export async function GET(request: Request) {
   if (!snapshot) return Response.json({ error: "upstream" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   return Response.json({ ...snapshot.payload, stale: !!stale,
     ...(place ? { nearMe: nearMe(snapshot.samples, place) } : {}),
+    ...(params.get("scope") === "th" || params.get("samples") === "th" ? nationalSamples(snapshot.samples) : {}),
   }, { headers: stale ? { "Cache-Control": "public, s-maxage=300" } : headers });
 }

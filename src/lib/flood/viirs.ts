@@ -5,6 +5,7 @@ import type { PalettePng } from "./png";
 export type FloodClass = "dry" | "water" | "recurring-flood" | "flood" | "insufficient-data" | "no-data";
 export type FloodTile = { x: number; y: number; z: number; image: PalettePng };
 export type FloodSample = Position & { provinceId: string; kind: FloodClass };
+export type DisplaySample = Pick<FloodSample, "lat" | "lon" | "kind">;
 export type PixelCounts = { flood: number; recurringFlood: number; dry: number; water: number; insufficientData: number; noData: number; sampled: number };
 export const SAMPLING_ZOOM = 7;
 export const FLOOD_ATTRIBUTION = ["NASA LANCE/GIBS VIIRS flood", "geoBoundaries / © OpenStreetMap contributors (ODbL)"];
@@ -102,12 +103,38 @@ export function countsByProvince(samples: FloodSample[], masks: ProvinceMask[]):
   return counts;
 }
 
+function thin(samples: FloodSample[], cap: number): FloodSample[] {
+  if (samples.length <= cap) return samples;
+  if (cap === 0) return [];
+  if (cap === 1) return [samples[Math.floor(samples.length / 2)]];
+  return Array.from({ length: cap }, (_, i) => samples[Math.floor(i * (samples.length - 1) / (cap - 1))]);
+}
+
+function displaySamples(priority: FloodSample[], other: FloodSample[], sampleCap: number) {
+  // Preserve flood detections before spending the remaining budget on water or missing observations.
+  const selected = [...thin(priority, sampleCap), ...thin(other, Math.max(0, sampleCap - priority.length))];
+  const samples: DisplaySample[] = selected.map(({ lat, lon, kind }) => ({
+    lat: Number(lat.toFixed(4)), lon: Number(lon.toFixed(4)), kind,
+  }));
+  return { samples, sampleCap, thinned: priority.length + other.length > sampleCap };
+}
+
+export function nationalSamples(samples: FloodSample[]) {
+  return displaySamples(samples.filter((sample) => sample.kind === "flood" || sample.kind === "recurring-flood"), [], 3000);
+}
+
 export function nearMe(samples: FloodSample[], place: Position, radiusKm = 30) {
   const counts = emptyCounts();
-  for (const sample of samples) if (distanceKm(place, sample) <= radiusKm) add(counts, sample);
+  const priority: FloodSample[] = [];
+  const other: FloodSample[] = [];
+  for (const sample of samples) if (distanceKm(place, sample) <= radiusKm) {
+    add(counts, sample);
+    if (sample.kind === "flood" || sample.kind === "recurring-flood") priority.push(sample);
+    else if (sample.kind === "water" || sample.kind === "insufficient-data") other.push(sample);
+  }
   const verdict = counts.flood + counts.recurringFlood >= 5 ? "flood"
     : counts.sampled === 0 || counts.noData + counts.insufficientData >= counts.sampled * 0.5 ? "cloud-or-no-data" : "not-seen";
-  return { ...place, radiusKm, verdict, counts };
+  return { ...place, radiusKm, verdict, counts, ...displaySamples(priority, other, 400) };
 }
 
 const regionProvinces = {
