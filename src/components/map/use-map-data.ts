@@ -16,7 +16,7 @@ import { REFRESH, shouldRefresh } from "@/lib/map/refresh";
 type DataKey = "radar" | "wind" | "storms" | "quakes" | "dams" | "rainRisk" | "rivers" | "tmdWarnings";
 type FetchTimes = Record<DataKey, number | null>;
 
-export function useMapData() {
+export function useMapData(modelEnabled = true) {
   const [manifest, setManifest] = useState<RadarManifest | null>(null);
   const [radarFetchedAt, setRadarFetchedAt] = useState<number | null>(null);
   const [wind, setWind] = useState<WindGrid | null>(null);
@@ -240,7 +240,7 @@ export function useMapData() {
     const refreshOnReturn = () => {
       const now = Date.now();
       if (shouldRefresh(lastFetched.current.radar, now, REFRESH.radar)) loadRadar();
-      if (lastFetched.current.wind !== null && shouldRefresh(lastFetched.current.wind, now, REFRESH.slow)) loadWind();
+      if (modelEnabled && lastFetched.current.wind !== null && shouldRefresh(lastFetched.current.wind, now, REFRESH.slow)) loadWind();
       if (lastFetched.current.storms !== null && shouldRefresh(lastFetched.current.storms, now, REFRESH.slow)) loadStorms();
       if (lastFetched.current.quakes !== null && shouldRefresh(lastFetched.current.quakes, now, REFRESH.slow)) loadQuakes();
       if (lastFetched.current.dams !== null && shouldRefresh(lastFetched.current.dams, now, REFRESH.slow)) loadDams(true).catch(() => {});
@@ -250,7 +250,7 @@ export function useMapData() {
     };
     const onVisibilityChange = () => { if (document.visibilityState === "visible") refreshOnReturn(); };
     loadRadar();
-    loadWind();
+    if (modelEnabled) loadWind();
     loadStorms();
     loadQuakes();
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") loadRadar(); }, REFRESH.radar);
@@ -261,12 +261,15 @@ export function useMapData() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("online", refreshOnReturn);
       Object.values(controllers).forEach((controller) => controller.abort());
-      damsController.current?.abort();
-      rainRiskController.current?.abort();
-      riversController.current?.abort();
-      tmdWarningsController.current?.abort();
     };
-  }, [loadDams, loadRainRisk, loadRivers, loadTmdWarnings]);
+  }, [loadDams, loadRainRisk, loadRivers, loadTmdWarnings, modelEnabled]);
+
+  useEffect(() => () => {
+    damsController.current?.abort();
+    rainRiskController.current?.abort();
+    riversController.current?.abort();
+    tmdWarningsController.current?.abort();
+  }, []);
 
   return { manifest, radarFetchedAt, wind, windSettled, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes };
 }

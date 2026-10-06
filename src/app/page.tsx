@@ -1,5 +1,5 @@
-import { FloodHome } from "@/components/flood/flood-home";
+import { MapHome } from "@/components/sheet/map-home";
 
 export default function HomePage() {
-  return <FloodHome />;
+  return <MapHome />;
 }

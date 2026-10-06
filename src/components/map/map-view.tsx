@@ -108,19 +108,19 @@ function rememberSheetPosition(position: SheetPosition): void {
 
 const scalarGrid = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
 
-export function MapView() {
+export function MapView({ homeLens }: { homeLens?: "flood" | "dams" | "rain" } = {}) {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
   const [urlView] = useState(() => parseUrlView(window.location.search));
   return (
-    <MapProvider containerRef={container} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
+    <MapProvider containerRef={container} fixedTheme={homeLens ? "dark" : undefined} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
       ? [urlView.lon, urlView.lat] : [place.lon, place.lat]} initialZoom={urlView.z}>
-      <MapScreen container={container} urlView={urlView} />
+      <MapScreen container={container} urlView={urlView} homeLens={homeLens} />
     </MapProvider>
   );
 }
 
-function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView }) {
+function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView; homeLens?: "flood" | "dams" | "rain" }) {
   const router = useRouter();
   const { place } = useLastPlace();
   const { favourites } = useFavourites();
@@ -128,7 +128,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const mapSummaryId = useId();
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
-  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData();
+  const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData(!homeLens || homeLens === "rain");
   const [watch, setWatch] = useState(readWatch);
   const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, { kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }));
   const toggleRiverWatch = (id: string) => {
@@ -137,7 +137,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     if (watched) setWatch((current) => toggleWatch(current, { kind: "river", id, unit: "cms", ...watched }));
   };
   useEffect(() => { writeWatch(watch); }, [watch]);
-  const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: view.mode,
+  const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: homeLens ? "water" : view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, waterDay: view.wd, allRoutes: view.routes, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
   const { mode, timeMs, playing, primary, rainOn, overlays, waterDay, allRoutes } = mapState;
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
@@ -172,7 +172,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [makingImage, setMakingImage] = useState(false);
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
-  const openProvince = useCallback((id: string) => router.push(`/?province=${encodeURIComponent(id)}`), [router]);
+  const openProvince = useCallback((id: string) => {
+    if (homeLens) {
+      window.history.replaceState(null, "", `/?province=${encodeURIComponent(id)}`);
+      window.dispatchEvent(new Event("popstate"));
+    } else router.push(`/?province=${encodeURIComponent(id)}`);
+  }, [router, homeLens]);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute, onProvince: water ? openProvince : undefined });
   if (lite && buildings3dOn) setBuildings3dOn(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
@@ -216,7 +221,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [water, primary, imergOn]);
   const domain = useMemo(() => makeDomain(nowMs), [nowMs]);
   const effectiveTime = timeMs ?? nowMs;
-  const { series: windSeries, fetchedAt: modelFetchedAt } = useForecastDays({ source: "wind", enabled: true, focusTime: effectiveTime, nowMs });
+  const { series: windSeries, fetchedAt: modelFetchedAt } = useForecastDays({ source: "wind", enabled: !homeLens || homeLens === "rain", focusTime: effectiveTime, nowMs });
   const { series: pm25Series, loadedDays: pm25LoadedDays, lastAvailable: pm25LastAvailable, loading: pm25Loading, error: pm25Error } = useForecastDays({ source: "pm25", enabled: !water && primary === "pm25", focusTime: effectiveTime, nowMs });
   // Rain can be shown when there is radar for the past or model rain for the future.
   const radarAvailable = frames.length > 0 || Boolean(windSeries?.grids.precip);
@@ -257,7 +262,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const rainImageSize = lite || terrainOn ? 256 : 512;
   // Water replay uses only the past frames already present in the radar manifest.
   const [waterRadar, setWaterRadar] = useState(true);
-  const waterRadarOn = water && waterRadar && frames.length > 0;
+  const waterRadarOn = water && waterRadar && (!homeLens || homeLens === "rain") && frames.length > 0;
   useRadarLayer(mapInstance, frames, manifest?.maxZoom ?? 7, waterRadarOn ? replayRadarIndex : hasRadarFrame ? rainSource.index : -1,
     waterRadarOn || (rainVisible && hasRadarFrame), waterRadarOn ? 0.5 : rainSource.kind === "blend" ? rainSource.radarOpacity : 0.7);
   useTimeImageLayer(mapInstance, { id: "model-rain", enabled: rainVisible && (rainSource.kind === "model" || (rainSource.kind === "blend" && rainSource.modelOpacity > 0)), series: windSeries, timeMs: effectiveTime, nowMs, kind: "rain", grid: scalarGrid, beforeSymbol: true, opacity: rainSource.kind === "blend" ? rainSource.modelOpacity : 1, size: rainImageSize });
@@ -281,10 +286,10 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
   useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
-  useSatelliteFloodLayer(mapInstance, water && satFloodOn, floodReport, floodNow);
+  useSatelliteFloodLayer(mapInstance, water && satFloodOn && (!homeLens || homeLens === "flood"), floodReport, floodNow, homeLens ? 0.18 : 0.65, homeLens ? "#22d3ee" : undefined);
   const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
     ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
-  useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);
+  useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds, homeLens === "dams" ? 1.5 : 1);
   const reservoirs = useReservoirs(water && reservoirsOn);
   useReservoirsLayer(mapInstance, reservoirs.points, water && reservoirsOn, nowMs);
   const [floodEventsOn, setFloodEventsOn] = useState(true);
@@ -292,9 +297,9 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   useFloodEventsLayer(mapInstance, floodEvents, water && floodEventsOn);
   const [floodRiskOn, setFloodRiskOn] = useState(false);
   const floodRisk = useFloodRiskLayer(mapInstance, water && floodRiskOn);
-  useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
-  useRiverLayer(mapInstance, rivers, water, waterDay);
-  useAllRoutesLayer(mapInstance, dams, water && allRoutes, waterDay);
+  useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0 && (!homeLens || homeLens === "rain"), Boolean(homeLens));
+  useRiverLayer(mapInstance, rivers, water && !homeLens, waterDay);
+  useAllRoutesLayer(mapInstance, dams, water && allRoutes && homeLens !== "rain", waterDay);
   const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs, waterDay);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;
@@ -308,7 +313,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     : "";
   const activeRelease = activePath ? dams?.dams.find((dam) => dam.id === activePath.id)?.releaseCms ?? null : null;
   useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion, lite);
-  usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion, urlView.lat !== undefined && urlView.lon !== undefined);
+  usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion || Boolean(homeLens), urlView.lat !== undefined && urlView.lon !== undefined);
   useFavouriteLayer(mapInstance, favourites, place, windSeries, effectiveTime, !water);
 
   useEffect(() => {
@@ -379,12 +384,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [water, rainRiskStatus, loadRainRisk, t]);
 
   useEffect(() => {
-    if (!water || riversStatus !== "idle") return;
+    if (!water || (homeLens && homeLens !== "rain") || riversStatus !== "idle") return;
     loadRivers().catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
       toast.error(t("ข้อมูลแม่น้ำไม่พร้อมใช้งาน"));
     });
-  }, [water, riversStatus, loadRivers, t]);
+  }, [water, riversStatus, loadRivers, t, homeLens]);
 
   useEffect(() => {
     if (!water || riversStatus !== "ready" || !rivers) return;
@@ -475,7 +480,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   }, [mapInstance, primary, timeMs, effectiveTime, overlays, activePathId, probe, mode, waterDay, allRoutes]);
 
   useEffect(() => {
-    if (!mapInstance) return;
+    if (!mapInstance || homeLens) return;
     let timer: number;
     const schedule = () => {
       window.clearTimeout(timer);
@@ -487,7 +492,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
     mapInstance.on("moveend", schedule);
     schedule();
     return () => { mapInstance.off("moveend", schedule); window.clearTimeout(timer); };
-  }, [mapInstance, viewQuery]);
+  }, [mapInstance, viewQuery, homeLens]);
 
   useEffect(() => {
     if (!mapInstance) return;
@@ -789,6 +794,12 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
       imergTime: !water && imergOn ? satelliteTimes.imerg : undefined,
       rainObservedAt: rainRisk?.observedAt, riversDate: rivers?.today, warningAt: tmdWarnings ? tmdWarnings.items[0]?.announcedAt ?? null : undefined })} />}
     onProbeCenter={(trigger) => probeCenter(trigger)} />;
+
+  if (homeLens) return <div className="map-shell map-home-canvas" style={{ "--map-bg": BASE.dark.bg, "--map-panel": BASE.dark.panel, "--map-panel-border": BASE.dark.panelBorder, "--map-label": BASE.dark.label } as CSSProperties}>
+    <div ref={container} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} role="region" aria-label={t("แผนที่")} />
+    {probe?.kind === "dam" && <div className="home-map-detail"><a href={`/water/dam/${probe.id}`}>{t("ดูรายละเอียดเขื่อน")} ▸</a><button onClick={close} aria-label={t("ปิด")}>×</button></div>}
+    {status !== "ready" && <p className="home-map-status" role="status">{t(status === "error" ? "โหลดแผนที่ไม่สำเร็จ" : "กำลังโหลดแผนที่…")}{status === "error" && <button onClick={retry}>{t("ลองใหม่")}</button>}</p>}
+  </div>;
 
   return <main className={`map-shell${immersive ? " map-shell--immersive" : ""}`} style={{
     "--map-bg": BASE[theme].bg, "--map-panel": BASE[theme].panel, "--map-panel-border": BASE[theme].panelBorder,

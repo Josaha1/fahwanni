@@ -1,5 +1,6 @@
 "use client";
 
+import { MapBackLink } from "@/components/sheet/map-back-link";
 import dynamic from "next/dynamic";
 import { useT } from "@/i18n/client";
 
@@ -14,5 +15,5 @@ function MapLoading() {
 }
 
 export default function MapPage() {
-  return <MapView />;
+  return <><MapBackLink floating /><MapView /></>;
 }

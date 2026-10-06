@@ -7,7 +7,6 @@ import Script from "next/script";
 import { ThemeController } from "@/components/theme-controller";
 import { RouteTransition } from "@/components/visual-transition";
 import "@/components/visual-transition.css";
-import { BottomNav } from "@/components/bottom-nav";
 import { VersionWatcher } from "@/components/version-watcher";
 import { LocaleProvider } from "@/i18n/client";
 import { getLocale } from "@/i18n/server";
@@ -60,7 +59,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${ibmPlexSansThai.variable} antialiased`}>
         <Script id="fah-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeController />
-        <LocaleProvider locale={locale}><RouteTransition>{children}</RouteTransition><BottomNav /></LocaleProvider>
+        <LocaleProvider locale={locale}><RouteTransition>{children}</RouteTransition></LocaleProvider>
         <VersionWatcher />
         <Toaster position="top-center" toastOptions={{ style: { background: "var(--card)", color: "var(--foreground)", borderColor: "var(--border)", fontFamily: "inherit" } }} />
         <SpeedInsights />

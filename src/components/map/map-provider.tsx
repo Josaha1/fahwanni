@@ -33,16 +33,18 @@ export function useMapContext(): MapContextValue {
  * again only on retry): it never depends on the place or the language, so changing either moves
  * the view or relabels instead of rebuilding every layer.
  */
-export function MapProvider({ containerRef, initialCenter, initialZoom = 6, children }: {
+export function MapProvider({ containerRef, initialCenter, initialZoom = 6, fixedTheme, children }: {
   containerRef: RefObject<HTMLDivElement | null>;
   /** Read once when the map is created. */
   initialCenter: [number, number];
   initialZoom?: number;
+  fixedTheme?: BaseTheme;
   children: ReactNode;
 }) {
   const [center] = useState(initialCenter);
   const [zoom] = useState(initialZoom);
-  const appTheme = useAppMapTheme();
+  const selectedTheme = useAppMapTheme();
+  const appTheme = fixedTheme ?? selectedTheme;
   const [initialStyle, setInitialStyle] = useState<{ style: StyleSpecification | string; theme: BaseTheme } | null>(null);
   const [map, setMap] = useState<Map | null>(null);
   const [theme, setTheme] = useState<BaseTheme>("dark");

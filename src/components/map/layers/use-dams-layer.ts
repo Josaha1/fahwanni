@@ -28,7 +28,7 @@ function fallbackFilter(map: Map, data: DamCollection): FilterSpecification {
 }
 
 /** `visibleIds`: a water-mode filter chip; null shows every dam. */
-export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, waterDay = 0, visibleIds: Set<string> | null = null) {
+export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled: boolean, waterDay = 0, visibleIds: Set<string> | null = null, scale = 1) {
   const t = useT();
   const { theme } = useMapContext();
   const { reducedMotion, lite } = useLite();
@@ -91,7 +91,7 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
       } });
     // Keep the id used by useProbe and neighbouring layers so taps still open the dam card.
     if (!live.getLayer("dam-circle")) live.addLayer({ id: "dam-circle", type: "symbol", source: SOURCE,
-      layout: { "icon-image": ["get", "sprite"], "icon-size": ["/", ["*", RADIUS, 2], RING_SIZE],
+      layout: { "icon-image": ["get", "sprite"], "icon-size": ["/", ["*", RADIUS, 2 * scale], RING_SIZE],
         "icon-allow-overlap": true, "icon-ignore-placement": true },
       paint: { "icon-opacity": waterDay > 0 ? 0.45 : 0.95 } });
     if (!live.getLayer("dam-label")) live.addLayer({ id: "dam-label", type: "symbol", source: SOURCE, minzoom: 7,
@@ -100,7 +100,7 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
   }, (live) => {
     for (const id of LAYERS) if (live.getLayer(id)) live.removeLayer(id);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
-  }, [data, theme, waterDay, pulse]);
+  }, [data, theme, waterDay, pulse, scale]);
 
   useEffect(() => {
     if (!map || !pulse) return;

@@ -17,7 +17,7 @@ const HATCH = "province-cloud-hatch";
 const LAYERS = [PROVINCE_FLOOD_LAYER, "province-flood-cloud", "province-flood-border"];
 type ProvinceCollection = FeatureCollection<Polygon | MultiPolygon, { id: string }>;
 
-export function useSatelliteFloodLayer(map: Map | null, enabled: boolean, report: FloodReport | null, snapshot: FloodNowPayload | null): void {
+export function useSatelliteFloodLayer(map: Map | null, enabled: boolean, report: FloodReport | null, snapshot: FloodNowPayload | null, cloudOpacity = 0.65, waterColor?: string): void {
   const { theme } = useMapContext();
   const [geometry, setGeometry] = useState<ProvinceCollection | null>(null);
   const date = report?.date;
@@ -59,7 +59,7 @@ export function useSatelliteFloodLayer(map: Map | null, enabled: boolean, report
   useStyleEffect(map, (live) => {
     if (!data || !live.getStyle()?.layers) return;
     const tokens = getComputedStyle(document.documentElement);
-    const water = tokens.getPropertyValue("--water").trim() || "#22d3ee";
+    const water = waterColor ?? (tokens.getPropertyValue("--water").trim() || "#22d3ee");
     const grey = tokens.getPropertyValue("--nodata").trim() || "#64748b";
     if (!live.hasImage(HATCH)) {
       // A seamless 8px diagonal tile, generated at runtime without a bitmap asset.
@@ -81,12 +81,12 @@ export function useSatelliteFloodLayer(map: Map | null, enabled: boolean, report
     if (!live.getLayer(PROVINCE_FLOOD_LAYER)) live.addLayer({ id: PROVINCE_FLOOD_LAYER, type: "fill", source: SOURCE,
       paint: { "fill-color": water, "fill-opacity": ["get", "opacity"] } }, live.getLayer(ID) ? ID : before);
     if (!live.getLayer("province-flood-cloud")) live.addLayer({ id: "province-flood-cloud", type: "fill", source: SOURCE,
-      filter: ["==", ["get", "cloudy"], true], paint: { "fill-pattern": HATCH, "fill-opacity": 0.65 } }, before);
+      filter: ["==", ["get", "cloudy"], true], paint: { "fill-pattern": HATCH, "fill-opacity": cloudOpacity } }, before);
     if (!live.getLayer("province-flood-border")) live.addLayer({ id: "province-flood-border", type: "line", source: SOURCE,
       paint: { "line-color": grey, "line-width": 0.5, "line-opacity": 0.6 } }, before);
   }, (live) => {
     for (const id of [...LAYERS].reverse()) if (live.getLayer(id)) live.removeLayer(id);
     if (live.getSource(SOURCE)) live.removeSource(SOURCE);
     if (live.hasImage(HATCH)) live.removeImage(HATCH);
-  }, [data, theme]);
+  }, [data, theme, cloudOpacity, waterColor]);
 }
