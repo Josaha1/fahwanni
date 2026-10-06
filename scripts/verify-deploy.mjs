@@ -29,6 +29,8 @@ const paths = [
   "/embed/dam/200101",
   "/embed/province/phra-nakhon-si-ayutthaya",
   "/alerts",
+  "/text",
+  "/text?lang=en",
   "/water/dam/200101",
   "/api/flood-now",
   "/api/rain-dams?ids=200101,200102,200103",
@@ -64,9 +66,13 @@ const results = await Promise.all(paths.map(async (path) => {
   const started = performance.now();
   try {
     const response = await fetch(new URL(path, base), { cache: "no-store", redirect: path in redirects ? "manual" : "follow" });
-    const bytes = (await response.arrayBuffer()).byteLength;
+    const body = await response.arrayBuffer();
+    const bytes = body.byteLength;
+    const isText = path.startsWith("/text");
+    const textError = isText && (bytes >= 30_000 || /<script\b/i.test(new TextDecoder().decode(body)))
+      ? "Expected HTML < 30 KB without scripts" : undefined;
     const vercelId = response.headers.get("x-vercel-id");
-    return { path, status: response.status, location: response.headers.get("location"), bytes, ms: Math.round(performance.now() - started), region: vercelId?.split("::")[0] ?? "" };
+    return { path, status: response.status, location: response.headers.get("location"), bytes, ms: Math.round(performance.now() - started), region: vercelId?.split("::")[0] ?? "", error: textError };
   } catch (error) {
     return { path, status: "ERROR", bytes: 0, ms: Math.round(performance.now() - started), region: "", error: String(error) };
   }
@@ -74,6 +80,7 @@ const results = await Promise.all(paths.map(async (path) => {
 
 console.table(results.map(({ path, status, bytes, ms, region }) => ({ path, status, bytes, ms, region })));
 for (const result of results) {
+  if (result.error) { console.error(`${result.path}: ${result.error}`); process.exitCode = 1; }
   if (result.path in redirects) {
     const target = redirects[result.path];
     if (result.status !== 308 || !result.location || new URL(result.location, base).href !== new URL(target, base).href) {

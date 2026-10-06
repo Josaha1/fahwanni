@@ -30,6 +30,7 @@ import { useFollowed } from "@/hooks/use-followed";
 import { useHomeNews } from "./use-home-news";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { SpeakButton } from "@/components/speak-button";
+import { damsCsv, provincesCsv, downloadCsv } from "@/lib/csv";
 
 const provinceHref = (th: string) => { const match = provinces.find((province) => province.th === th); return match ? `/province/${match.id}` : "/alerts"; };
 import "./map-home.css";
@@ -139,6 +140,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
           {lens === "rain" && rainList.slice(0, 10).map((station) => <Link key={station.id} href={provinceHref(station.provinceTh)} className="home-row"><span>{station.nameTh}</span><span className="home-bar"><i style={{ width: `${100 * station.rainMm / Math.max(1, rainList[0].rainMm)}%` }} /></span><span>{number(station.rainMm)} {t("มม.")}</span></Link>)}
         </div>
         {lens === "flood" && <p className="home-source">{t("จุดตรวจจากดาวเทียม ไม่ใช่ขนาดพื้นที่")} · {source("NASA VIIRS", flood.data?.date, "satellite")}{!flood.data && ` · ${loading}`}</p>}
+        {lens === "flood" && <button className="home-action" disabled={!flood.data} onClick={() => { if (flood.data) downloadCsv(provincesCsv(flood.data.provinceCounts, flood.data.date), `provinces-${flood.data.date}.csv`); }}>{t("ดาวน์โหลด CSV")}</button>}
         {lens === "dams" && <p className="home-source">{source("กรมชลประทาน", dams.data?.dataDate)}</p>}
         {lens === "rain" && <p className="home-source">{source("กรมอุตุนิยมวิทยา", rain.data?.observedAt, "rain24h")}</p>}
         {lens === "dams" && !dams.data && <p role="status">{loading}</p>}{lens === "rain" && !rain.data && <p role="status">{loading}</p>}
@@ -148,11 +150,13 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
         <h2>{t("ตารางเขื่อนทั้งหมด (เจ้าหน้าที่/สื่อ)")}</h2>
         <div className="home-table"><table><thead><tr>{["เขื่อน", "%", "ล้าน ม³", "เข้า", "ระบาย"].map((label) => <th key={label} scope="col">{t(label)}</th>)}</tr></thead><tbody>{tableList.map((dam) => <tr key={dam.id}><th scope="row"><Link href={`/dam/${dam.id}`}>{dam.nameTh}</Link><br />{source("กรมชลประทาน", dam.date)}</th><td>{number(dam.storagePct)}</td><td>{number(dam.storageMcm)}</td><td>{number(dam.inflowCms)}</td><td>{number(dam.releaseCms)}</td></tr>)}</tbody></table></div>
         <p className="home-source">{t("เข้า / ระบาย: ลบ.ม./วินาที · — = ไม่รายงาน")}</p>
+        <button className="home-action" disabled={!dams.data} onClick={() => downloadCsv(damsCsv(tableList), `dams-${dams.data?.dataDate ?? new Date().toISOString().slice(0, 10)}.csv`)}>{t("ดาวน์โหลด CSV")}</button>
         <button className="home-action" disabled={!dams.data} onClick={async () => { try { await navigator.clipboard.writeText(damClipboard(tableList)); toast.success(t("คัดลอกแล้ว")); } catch { toast.error(t("คัดลอกไม่สำเร็จ")); } }}>{t("คัดลอกพร้อมที่มา")}</button>
       </>}
       <button className="home-action" onClick={() => dialog.current?.showModal()}>{t("มีอะไรใหม่")} · {t("ติดตาม")}</button>
       <div className="home-depth" role="group" aria-label={t("ระดับรายละเอียด")}><span>{t("ดูแบบ")}</span>{([ ["peek", "ทั่วไป"], ["half", "อาสา"], ["full", "เจ้าหน้าที่"] ] as const).map(([key, label]) => <button key={key} aria-pressed={detent === key} onClick={() => setDetent(key)}>{t(label)}</button>)}</div>
       <EmergencyStrip />
+      <a className="home-action" href={`/text?lang=${t.locale}`}>{t("หน้า text สำหรับ 2G")}</a>
     </BottomSheet>
     <dialog ref={dialog} className="home-alerts" aria-labelledby="home-alerts-title" onClose={() => { markRead(); bell.current?.focus(); }}>
       <header><h2 id="home-alerts-title">{t("แจ้งเตือน")}</h2><button onClick={() => dialog.current?.close()} aria-label={t("ปิด")}>×</button></header>

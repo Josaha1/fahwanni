@@ -1,4 +1,6 @@
 export const sheet = {
+  "ดาวน์โหลด CSV": "Download CSV",
+  "หน้า text สำหรับ 2G": "Text page for 2G",
   "แชร์ภาพสรุปเขื่อน": "Share dam summary",
   "แชร์ไป LINE": "Share to LINE",
   "ฝังในเว็บอื่น": "Embed on another website",
