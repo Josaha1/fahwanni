@@ -54,6 +54,6 @@ export function BottomSheet({ detent, onChange, reducedMotion, children }: {
           onChange(event.key === "Home" ? "full" : event.key === "End" ? "peek" : event.key === "ArrowUp" ? detent === "peek" ? "half" : "full" : detent === "full" ? "half" : "peek");
         }
       }}><span aria-hidden="true" /></button>
-    <div ref={body} id={id} className="home-sheet-body" style={{ height: height ? height - offsets[detent] - 28 : undefined }}>{children}</div>
+    <div ref={body} id={id} className="home-sheet-body" style={{ height: height ? `calc(${height - offsets[detent]}px - var(--home-grab-height, 28px))` : undefined }}>{children}</div>
   </motion.section>;
 }

@@ -3,6 +3,7 @@
 import { useT } from "@/i18n/client";
 import { useLite } from "@/hooks/use-lite";
 import { useWaterSource } from "@/hooks/use-water-source";
+import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import type { DamsPayload } from "@/lib/dams/client";
@@ -34,9 +35,10 @@ export function RiverDetail({ system, gauges }: { system: RiverSystem; gauges: P
     <SourceTime source="กรมชลประทาน" date={date} kind="daily" className="river-source" />
     {dams.status !== "ready" && <p className="text-muted text-sm" role="status">{t(dams.status === "loading" ? "กำลังโหลดข้อมูลส่วนนี้…" : "ข้อมูลส่วนนี้ไม่พร้อมใช้งาน")}</p>}
     {dams.status === "ready" && missingNames.length > 0 && <p className="river-source">{t("ไม่รายงานวันนี้: {names}", { names: missingNames.join(" · ") })}</p>}
-    <RiverSchematic system={system} dams={dams.data?.dams ?? []} gauges={gauges} animate={!lite && !reducedMotion} />
+    <div className="river-schematic-scroll"><RiverSchematic system={system} dams={dams.data?.dams ?? []} gauges={gauges} animate={!lite && !reducedMotion} /></div>
     <p className="river-legend">{t("ความกว้างและความเร็วเส้น = ผลรวมการระบายจากเขื่อนต้นน้ำ · ลบ.ม./วินาที · เทาประ = ไม่มีรายงาน · ประยาว = รายงานไม่ครบ")}</p>
     {gauges.length > 0 && <p className="river-source">{t("ขีดเทา = ระดับน้ำรายเดือน HII (CC BY-NC) ไม่ใช่ข้อมูลสด")}</p>}
     <p className="river-source">HydroRIVERS (CC BY 4.0)</p>
+    <EmergencyStrip />
   </div></main>;
 }

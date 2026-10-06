@@ -15,9 +15,9 @@ function readOverride(): boolean | null {
 }
 
 export function useLite() {
-  const [device, setDevice] = useState<DeviceEnv>(() => typeof window === "undefined"
-    ? { reducedMotion: false, saveData: false } : readDeviceEnv());
-  const [liteOverride, setLiteOverride] = useState(readOverride);
+  // Start from the server's values so hydration matches; the effect below reads the real device and saved choice.
+  const [device, setDevice] = useState<DeviceEnv>({ reducedMotion: false, saveData: false });
+  const [liteOverride, setLiteOverride] = useState<boolean | null>(null);
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");

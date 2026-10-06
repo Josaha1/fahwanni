@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/i18n/client";
 import { useWaterSource } from "@/hooks/use-water-source";
+import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import { ShareButton } from "@/components/share-button";
@@ -105,5 +106,6 @@ export function ProvinceDetail({ province, bbox }: { province: Province; bbox: B
       try { await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`); toast.success(t("คัดลอกแล้ว")); }
       catch { toast.error(t("คัดลอกไม่สำเร็จ")); }
     }}>{t("คัดลอกพร้อมที่มา")}</button></div>
+    <EmergencyStrip />
   </div></main>;
 }

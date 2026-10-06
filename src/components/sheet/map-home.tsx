@@ -10,6 +10,7 @@ import { useLastPlace } from "@/hooks/use-favourites";
 import { useWaterSource } from "@/hooks/use-water-source";
 import { useT } from "@/i18n/client";
 import { MapSearchPill } from "@/components/map/ui/map-search-pill";
+import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { ThMap } from "@/components/visuals/th-map";
 import { FavouritesRow } from "@/components/favourites-row";
@@ -149,7 +150,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       </>}
       <button className="home-action" onClick={() => dialog.current?.showModal()}>{t("มีอะไรใหม่")} · {t("ติดตาม")}</button>
       <div className="home-depth" role="group" aria-label={t("ระดับรายละเอียด")}><span>{t("ดูแบบ")}</span>{([ ["peek", "ทั่วไป"], ["half", "อาสา"], ["full", "เจ้าหน้าที่"] ] as const).map(([key, label]) => <button key={key} aria-pressed={detent === key} onClick={() => setDetent(key)}>{t(label)}</button>)}</div>
-      <div className="home-emergency" aria-label={t("เบอร์ฉุกเฉิน")}>{[["1784", "ปภ. 1784"], ["1669", "เจ็บป่วย 1669"], ["191", "เหตุด่วน 191"]].map(([phone, label]) => <a href={`tel:${phone}`} key={phone}>{t(label)}</a>)}</div>
+      <EmergencyStrip />
     </BottomSheet>
     <dialog ref={dialog} className="home-alerts" aria-labelledby="home-alerts-title" onClose={() => { markRead(); bell.current?.focus(); }}>
       <header><h2 id="home-alerts-title">{t("แจ้งเตือน")}</h2><button onClick={() => dialog.current?.close()} aria-label={t("ปิด")}>×</button></header>

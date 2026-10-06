@@ -1,15 +1,15 @@
 .province-sheet { margin-top: 0; }
 .province-sheet section { display: grid; gap: 8px; min-width: 0; }
 .province-map { display: block; width: 100%; height: 180px; border: 1px solid var(--border); border-radius: 12px; background: var(--background); }
-.province-big { color: var(--water); font-size: 40px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.province-big { color: var(--water); font-size: 2.5rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 .province-bar { height: 8px; min-width: 0; background: var(--card); border-radius: 9px; overflow: hidden; }
 .province-bar i { display: block; height: 100%; background: var(--water); border-radius: inherit; }
 .province-bar.release i { background: var(--release); }
 .province-rows { display: grid; gap: 2px; }
-.province-rows > a, .province-rows > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.province-rows > a, .province-rows > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
 .province-rows > a { grid-template-columns: minmax(0, 1fr) minmax(24px, 0.5fr) minmax(0, auto); min-height: 44px; }
 .province-rows span { min-width: 0; overflow-wrap: anywhere; }
 .province-days { display: flex; flex-wrap: wrap; gap: 6px; }
-.province-days button { padding: 6px 8px; min-height: 44px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
+.province-days button { padding: 6px 8px; min-height: 44px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.75rem; }
 .province-days button[aria-pressed="true"] { border-color: var(--water); color: var(--water); }
-.province-model { color: var(--model); font-size: 28px; }
+.province-model { color: var(--model); font-size: 1.75rem; }

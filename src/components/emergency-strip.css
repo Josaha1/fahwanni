@@ -1,0 +1,3 @@
+.emergency-strip { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; font-size: .6875rem; }
+.emergency-strip a { display: flex; align-items: center; min-height: 48px; max-width: 100%; padding: 6px 10px; border: 1px solid var(--warn); border-radius: 99px; color: var(--warn); overflow-wrap: anywhere; }
+.emergency-strip a:focus-visible { outline: 2px solid var(--warn); outline-offset: 2px; }

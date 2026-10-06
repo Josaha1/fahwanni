@@ -33,6 +33,7 @@ it("opens at peek with three sourced tiles and emergency links even when sources
   const html = render();
   expect(html).toContain('data-detent="peek"');
   expect(html.match(/class="home-tile"/g)).toHaveLength(3);
+  expect(html.match(/class="emergency-strip"/g)).toHaveLength(1);
   for (const phone of [1784, 1669, 191]) expect(html).toContain(`href="tel:${phone}"`);
   expect(html).toContain("พบน้ำ — จุด");
   expect(html).toContain("เมฆ —%");

@@ -480,7 +480,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] { min-width
 dialog.sheet::backdrop { background: rgba(45,58,90,.45); animation: sheet-fade 260ms ease-out; }
 html:has(dialog.sheet[open]) { overflow: hidden; }
 /* Large-text mode (settings): Tailwind sizes are rem-based, so scaling the root scales the app. */
-html[data-text="large"] { font-size: 118.75%; }
+html[data-text="large"] { font-size: 125%; }
 @keyframes sheet-up { from { transform: translateY(100%); } }
 @keyframes sheet-fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { dialog.sheet, dialog.sheet::backdrop { animation: none; } }

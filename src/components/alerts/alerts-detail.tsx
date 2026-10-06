@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useT } from "@/i18n/client";
 import { useWaterSource } from "@/hooks/use-water-source";
+import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import { FLOOD_EVENT_WORDS } from "@/components/water/flood-events";
@@ -30,5 +31,6 @@ export function AlertsDetail() {
     })}</ol>
     {!rows.length && warnings.data && events.data && dams.data && <p className="text-muted text-sm">{t("ไม่มีรายการแจ้งเตือนจากข้อมูลที่รายงาน")}</p>}
     <p className="text-muted text-xs">{t("ส้ม = เขื่อน >80% หรือระบาย ≥100 ลบ.ม./วินาที · ฟ้า = เหตุการณ์ · แดง = ประกาศ TMD")}</p>
+    <EmergencyStrip />
   </div></main>;
 }

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useT } from "@/i18n/client";
+import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { ShareButton } from "@/components/share-button";
 import { MapBackLink } from "@/components/sheet/map-back-link";
@@ -91,6 +92,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
       <section><h2>{t("เก็บกัก 7 วัน (% ความจุ)")}</h2>
         {trend.data && date ? <DamTrendChart trend={trend.data} id={registered.id} date={date} storageOnly showDetails={false} /> : status(trend.status === "loading")}
       </section>
+      <EmergencyStrip />
     </div>
   </main>;
 }
