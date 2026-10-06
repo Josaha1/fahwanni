@@ -14,6 +14,7 @@ import type { DamHistory } from "@/lib/dams/history";
 import type { RegisteredDam } from "@/lib/dams/registry";
 import { sourceTimeMs } from "@/lib/freshness";
 import { provinces } from "@/lib/provinces";
+import { riverSystemForDam } from "@/lib/rivers/systems";
 import downstream from "../../../public/data/dam-downstream.json";
 import { validTrend } from "./drainage-pillar";
 import { DamHero } from "./dam-hero";
@@ -34,6 +35,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
   const history = useWaterSource("/api/dams-history", validHistory);
   const geo = useWaterSource(`/data/dam-geo/${registered.id}.json`, validGeo);
   const dam = dams.data?.dams.find((entry) => entry.id === registered.id);
+  const riverSystem = riverSystemForDam(registered.id);
   const date = dam?.date ?? dams.data?.dataDate ?? undefined;
   const name = t.locale === "en" ? registered.nameEn : registered.nameTh;
   const province = provinces.find((entry) => entry.id === registered.provinceId);
@@ -81,7 +83,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
         {!stops.length && <p className="text-muted text-xs">{t("ไม่พบข้อมูลจังหวัดท้ายน้ำ")}</p>}
         <SourceTime source="HydroRIVERS (CC BY 4.0)" date={downstream.generatedAt} kind="daily" nowMs={sourceTimeMs(downstream.generatedAt) ?? undefined} />
       </section>
-      <div className="dam-actions"><button type="button" disabled={!dam} onClick={async () => {
+      <div className="dam-actions">{riverSystem && <Link className="dam-river-link" href={`/river/${riverSystem.id}`}>{t("ดูทั้งลุ่มน้ำ")} ▸</Link>}<button type="button" disabled={!dam} onClick={async () => {
         try { await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`); toast.success(t("คัดลอกแล้ว")); }
         catch { toast.error(t("คัดลอกไม่สำเร็จ")); }
       }}>{t("คัดลอกพร้อมที่มา")}</button><ShareButton text={shareText} /></div>

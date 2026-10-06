@@ -68,7 +68,7 @@ it.each(["th", "en"] as const)("keeps %s historical dates inline with one shared
   expect(section).toContain(locale === "th" ? "5 ต.ค. 2554" : "5 Oct 2011");
   expect(html).toContain('href="/?province=tak"');
   expect(html.indexOf('href="/?province=tak"')).toBeLessThan(html.indexOf('href="/?province=bangkok"'));
-  expect(html).not.toContain('href="/river/');
+  expect(html).toContain('href="/river/chao-phraya"');
   if (locale === "en") expect(html).not.toMatch(/[ก-๙]/);
 });
 

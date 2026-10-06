@@ -16,6 +16,7 @@ import { TmdWarningList } from "@/components/water/tmd-warnings";
 import { FloodEventItem, type FloodEventsPayload } from "@/components/water/flood-events";
 import { recentFloodEvents, type FloodNowPayload } from "@/components/flood/home-data";
 import { provinces } from "@/lib/provinces";
+import { mainRiverSystems } from "@/lib/rivers/systems";
 import type { PixelCounts } from "@/lib/flood/viirs";
 import type { DamsPayload } from "@/lib/dams/client";
 import type { RainRisk } from "@/lib/rain-risk/tmd";
@@ -130,6 +131,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
         {lens === "dams" && <p className="home-source">{source("กรมชลประทาน", dams.data?.dataDate)}</p>}
         {lens === "rain" && <p className="home-source">{source("กรมอุตุนิยมวิทยา", rain.data?.observedAt, "rain24h")}</p>}
         {lens === "dams" && !dams.data && <p role="status">{loading}</p>}{lens === "rain" && !rain.data && <p role="status">{loading}</p>}
+        <nav className="home-rivers" aria-label={t("ผังลุ่มน้ำ")}><h2>{t("ผังลุ่มน้ำ")}</h2>{mainRiverSystems.map((system) => <Link key={system.id} className="home-action" href={`/river/${system.id}`}>{t.locale === "en" ? system.en : system.th} ▸</Link>)}</nav>
       </>}
       {detent === "full" && <>
         <h2>{t("ตารางเขื่อนทั้งหมด (เจ้าหน้าที่/สื่อ)")}</h2>

@@ -68,6 +68,8 @@
 .home-table :is(th, td):first-child { text-align: left; }
 .home-action { align-self: start; border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 8px 12px; min-height: 44px; font-size: 13px; }
 .home-action:disabled { opacity: .5; cursor: default; }
+.home-rivers { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-rivers h2 { width: 100%; }
 .home-alerts { width: min(430px, calc(100vw - 24px)); max-height: 85dvh; margin: auto; padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: #141d27; color: var(--foreground); }
 .home-alerts::backdrop { background: #0009; }
 .home-alerts header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

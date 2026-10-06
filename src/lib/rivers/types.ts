@@ -5,6 +5,15 @@ export interface RiverBand {
   p90: number;
 }
 
+export interface RiverSystem {
+  id: string;
+  th: string;
+  en: string;
+  branches: { id: string; th: string; en: string; dams: string[] }[];
+  nodes: { id: string; kind: string; x: number; y: number; damId?: string; provinceId?: string }[];
+  edges: { from: string; to: string; damIds: string[] }[];
+}
+
 export interface RiverPoint {
   id: string;
   nameTh: string;

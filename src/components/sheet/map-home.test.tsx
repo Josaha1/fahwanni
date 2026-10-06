@@ -79,6 +79,8 @@ it("starts lite at half and fits the Thailand SVG above the sheet", () => {
   expect(html.match(/data-province=/g)).toHaveLength(77);
   expect(html).not.toContain('class="map-shell map-home-canvas"');
   expect(html).not.toContain("ตารางเขื่อนทั้งหมด");
+  for (const id of ["chao-phraya", "chi-mun", "mekong", "tapi", "pattani"]) expect(html).toContain(`href="/river/${id}"`);
+  expect(html).not.toContain('href="/river/other"');
   const css = readFileSync(new URL("./map-home.css", import.meta.url), "utf8");
   expect(css).toMatch(/\.home-svg\s*\{[^}]*height: 45%/);
   expect(css).toMatch(/\.home-svg \[data-th-map\]\s*\{[^}]*flex: 1; min-height: 0; height: auto/);

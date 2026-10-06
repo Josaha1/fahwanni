@@ -26,6 +26,7 @@
 .dam-downstream small { color: var(--muted); }
 .dam-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .dam-actions > button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
+.dam-river-link { min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 13px; }
 
 .dam-page:not(:has(.dam-map)) .dam-sheet { margin-top: 0; }
 
