@@ -1,4 +1,5 @@
 export const flood: Record<string, string> = {
+  "ดาวเทียมพบน้ำ": "Satellite detected flooding",
   "ชั้นข้อมูลนี้ปิดไว้ชั่วคราวช่วงน้ำท่วม": "This layer is temporarily hidden during the flood focus",
   "ฟังสรุป": "Listen to summary",
   "ดาวเทียมมีข้อมูลเพียง {n} วันในสัปดาห์นี้": "Satellite data is available for only {n} {n:day|days} this week",

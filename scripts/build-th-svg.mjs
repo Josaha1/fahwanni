@@ -41,7 +41,7 @@ function simplify(line, tolerance = 0.45) {
   }
   return at < 0 ? [a, b] : [...simplify(line.slice(0, at + 1), tolerance).slice(0, -1), ...simplify(line.slice(at), tolerance)];
 }
-function ringPath(ring) {
+function ringPoints(ring) {
   // Split at shared-boundary junctions so neighbouring provinces simplify the same arcs.
   const cuts = ring.slice(0, -1).flatMap((p, i) => neighbours.get(key(p)).size !== 2 ? [i] : []);
   if (cuts.length < 2) cuts.push(0, Math.floor((ring.length - 1) / 2));
@@ -55,12 +55,37 @@ function ringPath(ring) {
     const reduced = simplify(reverse ? arc.toReversed() : arc);
     result.push(...(reverse ? reduced.toReversed() : reduced).slice(0, -1));
   }
-  if (result.length < 3) return ringPathTriangle(ring);
-  return `M${result.map((p) => p.map(round).join(",")).join("L")}Z`;
+  if (result.length < 3) {
+    const open = ring.slice(0, -1);
+    return [0, Math.floor(open.length / 3), Math.floor(open.length * 2 / 3)].map((i) => project(open[i]));
+  }
+  return result;
 }
-function ringPathTriangle(ring) {
-  const open = ring.slice(0, -1);
-  return `M${[0, Math.floor(open.length / 3), Math.floor(open.length * 2 / 3)].map((i) => project(open[i]).map(round).join(",")).join("L")}Z`;
+function ringPath(ring) {
+  return `M${ringPoints(ring).map((p) => p.map(round).join(",")).join("L")}Z`;
+}
+if (process.argv.includes("--geojson")) {
+  const reducePolygon = (polygon) => polygon.map((ring) => {
+    const reduced = ringPoints(ring).map(([x, y]) => [
+      Number((x / (projection.cosLat * projection.scale) + west).toFixed(4)),
+      Number((north - y / projection.scale).toFixed(4)),
+    ]);
+    return [...reduced, reduced[0]];
+  });
+  const features = geo.features.map((feature) => {
+    const id = provinceIdFromShapeName(feature.properties.shapeName);
+    if (!id) throw new Error(`Unmatched province: ${feature.properties.shapeName}`);
+    const coordinates = polygons(feature).map(reducePolygon);
+    return { type: "Feature", properties: { id }, geometry: feature.geometry.type === "Polygon"
+      ? { type: "Polygon", coordinates: coordinates[0] } : { type: "MultiPolygon", coordinates } };
+  });
+  if (features.length !== 77 || new Set(features.map((f) => f.properties.id)).size !== 77) throw new Error("Expected 77 distinct provinces");
+  const output = JSON.stringify({ type: "FeatureCollection", features });
+  const bytes = Buffer.byteLength(output);
+  if (bytes > 150 * 1024) throw new Error(`Thailand GeoJSON exceeds 150 KB: ${bytes}`);
+  writeFileSync(new URL("public/data/th-provinces-lite.geojson", root), output);
+  console.log(`Thailand GeoJSON: ${features.length} provinces, ${bytes} bytes`);
+  process.exit(0);
 }
 const entries = geo.features.map((feature) => {
   const id = provinceIdFromShapeName(feature.properties.shapeName);

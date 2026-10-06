@@ -10,6 +10,7 @@ export type Legend = { title: string; unit: string; note?: string; steps: { colo
 export type Swatch =
   | { kind: "line"; color: string; dashed?: boolean }
   | { kind: "fill"; color: string; opacity: number }
+  | { kind: "hatch"; color: string }
   | { kind: "circle"; color: string; size: number }
   | { kind: "ring"; color: string }
   | { kind: "square"; color: string }
@@ -63,7 +64,8 @@ export function overlayLegend(active: { wind: boolean; storms: boolean; quakes: 
     { swatch: { kind: "fill", color: "#b91c1c", opacity: 140 / 255 }, label: "150 มม. ขึ้นไป" },
   ] });
   if (active.satFlood) sections.push({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
-    { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
+    { swatch: { kind: "fill", color: "var(--water)", opacity: 0.75 }, label: "ดาวเทียมพบน้ำ" },
+    { swatch: { kind: "hatch", color: "var(--nodata)" }, label: "เมฆบัง/ข้อมูลไม่พอ" },
   ] });
   if (active.surfaceWater) sections.push({ title: "พื้นที่ที่เคยมีน้ำขัง (1984–2021)", note: "พื้นที่ที่ดาวเทียมเคยเห็นน้ำ · ไม่ใช่การพยากรณ์", rows: [
     { swatch: { kind: "fill", color: "#3186c9", opacity: 0.6 }, label: "พื้นที่ที่มีน้ำบ่อยในอดีต" },

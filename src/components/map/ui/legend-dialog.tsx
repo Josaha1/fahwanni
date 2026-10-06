@@ -9,6 +9,7 @@ function SwatchView({ swatch }: { swatch: Swatch }) {
       <line x1="0" y1="10" x2="24" y2="10" stroke={swatch.color} strokeWidth="3" strokeDasharray={swatch.dashed ? "4 3" : undefined} />
     </svg>;
     case "fill": return <span className="block h-4 w-4 rounded-sm border" style={{ borderColor: swatch.color, backgroundColor: `color-mix(in srgb, ${swatch.color} ${swatch.opacity * 100}%, transparent)` }} aria-hidden="true" />;
+    case "hatch": return <span className="block h-4 w-4 rounded-sm" style={{ backgroundImage: `repeating-linear-gradient(135deg, ${swatch.color} 0 2px, transparent 2px 6px)` }} aria-hidden="true" />;
     case "circle": return <span className="block rounded-full" style={{ width: swatch.size, height: swatch.size, backgroundColor: swatch.color }} aria-hidden="true" />;
     case "ring": return <span className="block h-4 w-4 rounded-full border-[3px]" style={{ borderColor: swatch.color }} aria-hidden="true" />;
     case "square": return <span className="block h-3 w-3 rounded-[2px] border border-white" style={{ backgroundColor: swatch.color }} aria-hidden="true" />;
@@ -59,5 +60,6 @@ export function LegendDialog({ mode, primary, rainMode, active, dialogRef, trigg
     {active.thermal && <p className="map-muted mt-1 text-xs">NASA FIRMS/GIBS</p>}
     {mode === "water" && <p className="map-muted mt-4 text-xs">{t("ข้อมูล: กรมชลประทาน, กรมอุตุนิยมวิทยา, Open-Meteo · ปริมาณน้ำไหลผ่าน: GloFAS ผ่าน Open-Meteo (CC BY 4.0) · เส้นทางน้ำ: HydroRIVERS (CC BY 4.0)")}</p>}
     {active.surfaceWater && <p className="map-muted mt-1 text-xs">EC JRC/Google Global Surface Water</p>}
+    {active.satFlood && <p className="map-muted mt-1 text-xs">NASA LANCE/GIBS · geoBoundaries / © OpenStreetMap contributors (ODbL)</p>}
   </dialog>;
 }

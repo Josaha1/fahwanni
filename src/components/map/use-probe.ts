@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Marker, type GeoJSONSource, type Map, type MapMouseEvent } from "maplibre-gl";
+import { PROVINCE_FLOOD_LAYER } from "./layers/use-satellite-flood-layer";
 
 export type Probe = { kind: "point"; lat: number; lon: number } | { kind: "storm"; id: string } | { kind: "quake"; id: string } | { kind: "dam"; id: string } | { kind: "rain"; id: string } | { kind: "river"; id: string } | { kind: "reservoir"; id: string } | { kind: "floodEvent"; id: string } | { kind: "floodRisk"; id: string };
 
 /** `points: false` (water mode): empty taps do not open a point probe. */
 /** `onRoute`: a tap on the all-routes overview opens that route's dam and hands its id back to focus the route. */
-export function useProbe(map: Map | null, { points, onRoute }: { points: boolean; onRoute?: (damId: string) => void } = { points: true }) {
+export function useProbe(map: Map | null, { points, onRoute, onProvince }: { points: boolean; onRoute?: (damId: string) => void; onProvince?: (id: string) => void } = { points: true }) {
   const routeHandler = useRef(onRoute);
   useEffect(() => { routeHandler.current = onRoute; }, [onRoute]);
+  const provinceHandler = useRef(onProvince);
+  useEffect(() => { provinceHandler.current = onProvince; }, [onProvince]);
   const [probe, setProbe] = useState<Probe | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const select = useCallback((next: Probe, trigger?: HTMLElement | null) => {
@@ -75,6 +78,9 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       const features = layers.length ? map.queryRenderedFeatures(event.point, { layers }) : [];
       const quake = features.find((feature) => feature.layer?.id === "quake-circle" && typeof feature.properties?.id === "string");
       const storm = features.find((feature) => feature.layer?.id.startsWith("storm-") && typeof feature.properties?.id === "string");
+      const provinceLayers = [PROVINCE_FLOOD_LAYER, "province-flood-cloud"].filter((id) => map.getLayer(id));
+      const province = provinceHandler.current && provinceLayers.length ? map.queryRenderedFeatures(event.point, { layers: provinceLayers })
+        .find((feature) => typeof feature.properties?.id === "string") : undefined;
       if (dam) select({ kind: "dam", id: dam.properties!.id as string });
       else if (rain) select({ kind: "rain", id: rain.properties!.id as string });
       else if (river) select({ kind: "river", id: river.properties!.id as string });
@@ -89,6 +95,7 @@ export function useProbe(map: Map | null, { points, onRoute }: { points: boolean
       else if (favourite) select({ kind: "point", lat: favourite.properties!.lat as number, lon: favourite.properties!.lon as number });
       else if (quake) select({ kind: "quake", id: quake.properties!.id as string });
       else if (storm) select({ kind: "storm", id: storm.properties!.id as string });
+      else if (province) provinceHandler.current?.(province.properties!.id as string);
       else if (points) select({ kind: "point", lat: event.lngLat.lat, lon: event.lngLat.lng });
     };
     map.on("click", onClick);

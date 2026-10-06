@@ -4,6 +4,8 @@ import { TimeScrubber } from "@/components/time-scrubber";
 import { SourceTime } from "@/components/ui/source-time";
 import { reportedIndex } from "@/lib/timeline/reported";
 import { useFloodReplay } from "./use-flood-replay";
+import { useFloodNow } from "./use-flood-now";
+import { useRouter } from "next/navigation";
 import { FOCUS, isOn } from "@/lib/features";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
@@ -119,6 +121,7 @@ export function MapView() {
 }
 
 function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView }) {
+  const router = useRouter();
   const { place } = useLastPlace();
   const { favourites } = useFavourites();
   const t = useT();
@@ -169,7 +172,8 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const [makingImage, setMakingImage] = useState(false);
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
-  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute });
+  const openProvince = useCallback((id: string) => router.push(`/?province=${encodeURIComponent(id)}`), [router]);
+  const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute, onProvince: water ? openProvince : undefined });
   if (lite && buildings3dOn) setBuildings3dOn(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
     try {
@@ -188,10 +192,13 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const radarAge = minutesSinceNewest(frames, nowIso);
   const ageLabel = radarAgeLabel(radarAge, manifest?.stale);
   const nowMs = Date.parse(nowIso);
-  const floodReports = useFloodReplay(water && satFloodOn, nowMs);
+  const replayReports = useFloodReplay(water && satFloodOn, nowMs);
+  const floodNow = useFloodNow(water && satFloodOn, nowMs);
+  const floodReports = floodNow ? [...replayReports.filter((report) => report.date !== floodNow.date),
+    { date: floodNow.date, layer: "VIIRS_Combined_Flood_2-Day" as const }].sort((a, b) => a.date.localeCompare(b.date)) : replayReports;
   const [scrubDay, setScrubDay] = useState<string | null>(null);
   const floodDays = floodReports.map((report) => report.date);
-  const floodReport = floodReports[reportedIndex(floodDays, scrubDay)] ?? null;
+  const floodReport = floodReports[reportedIndex(floodDays, scrubDay ?? floodNow?.date ?? null)] ?? null;
   const [radarDay, setRadarDay] = useState<string | null>(null);
   const radarDays = frames.map((frame) => frame.time);
   const replayRadarIndex = reportedIndex(radarDays, radarDay);
@@ -274,7 +281,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   usePlateLayer(mapInstance, device.saveData);
   const [damFilter, setDamFilter] = useState<DamFilter>("all");
   useSurfaceWaterLayer(mapInstance, water && surfaceWaterOn);
-  useSatelliteFloodLayer(mapInstance, water && satFloodOn, floodReport);
+  useSatelliteFloodLayer(mapInstance, water && satFloodOn, floodReport, floodNow);
   const visibleDamIds = useMemo(() => water && damFilter !== "all" && dams
     ? new Set(filterDams(dams.dams, damFilter, watch).map((dam) => dam.id)) : null, [water, damFilter, dams, watch]);
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds);

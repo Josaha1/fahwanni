@@ -146,15 +146,17 @@ describe("overlayLegend", () => {
     ] });
   });
 
-  it("labels the satellite flood pixels and their observation limits", () => {
+  it("labels the province water fill, cloud hatch and observation limits", () => {
     const section = overlayLegend({ wind: false, storms: false, quakes: false, dams: false, satFlood: true }).at(-1);
     expect(section).toEqual({ title: "น้ำท่วมจากดาวเทียม (NASA)", note: "ล่าช้า ~1 วัน · ใต้เมฆมองไม่เห็น · ไม่ใช่การพยากรณ์", rows: [
-      { swatch: { kind: "fill", color: "#fa1e24", opacity: 0.85 }, label: "บริเวณที่ดาวเทียมเห็นน้ำท่วม" },
+      { swatch: { kind: "fill", color: "var(--water)", opacity: 0.75 }, label: "ดาวเทียมพบน้ำ" },
+      { swatch: { kind: "hatch", color: "var(--nodata)" }, label: "เมฆบัง/ข้อมูลไม่พอ" },
     ] });
     const en = translator("en");
     expect(en(section!.title)).not.toBe(section!.title);
     expect(en(section!.note!)).not.toBe(section!.note);
     expect(en(section!.rows[0].label)).not.toBe(section!.rows[0].label);
+    expect(en(section!.rows[1].label)).not.toBe(section!.rows[1].label);
   });
 
   it("has English translations for every Thai row and section", () => {
