@@ -8,7 +8,7 @@ self.fahRoute = function fahRoute(request, origin) {
   if (url.origin === "https://s3.amazonaws.com" && /^\/elevation-tiles-prod\/terrarium\/\d+\/\d+\/\d+\.png$/.test(url.pathname)) return "static";
   if (url.origin === "https://gibs.earthdata.nasa.gov" && /^\/(?:wmts|twms|wms)\//.test(url.pathname)) return "static";
   if (url.origin !== origin) return null;
-  if (["/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide", "/api/satellite", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
+  if (["/api/dams", "/api/flood-now", "/api/flood-events", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide", "/api/satellite", "/data/dam-paths.geojson", "/data/dam-downstream.json"].includes(url.pathname)) return "data";
   if (url.pathname.startsWith("/api/")) return null;
   if (url.pathname.startsWith("/_next/static/")) return "static";
   if (url.pathname.startsWith("/vendor/maplibre/")) return "static";
@@ -16,7 +16,7 @@ self.fahRoute = function fahRoute(request, origin) {
   if (/^\/anim\/(?:[a-z]+-(?:day|night)|typhoon-calm)\.webp$/.test(url.pathname)) return "static";
   if (/^\/icon[^/]*\.png$/.test(url.pathname) || url.pathname === "/apple-touch-icon.png" || url.pathname === "/manifest.webmanifest") return "static";
   const rsc = url.searchParams.has("_rsc") || (request.headers && request.headers.get("RSC"));
-  if ((url.pathname === "/" || url.pathname === "/map" || url.pathname === "/water" || url.pathname === "/alerts" || /^\/province\/[a-z-]+$/.test(url.pathname)) && request.mode === "navigate" && !rsc) return "page";
+  if ((url.pathname === "/" || url.pathname === "/map" || url.pathname === "/water" || url.pathname === "/alerts" || /^\/(?:province|river)\/[a-z-]+$/.test(url.pathname) || /^\/dam\/\d+$/.test(url.pathname)) && request.mode === "navigate" && !rsc) return "page";
   return null;
 };
 

@@ -622,3 +622,6 @@ html[data-text="large"] { font-size: 118.75%; }
 
 .map-back-link { display: block; padding: 10px 20px; font-size: 14px; }
 .map-back-link--floating { position: absolute; z-index: 10; top: 110px; left: 12px; padding: 6px 12px; background: var(--card); border-radius: 99px; }
+
+.offline-banner { position: fixed; z-index: 60; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 6px); transform: translateX(-50%); max-width: calc(100% - 24px);
+  padding: 4px 12px; border-radius: 999px; background: var(--release, #f59e0b); color: #111; font-size: .8rem; font-weight: 600; text-align: center; box-shadow: 0 2px 8px rgb(0 0 0 / .25); }

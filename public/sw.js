@@ -2,8 +2,8 @@
 
 importScripts("/sw-routing.js");
 
-const CACHE = "fah-v5";
-const DATA_CACHE = "fah-data-v1";
+const CACHE = "fah-v6";
+const DATA_CACHE = "fah-data-v2";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.add("/")).catch(() => {}));
@@ -36,7 +36,7 @@ async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
     const res = await fetch(request);
-    if (res.ok && !res.redirected && res.type === "basic") await cache.put(request, res.clone()).catch(() => {});
+    if (res.ok && !res.redirected && res.type === "basic") await cache.put(request, cacheName === DATA_CACHE ? await stamped(res.clone()) : res.clone()).catch(() => {});
     return res;
   } catch (error) {
     // The map rewrites its query (?lat=…&z=…) as you pan, so a reload asks for a URL that was never cached;
@@ -45,6 +45,13 @@ async function networkFirst(request, cacheName) {
     if (hit) return hit;
     throw error;
   }
+}
+
+// A saved data response carries the time it was saved, so an offline screen can say how old it is.
+async function stamped(res) {
+  const headers = new Headers(res.headers);
+  headers.set("x-fah-cached-at", new Date().toISOString());
+  return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers });
 }
 
 self.addEventListener("message", (event) => {

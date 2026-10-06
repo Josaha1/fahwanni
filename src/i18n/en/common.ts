@@ -483,6 +483,7 @@ export const common: Record<string, string> = {
   "เปิดเมนูของเบราว์เซอร์ แล้วเลือก “ติดตั้งแอป” หรือ “เพิ่มไปยังหน้าจอโฮม”": "Open the browser menu, then select ‘Install app’ or ‘Add to Home Screen’",
   "เข้าใจแล้ว": "Got it",
   "ออฟไลน์อยู่ · แสดงข้อมูลล่าสุดที่โหลดไว้": "Offline · Showing the latest saved data",
+  "ออฟไลน์ · ข้อมูลเมื่อ {time}": "Offline · data from {time}",
   "ติดตั้งแล้ว": "Installed",
   "ยังติดตั้งไม่ได้ ลองอีกครั้งผ่านเมนูของเบราว์เซอร์นะ": "Could not install yet. Try again from the browser menu",
   "โหมดแผนที่": "Map mode",

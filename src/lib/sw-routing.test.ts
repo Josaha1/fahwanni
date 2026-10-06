@@ -9,7 +9,7 @@ const route = (path: string, options?: RequestInit) => sandbox.self.fahRoute!(ne
 
 describe("service worker routing", () => {
   it.each([
-    "/api/dams", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide",
+    "/api/dams", "/api/flood-now", "/api/flood-now?lat=14.35&lon=100.57", "/api/flood-events", "/api/rain-risk", "/api/tmd-warnings", "/api/dams-trend", "/api/dams-history", "/api/rivers", "/api/tide",
     "/data/dam-paths.geojson", "/data/dam-downstream.json",
   ])("caches water data at %s", (path) => {
     expect(route(path)).toBe("data");
@@ -20,6 +20,13 @@ describe("service worker routing", () => {
   it("leaves unrelated APIs uncached", () => {
     expect(route("/api/weather")).toBeNull();
     expect(route("/api/dams-extra")).toBeNull();
+  });
+
+  it("caches the map-first detail pages for offline navigation", () => {
+    for (const path of ["/dam/200101", "/river/chao-phraya", "/province/phra-nakhon-si-ayutthaya", "/alerts"]) {
+      expect(sandbox.self.fahRoute!({ method: "GET", url: `${origin}${path}`, mode: "navigate", headers: new Headers() } as Request, origin)).toBe("page");
+    }
+    expect(sandbox.self.fahRoute!({ method: "GET", url: `${origin}/dam/abc`, mode: "navigate", headers: new Headers() } as Request, origin)).toBeNull();
   });
 
   it("keeps page and static routing", () => {
