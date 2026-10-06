@@ -107,6 +107,7 @@ screenshots. The executable copy goes to `docs/plans/map-first.md`. `wip/osm-dam
 **Phase A — sign-off mockup (Claude, before any code)**
 A1. Interactive HTML mockup artifact of Home peek/half, Dam, River (Chao Phraya), Province and Alerts at 390 px, using today's real numbers
     (RID / flood-now / TMD) as static sample data. The user approves or adjusts before Phase 0. Verify: the user says OK.
+    **DONE 2026-10-06:** https://claude.ai/artifact/CL8jRXaHnDenYFVJJpmxCH — user: "ต่อ".
 
 **Phase 0 — subtract (fast, visible: lighter app)**
 0.1 Delete the three.js stack + glb + tilt; `/water/dam/[id]` keeps the SVG hero.
