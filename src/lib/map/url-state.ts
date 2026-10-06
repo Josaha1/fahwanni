@@ -57,7 +57,7 @@ export function parseUrlView(search: string, focus: "flood" | "all" = FOCUS): Ur
   }
   const wd = boundedNumber(params.get("wd"), 1, 7);
   if (view.mode === "water" && wd !== undefined && Number.isInteger(wd)) view.wd = wd;
-  if (view.mode === "water" && params.get("routes") === "1") view.routes = true;
+  if (view.mode === "water" && ["0", "1"].includes(params.get("routes") ?? "")) view.routes = params.get("routes") === "1";
   return view;
 }
 
@@ -71,7 +71,7 @@ export function formatUrlView(view: Required<Pick<UrlView, "lat" | "lon" | "z" |
   if (view.t !== undefined) params.set("t", String(Math.round(view.t / 60_000)));
   if (view.mode) params.set("mode", view.mode);
   if (water && view.wd !== undefined && Number.isInteger(view.wd) && view.wd >= 1 && view.wd <= 7) params.set("wd", String(view.wd));
-  if (water && view.routes) params.set("routes", "1");
+  if (water && view.routes !== undefined) params.set("routes", view.routes ? "1" : "0");
   if (water && view.dam && /^[a-z0-9-]+$/.test(view.dam)) params.set("dam", view.dam);
   if (water && view.river && /^[a-z0-9-]+$/.test(view.river)) params.set("river", view.river);
   const overlays = [view.ov.wind && "wind", view.ov.storms && "storms", view.ov.quakes && "quakes", view.ov.terrain && "3d"].filter(Boolean).join(",");

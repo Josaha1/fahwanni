@@ -287,7 +287,7 @@ function MapScreen({ container, urlView }: { container: RefObject<HTMLDivElement
   const floodRisk = useFloodRiskLayer(mapInstance, water && floodRiskOn);
   useRainRiskLayer(mapInstance, rainRisk, water && waterDay === 0);
   useRiverLayer(mapInstance, rivers, water, waterDay);
-  useAllRoutesLayer(mapInstance, dams, water && allRoutes);
+  useAllRoutesLayer(mapInstance, dams, water && allRoutes, waterDay);
   const rainAccumStatus = useRainAccumulation(mapInstance, water && rainAccumOn, nowMs, waterDay);
   // The route follows `focus`, not the open card: closing the card or tapping the map keeps it.
   const activePathId = damsOn && mapState.focus?.kind === "damRoute" ? mapState.focus.damId : null;

@@ -34,7 +34,7 @@ export function initialMapState(override?: Partial<Pick<MapState, "mode" | "wate
   const waterDay = override?.waterDay ?? 0;
   return {
     mode,
-    allRoutes: mode === "water" && override?.allRoutes === true,
+    allRoutes: mode === "water" && override?.allRoutes !== false,
     waterDay: mode === "water" && Number.isInteger(waterDay) && waterDay >= 0 && waterDay <= 7 ? waterDay : 0,
     primary: focus === "flood" ? "rain" : override?.primary ?? "rain",
     rainOn: true,
@@ -65,7 +65,7 @@ export function mapReducer(state: MapState, action: MapAction): MapState {
     case "toggleAllRoutes": return state.mode === "water" ? { ...state, allRoutes: !state.allRoutes } : state;
     // Dams belong to water mode; leaving it drops the route too.
     case "setMode": return action.mode === "water"
-      ? { ...state, mode: "water", overlays: { ...state.overlays, dams: true }, playing: false }
+      ? { ...state, mode: "water", allRoutes: state.mode === "water" ? state.allRoutes : true, overlays: { ...state.overlays, dams: true }, playing: false }
       : { ...state, mode: "weather", waterDay: 0, allRoutes: false, overlays: { ...state.overlays, dams: false }, focus: null, playing: false };
   }
 }

@@ -189,4 +189,13 @@ describe("dam ring layer", () => {
     tick(1000);
     expect(map.setPaintProperty).toHaveBeenCalledWith("dam-high", "circle-stroke-opacity", 0);
   });
+
+  it("yields the high-release pulse to the all-dam flow animation", () => {
+    const map = fakeMap();
+    DamLayerHarness(map);
+    map.layers.set("all-routes-slow", { id: "all-routes-slow", type: "line", source: "all-routes" });
+    const tick = vi.mocked(requestAnimationFrame).mock.calls[0][0];
+    tick(900);
+    expect(map.setPaintProperty).toHaveBeenCalledWith("dam-high", "circle-stroke-opacity", 0);
+  });
 });

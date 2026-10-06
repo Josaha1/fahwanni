@@ -97,6 +97,7 @@ describe("map URL view", () => {
     expect(formatUrlView({ ...base, mode: "water", routes: true })).toContain("routes=1");
     expect(formatUrlView({ ...base, mode: "weather", routes: true })).not.toContain("routes");
     expect(parseUrlView("?mode=water&routes=1").routes).toBe(true);
+    expect(parseUrlView(formatUrlView({ ...base, mode: "water", routes: false })).routes).toBe(false);
     expect(parseUrlView("?routes=1").routes).toBeUndefined();
   });
 });

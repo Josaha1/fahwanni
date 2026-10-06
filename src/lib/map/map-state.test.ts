@@ -6,7 +6,7 @@ const mapReducer = (state: Parameters<typeof reducer>[0], action: Parameters<typ
 
 describe("flood map defaults", () => {
   it("opens an empty URL in water mode with dams and no weather overlays", () => {
-    expect(initialState()).toMatchObject({ mode: "water", primary: "rain", rainOn: true,
+    expect(initialState()).toMatchObject({ mode: "water", allRoutes: true, primary: "rain", rainOn: true,
       overlays: { dams: true, wind: false, storms: false, quakes: false, terrain: false } });
   });
   it("coerces hidden layers at initialization and after actions", () => {
@@ -126,10 +126,14 @@ describe("map state", () => {
   it("toggles the all-routes overview only in water mode and drops it when leaving", () => {
     expect(mapReducer(initialMapState(), { type: "toggleAllRoutes" }).allRoutes).toBe(false);
     const water = mapReducer(initialMapState(), { type: "setMode", mode: "water" });
-    const on = mapReducer(water, { type: "toggleAllRoutes" });
+    expect(water.allRoutes).toBe(true);
+    const off = mapReducer(water, { type: "toggleAllRoutes" });
+    expect(off.allRoutes).toBe(false);
+    const on = mapReducer(off, { type: "toggleAllRoutes" });
     expect(on.allRoutes).toBe(true);
     expect(mapReducer(on, { type: "setMode", mode: "weather" }).allRoutes).toBe(false);
     expect(initialMapState({ allRoutes: true }).allRoutes).toBe(false);
     expect(initialMapState({ mode: "water", allRoutes: true }).allRoutes).toBe(true);
+    expect(initialMapState({ mode: "water", allRoutes: false }).allRoutes).toBe(false);
   });
 });

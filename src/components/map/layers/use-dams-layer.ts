@@ -108,10 +108,11 @@ export function useDamsLayer(map: Map | null, dams: DamsPayload | null, enabled:
     let last = -Infinity;
     const tick = (now: number) => {
       if (now - last >= 80 && map.getLayer("dam-high")) {
-        // A focused route owns the screen's continuous motion while its flow layer is present.
-        const phase = map.getLayer("dam-path-flow") ? 0 : (now % 1800) / 1800;
+        // Flow routes own the screen's continuous motion while their layers are present.
+        const flowActive = map.getLayer("dam-path-flow") || ["slow", "mid", "fast"].some((bucket) => map.getLayer(`all-routes-${bucket}`));
+        const phase = flowActive ? 0 : (now % 1800) / 1800;
         map.setPaintProperty("dam-high", "circle-radius", ["+", RADIUS, 3 + phase * 7]);
-        map.setPaintProperty("dam-high", "circle-stroke-opacity", map.getLayer("dam-path-flow") ? 0 : 0.6 * (1 - phase));
+        map.setPaintProperty("dam-high", "circle-stroke-opacity", flowActive ? 0 : 0.6 * (1 - phase));
         last = now;
       }
       frame = requestAnimationFrame(tick);
