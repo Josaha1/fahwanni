@@ -1,6 +1,6 @@
 # Plan: map-first redesign
 
-Status: APPROVED 2026-10-06 (user approved the plan after "มีอะไรแนะนำเพิ่มเติมใส่มาได้เลย"; Claude's extras added as Phase 6).
+Status: DONE 2026-10-06 (all phases live, last commit 14427a9; verify-deploy 41 paths). Originally APPROVED 2026-10-06 (user approved the plan after "มีอะไรแนะนำเพิ่มเติมใส่มาได้เลย"; Claude's extras added as Phase 6).
 
 
 ## Context
