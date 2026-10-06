@@ -9,19 +9,22 @@ import { buildFloodShareText, buildShareText, type FloodShareSummary } from "@/l
 import type { WeatherSnapshot } from "@/lib/weather/types";
 import { Menu } from "./ui/menu";
 
-type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; flood?: never }
-  | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never };
+type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; flood?: never; text?: never }
+  | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never; text?: never }
+  | { text: string; flood?: never; snapshot?: never; air?: never; place?: never };
 
-export function ShareButton({ snapshot, air, place, flood }: ShareProps) {
+export function ShareButton({ snapshot, air, place, flood, text }: ShareProps) {
   const t = useT();
   const [making, setMaking] = useState(false);
 
   async function shareImage() {
     setMaking(true);
     try {
-      const blob = flood
+      const blob = text !== undefined
+        ? await (await import("./share/render-summary-image")).renderSummaryImage(text, t.locale)
+        : flood
         ? await (await import("./share/render-summary-image")).renderSummaryImage(buildFloodShareText(flood, t), t.locale)
-        : await (await import("./share/render-share-image")).renderShareImage(snapshot, air, place, t);
+        : await (await import("./share/render-share-image")).renderShareImage(snapshot!, air, place!, t);
       const file = new File([blob], "fah-wanni.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
         try { await navigator.share({ files: [file] }); } catch { /* dismissed */ }
@@ -40,7 +43,7 @@ export function ShareButton({ snapshot, air, place, flood }: ShareProps) {
   }
 
   function shareText() {
-    return `${flood ? buildFloodShareText(flood, t) : buildShareText(snapshot, air, place, t.locale, t)}\n${window.location.href}`;
+    return `${text ?? (flood ? buildFloodShareText(flood, t) : buildShareText(snapshot!, air, place!, t.locale, t))}\n${window.location.href}`;
   }
 
   async function share() {

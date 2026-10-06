@@ -1,63 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { VisualTransition } from "@/components/visual-transition";
-import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
-import { TimeScrubber } from "@/components/time-scrubber";
 import { SourceTime } from "@/components/ui/source-time";
-import { damGhosts, reportedDamDays } from "@/lib/dams/schematic";
-import type { DamHistory } from "@/lib/dams/history";
 import type { DamTrend } from "@/lib/dams/trend";
 import type { Dam } from "@/lib/dams/types";
-import { tankFill, visualSummaryTank } from "@/lib/visuals";
-import { sourceTimeMs } from "@/lib/freshness";
+import { previousDate } from "@/lib/dams/pillar";
 
-type Props = { dam: Dam; trend?: DamTrend | null; history?: DamHistory | null };
-
-export function DamTank({ dam, history, summary }: Props & { summary: string }) {
-  const fill = tankFill(dam.storagePct, 121);
-  const ghosts = damGhosts(dam, history);
-  const y = (pct: number) => 250 - Math.min(121, pct) * 1.6;
-  return <svg viewBox="0 0 480 320" className="aspect-[3/2] w-full rounded-xl text-given" role="img" aria-label={summary}>
-    <path d="M100 48V250H330V48" fill="none" stroke="currentColor" strokeWidth="3" />
-    {fill.state === "data" && <rect x="102" y={y(fill.shown)} width="226" height={fill.height * 160} fill={fill.color} opacity="0.75" />}
-    <line x1="90" x2="340" y1={y(100)} y2={y(100)} stroke="currentColor" strokeDasharray="4 3" />
-    <text x="348" y={y(100) + 4} fontSize="12" fill="currentColor">100%</text>
-    {ghosts.map(({ key, pct }) => <line key={key} data-level={key} x1="100" x2="330" y1={y(pct)} y2={y(pct)}
-      stroke={key === "lastYear" ? "#64748b" : "#e11d48"} strokeWidth="2" strokeDasharray={key === "lastYear" ? "6 4" : "2 4"} />)}
-  </svg>;
+export function capacityColor(pct: number | null | undefined) {
+  return pct == null ? "var(--nodata)" : pct > 100 ? "var(--warn)" : pct > 80 ? "var(--release)" : "var(--water)";
 }
 
-export function DamHero({ dam, trend, history }: Props) {
+export function DamHero({ dam, trend }: { dam: Dam; trend?: DamTrend | null }) {
   const t = useT();
-  const { reducedMotion } = useLite();
-  const [day, setDay] = useState<string | null>(null);
-  const days = reportedDamDays(dam, trend);
-  const found = days.findIndex((entry) => entry.date === (day ?? dam.date));
-  const index = found < 0 ? days.length - 1 : found;
-  const selected = days[index];
-  const ghosts = damGhosts(selected, history);
-  const dateFormat = new Intl.DateTimeFormat(t.intl, { day: "numeric", month: "short", timeZone: "Asia/Bangkok" });
-  const dateLabel = (date: string) => {
-    const at = sourceTimeMs(date);
-    return at === null ? t("ไม่ทราบวันที่ข้อมูล") : dateFormat.format(new Date(at));
-  };
-  const selectedDate = dateLabel(selected.date);
-  const summary = `${visualSummaryTank(tankFill(selected.storagePct, 121), t)} · ${t("ข้อมูลวันที่ {date}", { date: selectedDate })}`;
-
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
-  return <div className="space-y-2" data-scene-state={JSON.stringify({ mode: "svg", day: selected.date,
-    pct: selected.storagePct, ghosts })}>
-    <VisualTransition name={`dam-${dam.id}`}><div><DamTank dam={selected} history={history} summary={summary} /></div></VisualTransition>
-    {ghosts.length > 0 && <ul className="flex flex-wrap gap-3 text-xs">{ghosts.map(({ key, pct, date }) => <li key={key}
-      style={{ color: key === "lastYear" ? "#64748b" : "#e11d48" }}>{t(key === "lastYear" ? "ปีที่แล้ว {pct}%" : "ปี 2554 {pct}%", { pct: number.format(pct) })} · {dateLabel(date)}</li>)}</ul>}
-    <TimeScrubber days={days.map((entry) => entry.date)} day={selected.date} onChange={setDay}
-      label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")} reducedMotion={reducedMotion} />
-    <p className="text-muted text-xs">{summary}</p>
-    <div className="flex flex-wrap gap-3 text-xs"><span>{t("ระบาย (ลบ.ม./วินาที)")}: {selected.releaseCms == null ? "—" : number.format(selected.releaseCms)}</span>
-      <span>{t("ไหลเข้า (ลบ.ม./วินาที)")}: {selected.inflowCms == null ? "—" : number.format(selected.inflowCms)}</span></div>
-    {selected.date === dam.date ? <SourceTime source="กรมชลประทาน" date={selected.date} kind="daily" />
-      : <span className="text-muted text-xs">{t("กรมชลประทาน")} · {t("ข้อมูลวันที่ {date}", { date: selectedDate })}</span>}
+  const value = (n: number | null | undefined) => n == null ? t("ไม่รายงาน") : number.format(n);
+  const yesterday = previousDate(dam.date);
+  const index = trend?.dates.indexOf(yesterday) ?? -1;
+  const prior = index < 0 ? null : trend?.release[dam.id]?.[index] ?? null;
+  const delta = dam.releaseCms == null || prior == null ? null : dam.releaseCms - prior;
+  const circumference = 2 * Math.PI * 52;
+  return <div>
+    <div className="dam-hero">
+      <div className="dam-gauge">
+        <svg viewBox="0 0 130 130" role="img" aria-label={t("{pct}% ของความจุ", { pct: value(dam.storagePct) })}>
+          <circle cx="65" cy="65" r="52" fill="none" stroke="var(--border)" strokeWidth="14" />
+          <circle cx="65" cy="65" r="52" fill="none" stroke={capacityColor(dam.storagePct)} strokeWidth="14" strokeLinecap="round" strokeDasharray={`${circumference * Math.max(0, Math.min(dam.storagePct, 100)) / 100} ${circumference}`} transform="rotate(-90 65 65)" />
+          {dam.storagePct > 100 && <circle data-overflow="true" cx="65" cy="65" r="62" fill="none" stroke="var(--warn)" strokeWidth="3" strokeDasharray={`${2 * Math.PI * 62 * Math.min(100, dam.storagePct - 100) / 100} ${2 * Math.PI * 62}`} transform="rotate(-90 65 65)" />}
+          <text x="65" y="63" textAnchor="middle" fontSize="26" fontWeight="700" fill="currentColor">{value(dam.storagePct)}%</text>
+          <text x="65" y="83" textAnchor="middle" fontSize="11" fill="var(--muted)">{t("ของความจุ")}</text>
+        </svg>
+      </div>
+      <div className="dam-release">
+        <span className="text-muted text-xs">{t("ระบาย")}</span>
+        <strong>{value(dam.releaseCms)}</strong><span className="text-muted text-xs">{t("ลบ.ม./วินาที")}</span>
+        <span className="text-xs">{delta == null ? t("ไม่พบข้อมูลเทียบเมื่อวาน") : `${delta > 0 ? "▲" : delta < 0 ? "▼" : "＝"} ${value(Math.abs(delta))} ${t("เทียบเมื่อวาน")}`}</span>
+      </div>
+    </div>
+    <div className="dam-metrics">
+      <div>{t("ไหลเข้า (ลบ.ม./วินาที)")}<b>{value(dam.inflowCms)}</b></div>
+      <div>{t("เก็บกัก / ความจุ (ล้าน ม³)")}<b>{value(dam.storageMcm)} / {value(dam.capacityMcm)}</b></div>
+    </div>
+    <SourceTime source="กรมชลประทาน" date={dam.date} kind="daily" />
   </div>;
 }

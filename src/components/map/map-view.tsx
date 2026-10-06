@@ -94,6 +94,11 @@ import { useProbe } from "./use-probe";
 import { captureMapBlob, mapSourceLine, renderMapShareImage } from "@/components/share/render-map-share";
 import { damLegendStrip, legendFor } from "@/lib/map/legend";
 
+import { useDamReservoirLayer, type DamReservoirGeo } from "./layers/use-dam-reservoir-layer";
+import type { RegisteredDam } from "@/lib/dams/registry";
+
+type DamDetailMap = { registered: RegisteredDam; geo: DamReservoirGeo | null; pct: number | null };
+
 function initialSheetPosition(): SheetPosition {
   try {
     const saved = localStorage.getItem("fah-map-sheet");
@@ -108,19 +113,19 @@ function rememberSheetPosition(position: SheetPosition): void {
 
 const scalarGrid = { bbox: WIND_BBOX, nx: WIND_NX, ny: WIND_NY };
 
-export function MapView({ homeLens }: { homeLens?: "flood" | "dams" | "rain" } = {}) {
+export function MapView({ homeLens, damDetail }: { homeLens?: "flood" | "dams" | "rain"; damDetail?: DamDetailMap } = {}) {
   const { place } = useLastPlace();
   const container = useRef<HTMLDivElement>(null);
-  const [urlView] = useState(() => parseUrlView(window.location.search));
+  const [urlView] = useState(() => damDetail ? { mode: "water" as const, dam: damDetail.registered.id, lat: damDetail.registered.lat, lon: damDetail.registered.lon, z: 8, routes: false } : parseUrlView(window.location.search));
   return (
     <MapProvider containerRef={container} fixedTheme={homeLens ? "dark" : undefined} initialCenter={urlView.lat !== undefined && urlView.lon !== undefined
       ? [urlView.lon, urlView.lat] : [place.lon, place.lat]} initialZoom={urlView.z}>
-      <MapScreen container={container} urlView={urlView} homeLens={homeLens} />
+      <MapScreen container={container} urlView={urlView} homeLens={homeLens} damDetail={damDetail} />
     </MapProvider>
   );
 }
 
-function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView; homeLens?: "flood" | "dams" | "rain" }) {
+function MapScreen({ container, urlView, homeLens, damDetail }: { container: RefObject<HTMLDivElement | null>; urlView: UrlView; homeLens?: "flood" | "dams" | "rain"; damDetail?: DamDetailMap }) {
   const router = useRouter();
   const { place } = useLastPlace();
   const { favourites } = useFavourites();
@@ -143,7 +148,7 @@ function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTML
   // Water mode shows observed daily dam data only: weather layers and the time bar step aside (their state is kept).
   const water = mode === "water";
   const [rainAccumOn, setRainAccumOn] = useState(false);
-  const [satFloodOn, setSatFloodOn] = useState(true);
+  const [satFloodOn, setSatFloodOn] = useState(!damDetail);
   const [reservoirsOn, setReservoirsOn] = useState(false);
   const [surfaceWaterOn, setSurfaceWaterOn] = useState(false);
   const [thermalOverride, setThermalOverride] = useState<boolean | null>(null);
@@ -173,11 +178,11 @@ function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTML
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
   const openProvince = useCallback((id: string) => {
-    if (homeLens) {
+    if (homeLens && !damDetail) {
       window.history.replaceState(null, "", `/?province=${encodeURIComponent(id)}`);
       window.dispatchEvent(new Event("popstate"));
     } else router.push(`/?province=${encodeURIComponent(id)}`);
-  }, [router, homeLens]);
+  }, [router, homeLens, damDetail]);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute, onProvince: water ? openProvince : undefined });
   if (lite && buildings3dOn) setBuildings3dOn(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {
@@ -292,7 +297,7 @@ function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTML
   useDamsLayer(mapInstance, dams, damsOn, water ? waterDay : 0, visibleDamIds, homeLens === "dams" ? 1.5 : 1);
   const reservoirs = useReservoirs(water && reservoirsOn);
   useReservoirsLayer(mapInstance, reservoirs.points, water && reservoirsOn, nowMs);
-  const [floodEventsOn, setFloodEventsOn] = useState(true);
+  const [floodEventsOn, setFloodEventsOn] = useState(!damDetail);
   const floodEvents = useFloodEvents(water && floodEventsOn);
   useFloodEventsLayer(mapInstance, floodEvents, water && floodEventsOn);
   const [floodRiskOn, setFloodRiskOn] = useState(false);
@@ -312,7 +317,8 @@ function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTML
     })()
     : "";
   const activeRelease = activePath ? dams?.dams.find((dam) => dam.id === activePath.id)?.releaseCms ?? null : null;
-  useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion, lite);
+  useDamPathLayer(mapInstance, activePath?.path ?? null, activeRelease, isDesktop, reducedMotion, lite, !damDetail);
+  useDamReservoirLayer(mapInstance, damDetail?.geo ?? null, damDetail?.pct ?? null);
   usePlaceMarker(mapInstance, place.lon, place.lat, placeName, reducedMotion || Boolean(homeLens), urlView.lat !== undefined && urlView.lon !== undefined);
   useFavouriteLayer(mapInstance, favourites, place, windSeries, effectiveTime, !water);
 
@@ -797,7 +803,7 @@ function MapScreen({ container, urlView, homeLens }: { container: RefObject<HTML
 
   if (homeLens) return <div className="map-shell map-home-canvas" style={{ "--map-bg": BASE.dark.bg, "--map-panel": BASE.dark.panel, "--map-panel-border": BASE.dark.panelBorder, "--map-label": BASE.dark.label } as CSSProperties}>
     <div ref={container} className="absolute inset-0" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} role="region" aria-label={t("แผนที่")} />
-    {probe?.kind === "dam" && <div className="home-map-detail"><a href={`/water/dam/${probe.id}`}>{t("ดูรายละเอียดเขื่อน")} ▸</a><button onClick={close} aria-label={t("ปิด")}>×</button></div>}
+    {probe?.kind === "dam" && <div className="home-map-detail"><a href={`/dam/${probe.id}`}>{t("ดูรายละเอียดเขื่อน")} ▸</a><button onClick={close} aria-label={t("ปิด")}>×</button></div>}
     {status !== "ready" && <p className="home-map-status" role="status">{t(status === "error" ? "โหลดแผนที่ไม่สำเร็จ" : "กำลังโหลดแผนที่…")}{status === "error" && <button onClick={retry}>{t("ลองใหม่")}</button>}</p>}
   </div>;
 

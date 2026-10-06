@@ -26,7 +26,7 @@ it.each(["th", "en"] as const)("renders 35 compact SVG cards with accessible cap
   expect(html.match(/h-\[104px\]/g)).toHaveLength(35);
   const visible = html.replace(/<[^>]*>/g, "");
   for (const entry of tankGridData([first], date, null)) {
-    expect(html).toContain(`href="/water/dam/${entry.id}"`);
+    expect(html).toContain(`href="/dam/${entry.id}"`);
     expect(html).toContain(`aria-label="${visualSummaryTank(entry.fill, translator(locale))}"`);
     expect(visible).not.toContain(visualSummaryTank(entry.fill, translator(locale)));
   }

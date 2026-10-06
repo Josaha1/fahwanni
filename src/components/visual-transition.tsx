@@ -11,7 +11,7 @@ export function VisualTransition({ name, children }: { name: string; children: R
 
 export function RouteTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const participating = ["/", "/water", "/rain", "/map"].includes(pathname) || pathname.startsWith("/water/dam/");
+  const participating = ["/", "/water", "/rain", "/map"].includes(pathname) || pathname.startsWith("/dam/");
   return typeof ViewTransition !== "undefined" && participating ? <ViewTransition key={pathname} name="tab-content" share="auto" enter="auto" default="none">
     <div>{children}</div>
   </ViewTransition> : children;

@@ -1,78 +1,94 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useT } from "@/i18n/client";
 import { SourceTime } from "@/components/ui/source-time";
+import { ShareButton } from "@/components/share-button";
+import { MapBackLink } from "@/components/sheet/map-back-link";
 import { useWaterSource } from "@/hooks/use-water-source";
+import { useLite } from "@/hooks/use-lite";
 import type { DamsPayload } from "@/lib/dams/client";
-import type { DwrPayload } from "@/lib/dams/dwr-client";
 import type { DamHistory } from "@/lib/dams/history";
 import type { RegisteredDam } from "@/lib/dams/registry";
 import { sourceTimeMs } from "@/lib/freshness";
-import { distanceKm } from "@/lib/storms/normalize";
-import { sumRelease } from "@/lib/rivers/observed";
-import observed from "../../../public/data/observed-points.json";
-import { DownstreamProvinces, validTrend } from "./drainage-pillar";
+import { provinces } from "@/lib/provinces";
+import downstream from "../../../public/data/dam-downstream.json";
+import { validTrend } from "./drainage-pillar";
 import { DamHero } from "./dam-hero";
-import { DamTrendChart } from "./dam-trend-chart";
+import { DamChartDetails, DamReleaseBars, DamTrendChart } from "./dam-trend-chart";
+import type { DamReservoirGeo } from "@/components/map/layers/use-dam-reservoir-layer";
+import "./dam-detail.css";
 
+const MapView = dynamic(() => import("@/components/map/map-view").then((module) => module.MapView), { ssr: false });
 const validDams = (value: DamsPayload) => Array.isArray(value?.dams);
 const validHistory = (value: DamHistory) => typeof value?.dataDate === "string";
-const validDwr = (value: DwrPayload) => Array.isArray(value?.reservoirs);
+const validGeo = (value: DamReservoirGeo) => Array.isArray(value?.reservoir);
 
 export function DamDetail({ registered }: { registered: RegisteredDam }) {
   const t = useT();
+  const { lite, reducedMotion } = useLite();
   const dams = useWaterSource("/api/dams", validDams);
   const trend = useWaterSource("/api/dams-trend", validTrend);
   const history = useWaterSource("/api/dams-history", validHistory);
-  const dwr = useWaterSource("/api/dams-all", validDwr);
+  const geo = useWaterSource(`/data/dam-geo/${registered.id}.json`, validGeo);
   const dam = dams.data?.dams.find((entry) => entry.id === registered.id);
-  const date = dams.data?.dataDate;
+  const date = dam?.date ?? dams.data?.dataDate ?? undefined;
+  const name = t.locale === "en" ? registered.nameEn : registered.nameTh;
+  const province = provinces.find((entry) => entry.id === registered.provinceId);
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
-  const value = (n: number | null | undefined) => n == null ? "—" : number.format(n);
-  const historyDate = (date: string | undefined) => {
-    const at = sourceTimeMs(date);
-    return at === null ? t("ไม่ทราบวันที่ข้อมูล") : new Intl.DateTimeFormat(t.intl, {
-      day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok",
-    }).format(new Date(at));
-  };
-  const points = observed.points.filter((point) => point.dams.includes(registered.id));
-  const nearby = (dwr.data?.reservoirs ?? []).filter((reservoir) => reservoir.kind === "reservoir").map((reservoir) => ({ reservoir, km: distanceKm(registered, reservoir) })).sort((a, b) => a.km - b.km || a.reservoir.code.localeCompare(b.reservoir.code)).slice(0, 5);
+  const value = (n: number | null | undefined) => n == null ? t("ไม่รายงาน") : number.format(n);
+  const stops = (downstream.dams as Record<string, { provinces: { id: string; km: number }[] }>)[registered.id]?.provinces ?? [];
   const comparisons = [
-    { label: "ปีที่แล้ว (วันเดียวกัน)", entry: history.data?.lastYear },
-    { label: "ปี 2554 (วันเดียวกัน)", entry: history.data?.year2554 },
+    { label: "ปีที่แล้ว", entry: history.data?.lastYear },
+    { label: "2554", entry: history.data?.year2554 },
   ];
+  const stamp = (at?: string) => at ?? t("ไม่ทราบวันที่ข้อมูล");
+  const shareText = [name,
+    `${t("ปริมาณน้ำในเขื่อน (%)")}: ${value(dam?.storagePct)} · ${t("กรมชลประทาน")} · ${stamp(date)}`,
+    `${t("ระบาย (ลบ.ม./วินาที)")}: ${value(dam?.releaseCms)} · ${t("กรมชลประทาน")} · ${stamp(date)}`,
+    `${t("ไหลเข้า (ลบ.ม./วินาที)")}: ${value(dam?.inflowCms)} · ${t("กรมชลประทาน")} · ${stamp(date)}`,
+    `${t("เก็บกัก / ความจุ (ล้าน ม³)")}: ${value(dam?.storageMcm)} / ${value(dam?.capacityMcm)} · ${t("กรมชลประทาน")} · ${stamp(date)}`,
+    ...comparisons.map(({ label, entry }) => `${t(label)}: ${history.data?.dataDate === date ? value(entry?.pct[registered.id]) : t("ไม่พบข้อมูลในวันที่เปรียบเทียบ")} · ${t("กรมชลประทาน")} · ${stamp(history.data?.dataDate === date ? entry?.date : undefined)}`),
+    `${t("ที่มา")}: https://app.rid.go.th/reservoir/`,
+  ].join("\n");
   const status = (loading: boolean) => <p className="text-muted text-sm" role="status">{t(loading ? "กำลังโหลดข้อมูลส่วนนี้…" : "ข้อมูลส่วนนี้ไม่พร้อมใช้งาน")}</p>;
-  return <main className="app-shell space-y-4" style={{ paddingBottom: "calc(var(--nav-h, 88px) + 2rem)" }}>
-    <header><Link className="inline-flex min-h-11 items-center text-given underline" href="/water">{t("การระบายน้ำจากเขื่อน")}</Link><h1 className="text-2xl font-semibold">{t.locale === "en" ? registered.nameEn : registered.nameTh}</h1></header>
-    <section className="placeholder-card space-y-2">
-      {dam ? <DamHero dam={dam} trend={trend.data} history={history.data} /> : status(dams.status === "loading")}
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")}>
-      <h2 className="text-lg font-semibold">{t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")}</h2>
-      {trend.data && date ? <DamTrendChart trend={trend.data} id={registered.id} date={date} /> : status(trend.status === "loading" || dams.status === "loading")}
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("ปริมาณน้ำในเขื่อน: วันเดียวกันในอดีต")}>
-      <h2 className="text-lg font-semibold">{t("ปริมาณน้ำในเขื่อน: วันเดียวกันในอดีต")}</h2>
-      {history.data && date && history.data.dataDate === date ? <ul className="space-y-2 text-sm">{comparisons.map(({ label, entry }) => <li key={label}>{t(label)}: {entry?.pct[registered.id] == null ? t("ไม่พบข้อมูลในวันที่เปรียบเทียบ") : `${value(entry.pct[registered.id])}%`}<p><span className="text-muted text-xs">{t("กรมชลประทาน")} · {historyDate(entry?.date)}</span></p></li>)}</ul> : status(history.status === "loading")}
-      <p className="text-muted text-xs">{t("ตัวเลขปี 2554 อย่างเดียวไม่ได้บอกว่าจะท่วม ปี 2554 ท่วมเพราะฝน เขื่อนเต็ม และจังหวะเวลาประกอบกัน")}</p>
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("จังหวัดท้ายน้ำโดยประมาณ")}>
-      <h2 className="text-lg font-semibold">{t("จังหวัดท้ายน้ำโดยประมาณ")}</h2><DownstreamProvinces id={registered.id} />
-      <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-given underline" href={`/map?mode=water&dam=${registered.id}&routes=1&lat=${registered.lat}&lon=${registered.lon}&z=7`}>{t("ดูเส้นทางระบายน้ำบนแผนที่")}</Link>
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("จุดแม่น้ำที่รับน้ำจากเขื่อนนี้")}>
-      <h2 className="text-lg font-semibold">{t("จุดแม่น้ำที่รับน้ำจากเขื่อนนี้")}</h2>
-      {points.length ? <ul className="space-y-3 text-sm">{points.map((point) => {
-        // A shared river point includes all its upstream dams; stale reports cannot stand in for today's release.
-        const release = sumRelease(point.dams, (dams.data?.dams ?? []).filter((dam) => dam.date === date), trend.data);
-        return <li key={point.id}><Link className="inline-flex min-h-11 items-center font-semibold text-given underline" href={`/map?mode=water&river=${point.id}&lat=${point.lat}&lon=${point.lon}&z=8`}>{t.locale === "en" ? point.nameEn : point.nameTh}</Link><p>{t("ระบายรวมจากเขื่อนต้นน้ำ: {cms} ลบ.ม./วินาที", { cms: value(release?.today?.totalCms) })}</p><p className="text-muted">{t("ขาดรายงานเขื่อนต้นน้ำ {n} แห่ง", { n: release?.today?.missing.length ?? point.dams.length })}</p><SourceTime source="กรมชลประทาน" date={date} kind="daily" /></li>;
-      })}</ul> : <p className="text-muted text-sm">{t("ไม่พบจุดแม่น้ำที่เชื่อมกับเขื่อนนี้ในข้อมูล")}</p>}
-      <p className="text-muted text-xs">{t("การระบายรวมจากเขื่อนต้นน้ำ ไม่ใช่ค่าที่วัด ณ จุดแม่น้ำ")}</p>
-    </section>
-    <section className="placeholder-card space-y-2" aria-label={t("อ่าง DWR ใกล้เขื่อน")}>
-      <h2 className="text-lg font-semibold">{t("อ่าง DWR ใกล้เขื่อน")}</h2>
-      {dwr.data ? <ul className="space-y-2 text-sm">{nearby.map(({ reservoir, km }) => <li key={reservoir.code}><Link className="inline-flex min-h-11 items-center font-semibold text-given underline" href={`/map?mode=water&lat=${reservoir.lat}&lon=${reservoir.lon}&z=12`}>{reservoir.name} · {t("{km} กม.", { km: number.format(km) })}</Link><p>{reservoir.pct === null ? t("ไม่พบข้อมูลปริมาณน้ำในอ่าง") : t("ปริมาณน้ำในอ่าง: {pct}%", { pct: value(reservoir.pct) })}</p><SourceTime source="กรมทรัพยากรน้ำ (DWR)" date={reservoir.measuredAt} kind="daily" /></li>)}</ul> : status(dwr.status === "loading")}
-    </section>
+  const polygon = geo.data?.reservoir.some((ring) => ring.role === "outer" && ring.coordinates.length >= 4) ? geo.data : null;
+  return <main className="dam-page">
+    {!lite && !reducedMotion && <div className="dam-map"><MapView key={registered.id} homeLens="dams" damDetail={{ registered, geo: polygon, pct: dam?.storagePct ?? null }} /></div>}
+    <div className="dam-sheet">
+      <header><MapBackLink /><h1>{name}{province && <small> · {t.locale === "en" ? province.en : province.th}</small>}</h1></header>
+      {dam ? <DamHero dam={dam} trend={trend.data} /> : status(dams.status === "loading")}
+      <section aria-label={t("ระบาย 7 วัน (ลบ.ม./วินาที)")}><h2>{t("ระบาย 7 วัน (ลบ.ม./วินาที)")}</h2>
+        {trend.data && date ? <><DamReleaseBars trend={trend.data} id={registered.id} date={date} showDetails={false} /><DamChartDetails trend={trend.data} id={registered.id} date={date} /></> : status(trend.status === "loading")}
+      </section>
+      <section aria-label={t("ปริมาณน้ำในเขื่อน: วันเดียวกันในอดีต")}>
+        <h2>{t("ปริมาณน้ำในเขื่อน: วันเดียวกันในอดีต")}</h2>
+        {history.data && date && history.data.dataDate === date ? <ul className="dam-history">{comparisons.map(({ label, entry }) => {
+          const at = sourceTimeMs(entry?.date);
+          return <li key={label}>{t(label)} {entry?.pct[registered.id] == null ? t("ไม่พบข้อมูลในวันที่เปรียบเทียบ") : `${value(entry.pct[registered.id])}%`}
+            {" · "}{at === null ? t("ไม่ทราบวันที่ข้อมูล") : new Intl.DateTimeFormat(t.intl, { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" }).format(new Date(at))}
+          </li>;
+        })}</ul> : status(history.status === "loading")}
+        <p className="text-muted text-xs">{t("ที่มา")}: {t("กรมชลประทาน")}</p>
+      </section>
+      <section><h2>{t("น้ำที่ระบายไหลผ่าน (ตามแม่น้ำ โดยประมาณ)")}</h2>
+        <div className="dam-downstream min-w-0 max-w-full overflow-x-auto">{[...stops].sort((a, b) => a.km - b.km).map((stop) => {
+          const province = provinces.find((entry) => entry.id === stop.id);
+          return <Link key={stop.id} href={`/?province=${stop.id}`}><i aria-hidden="true" />{province ? t.locale === "en" ? province.en : province.th : stop.id}<small>{t("{km} กม.", { km: number.format(stop.km) })}</small></Link>;
+        })}</div>
+        {!stops.length && <p className="text-muted text-xs">{t("ไม่พบข้อมูลจังหวัดท้ายน้ำ")}</p>}
+        <SourceTime source="HydroRIVERS (CC BY 4.0)" date={downstream.generatedAt} kind="daily" nowMs={sourceTimeMs(downstream.generatedAt) ?? undefined} />
+      </section>
+      <div className="dam-actions"><button type="button" disabled={!dam} onClick={async () => {
+        try { await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`); toast.success(t("คัดลอกแล้ว")); }
+        catch { toast.error(t("คัดลอกไม่สำเร็จ")); }
+      }}>{t("คัดลอกพร้อมที่มา")}</button><ShareButton text={shareText} /></div>
+      {polygon && !lite && !reducedMotion && <p className="text-muted text-xs">{t("รูปอ่างจาก OpenStreetMap ระบายสีตาม % ความจุ ไม่ใช่ระดับน้ำจริง")} · © OpenStreetMap contributors (ODbL)</p>}
+      <section><h2>{t("เก็บกัก 7 วัน (% ความจุ)")}</h2>
+        {trend.data && date ? <DamTrendChart trend={trend.data} id={registered.id} date={date} storageOnly showDetails={false} /> : status(trend.status === "loading")}
+      </section>
+    </div>
   </main>;
 }

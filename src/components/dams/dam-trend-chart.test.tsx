@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/i18n/client";
 import fixture from "@/lib/dams/fixture-rid.json";
 import { parseRidDams } from "@/lib/dams/rid";
-import { chartDays, DamTrendChart } from "./dam-trend-chart";
+import { chartDays, DamReleaseBars, DamTrendChart } from "./dam-trend-chart";
 import { DrainagePillar, DownstreamProvinces, downstreamProvinceIds } from "./drainage-pillar";
 
 const trend = { dates: ["2026-10-01", "2026-10-03"], release: { dam: [0, 10] }, inflow: { dam: [5, null] }, pct: { dam: [80, 85] } };
@@ -35,5 +35,26 @@ it("keeps region filter values independent of translated English labels", () => 
     dams={{ status: "ready", data: { ...report, fetchedAt: "2026-09-29T12:00:00Z", stale: false } }}
     place={{ id: "test", name: "Bangkok", lat: 13.7, lon: 100.5, source: "province" }} /></LocaleProvider>);
   expect(html).toContain('<option value="ภาคเหนือ">North</option>');
-  expect(html).toContain('href="/water/dam/200101"');
+  expect(html).toContain('href="/dam/200101"');
+});
+
+it("draws a grey missing-day slot without replacing an actual zero report", async () => {
+  const { DamReleaseBars } = await import("./dam-trend-chart");
+  const html = renderToStaticMarkup(<LocaleProvider locale="en"><DamReleaseBars trend={trend} id="dam" date="2026-10-03" /></LocaleProvider>);
+  const missing = html.split('data-report-date="2026-10-02"')[1].split("</g>")[0];
+  const zero = html.split('data-report-date="2026-10-01"')[1].split("</g>")[0];
+  expect(missing).toContain('fill="var(--nodata)"');
+  expect(missing).toContain("No report");
+  expect(zero).toContain('height="0"');
+  expect(zero).toContain('fill="var(--release)"');
+  expect(html).toContain("Royal Irrigation Department");
+  expect(html).toContain("3 Oct");
+});
+
+
+it.each([DamReleaseBars, DamTrendChart])("bounds chart SVGs to their container with a fixed height", (Chart) => {
+  const html = renderToStaticMarkup(<LocaleProvider locale="en"><Chart trend={trend} id="dam" date="2026-10-03" showDetails={false} /></LocaleProvider>);
+  expect(html).toMatch(/<svg viewBox="[^"]+" width="100%" height="120" class="dam-chart w-full max-w-full"/);
+  expect(html).not.toContain("View as table");
+  expect(html).not.toContain("Royal Irrigation Department ·");
 });

@@ -123,7 +123,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
         <div className="home-rows">
           {lens === "flood" && flooded.slice(0, 10).map(([id, counts]) => <Link key={id} href={`/?province=${id}`} onClick={(event) => { event.preventDefault(); selectProvince(id); }} className="home-row" aria-current={place.id === id ? "true" : undefined}>
             <span>{provinceName(id)}</span><span className="home-bar"><i style={{ width: `${100 * waterPoints(counts) / Math.max(1, waterPoints(flooded[0][1]))}%` }} /></span><span>{t("{n} จุด", { n: number(waterPoints(counts)) })}<small>{t("เมฆ {n}%", { n: number(cloudPercent(counts)) })}</small></span></Link>)}
-          {lens === "dams" && releaseList.slice(0, 10).map((dam) => <Link key={dam.id} href={`/water/dam/${dam.id}`} className="home-row"><span>{dam.nameTh}</span><span className="home-bar release"><i style={{ width: `${Math.min(100, dam.storagePct)}%` }} /></span><span>{number(dam.storagePct)}%<small>{number(dam.releaseCms)} {t("ลบ.ม./วิ")}</small></span></Link>)}
+          {lens === "dams" && releaseList.slice(0, 10).map((dam) => <Link key={dam.id} href={`/dam/${dam.id}`} className="home-row"><span>{dam.nameTh}</span><span className="home-bar release"><i style={{ width: `${Math.min(100, dam.storagePct)}%` }} /></span><span>{number(dam.storagePct)}%<small>{number(dam.releaseCms)} {t("ลบ.ม./วิ")}</small></span></Link>)}
           {lens === "rain" && rainList.slice(0, 10).map((station) => <Link key={station.id} href="/rain" className="home-row"><span>{station.nameTh}</span><span className="home-bar"><i style={{ width: `${100 * station.rainMm / Math.max(1, rainList[0].rainMm)}%` }} /></span><span>{number(station.rainMm)} {t("มม.")}</span></Link>)}
         </div>
         {lens === "flood" && <p className="home-source">{t("จุดตรวจจากดาวเทียม ไม่ใช่ขนาดพื้นที่")} · {source("NASA VIIRS", flood.data?.date, "satellite")}{!flood.data && ` · ${loading}`}</p>}
@@ -133,7 +133,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       </>}
       {detent === "full" && <>
         <h2>{t("ตารางเขื่อนทั้งหมด (เจ้าหน้าที่/สื่อ)")}</h2>
-        <div className="home-table"><table><thead><tr>{["เขื่อน", "%", "ล้าน ม³", "เข้า", "ระบาย"].map((label) => <th key={label} scope="col">{t(label)}</th>)}</tr></thead><tbody>{tableList.map((dam) => <tr key={dam.id}><th scope="row"><Link href={`/water/dam/${dam.id}`}>{dam.nameTh}</Link><br />{source("กรมชลประทาน", dam.date)}</th><td>{number(dam.storagePct)}</td><td>{number(dam.storageMcm)}</td><td>{number(dam.inflowCms)}</td><td>{number(dam.releaseCms)}</td></tr>)}</tbody></table></div>
+        <div className="home-table"><table><thead><tr>{["เขื่อน", "%", "ล้าน ม³", "เข้า", "ระบาย"].map((label) => <th key={label} scope="col">{t(label)}</th>)}</tr></thead><tbody>{tableList.map((dam) => <tr key={dam.id}><th scope="row"><Link href={`/dam/${dam.id}`}>{dam.nameTh}</Link><br />{source("กรมชลประทาน", dam.date)}</th><td>{number(dam.storagePct)}</td><td>{number(dam.storageMcm)}</td><td>{number(dam.inflowCms)}</td><td>{number(dam.releaseCms)}</td></tr>)}</tbody></table></div>
         <p className="home-source">{t("เข้า / ระบาย: ลบ.ม./วินาที · — = ไม่รายงาน")}</p>
         <button className="home-action" disabled={!dams.data} onClick={async () => { try { await navigator.clipboard.writeText(damClipboard(tableList)); toast.success(t("คัดลอกแล้ว")); } catch { toast.error(t("คัดลอกไม่สำเร็จ")); } }}>{t("คัดลอกพร้อมที่มา")}</button>
       </>}
@@ -144,11 +144,11 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       <header><h2 id="home-alerts-title">{t("แจ้งเตือน")}</h2><button onClick={() => dialog.current?.close()} aria-label={t("ปิด")}>×</button></header>
       <div className="home-alerts-body">
         {warnings.data ? <>{warnings.data.items.length ? <TmdWarningList items={warnings.data.items} limit={warnings.data.items.length} /> : <p>{t("ไม่มีประกาศเตือนภัย")}</p>}{source("กรมอุตุนิยมวิทยา", warningTime)}</> : <p>{loading}</p>}
-        {highRelease.map((dam) => <Link className="home-alert-row" href={`/water/dam/${dam.id}`} key={dam.id}>{dam.nameTh} · {t("ระบาย")} {number(dam.releaseCms)} {t("ลบ.ม./วิ")}{source("กรมชลประทาน", dam.date)}</Link>)}
+        {highRelease.map((dam) => <Link className="home-alert-row" href={`/dam/${dam.id}`} key={dam.id}>{dam.nameTh} · {t("ระบาย")} {number(dam.releaseCms)} {t("ลบ.ม./วิ")}{source("กรมชลประทาน", dam.date)}</Link>)}
         {recent.map((event) => <FloodEventItem key={event.id} event={event} muted="home-source" />)}
         {source("GLIDE / GDACS", events.data?.fetchedAt)}
         <h3>{t("มีอะไรใหม่")}</h3>{news.map((entry) => <p key={entry.key}>{t(entry.text, entry.params)}{source(entry.key.startsWith("dam:") ? "กรมชลประทาน" : "GloFAS / RID / HII", items.find((item) => item.key === entry.key)?.date)}</p>)}
-        <h3>{t("ติดตาม")}</h3>{Object.keys(watch).map((key) => <Link className="home-alert-row" key={key} href={key.startsWith("dam:") ? `/water/dam/${key.slice(4)}` : `/map?river=${key.slice(6)}`}>{items.find((item) => item.key === key)?.label ?? key}{source(key.startsWith("dam:") ? "กรมชลประทาน" : "GloFAS / RID / HII", items.find((item) => item.key === key)?.date ?? watch[key as keyof typeof watch].date)}</Link>)}
+        <h3>{t("ติดตาม")}</h3>{Object.keys(watch).map((key) => <Link className="home-alert-row" key={key} href={key.startsWith("dam:") ? `/dam/${key.slice(4)}` : `/map?river=${key.slice(6)}`}>{items.find((item) => item.key === key)?.label ?? key}{source(key.startsWith("dam:") ? "กรมชลประทาน" : "GloFAS / RID / HII", items.find((item) => item.key === key)?.date ?? watch[key as keyof typeof watch].date)}</Link>)}
         <FavouritesRow place={place} onSelect={(next) => { setPlace(next); dialog.current?.close(); }} />
       </div>
     </dialog>

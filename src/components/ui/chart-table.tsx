@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useT } from "@/i18n/client";
 
-export function ChartTable({ caption, columns, rows }: { caption: string; columns: string[]; rows: string[][] }) {
+export function ChartTable({ caption, columns, rows }: { caption: string; columns: string[]; rows: ReactNode[][] }) {
   const t = useT();
   const id = useId();
   const [expanded, setExpanded] = useState(false);

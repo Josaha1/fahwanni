@@ -10,7 +10,7 @@ import { useStyleEffect } from "../use-style-effect";
 
 const LAYERS = ["dam-path-casing", "dam-path", "dam-path-flow", "dam-path-arrows"] as const;
 
-export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCms: number | null, isDesktop: boolean, reducedMotion: boolean, lite: boolean) {
+export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCms: number | null, isDesktop: boolean, reducedMotion: boolean, lite: boolean, fit = true) {
   const { theme } = useMapContext();
   const width = flowWidth(releaseCms);
   const role = flowColorRole(releaseCms);
@@ -44,7 +44,7 @@ export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCm
   useFlowDashAnimation(map, targets, Boolean(path) && !reducedMotion && !lite, 60_000);
 
   useEffect(() => {
-    if (!map || !path) return;
+    if (!map || !path || !fit) return;
     const bounds = new LngLatBounds();
     for (const coordinate of path.geometry.coordinates) bounds.extend(coordinate);
     const height = map.getContainer().clientHeight;
@@ -52,7 +52,7 @@ export function useDamPathLayer(map: Map | null, path: DamPath | null, releaseCm
     const bottom = Math.min(sheetHeight + 16, Math.max(0, height - 72 - 160));
     map.fitBounds(bounds, { padding: isDesktop ? { top: 40, right: 40, bottom: 40, left: 400 }
       : { top: 72, right: 40, bottom, left: 40 }, maxZoom: 9, duration: reducedMotion ? 0 : 800 });
-  }, [map, path, isDesktop, reducedMotion]);
+  }, [map, path, isDesktop, reducedMotion, fit]);
 }
 
 /** One frame loop for all speed layers; style reloads must receive the current pattern too. */

@@ -55,7 +55,7 @@ it("uses API counts rather than thinned points and includes every dam with its o
   expect(html).toContain("พบน้ำ 12 จุด");
   expect(html).toContain("เมฆ 25%");
   expect(html).toContain("ดาวเทียมพบน้ำ 1 จังหวัด");
-  expect(html).toContain('href="/water/dam/dam"');
+  expect(html).toContain('href="/dam/dam"');
   expect(html).toContain("ตารางเขื่อนทั้งหมด");
   expect(html).toContain("คัดลอกพร้อมที่มา");
   expect(html).toContain("<td>0</td><td>—</td>");

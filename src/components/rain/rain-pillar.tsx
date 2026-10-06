@@ -111,7 +111,7 @@ export function RainPillar({ place }: { place: Place }) {
     <section className="placeholder-card space-y-3" aria-label={t("แบบจำลองฝนสะสม")}><h3 className="text-lg">{t("แบบจำลองฝนสะสม")}</h3><p className="text-sm">{t("สะสมตั้งแต่วันนี้ · กริดแบบจำลอง")}</p>{tubes(currentModel?.totals ?? emptyTotals)}<SourceTime source="Open-Meteo" date={currentModel?.date} kind="model" model /></section>
     <section className="placeholder-card space-y-3" aria-label={t("ฝนรอบเขื่อน (ไม่ใช่ทั้งลุ่มน้ำ)")}><h3 className="text-lg">{t("ฝนรอบเขื่อน (ไม่ใช่ทั้งลุ่มน้ำ)")}</h3><p className="text-muted text-sm">{t("เฉลี่ยจุดกริดในรัศมี 30 กม. · สะสมตั้งแต่วันนี้")}</p>{nearestDams.map((dam) => {
       const data = damRain.data?.find((row) => row.id === dam.id);
-      return <div key={dam.id} className="space-y-2 border-t border-border pt-3"><Link href={`/water/dam/${dam.id}`} className="inline-flex min-h-11 items-center text-given underline">{t.locale === "en" ? dam.nameEn : dam.nameTh}</Link>{tubes(data?.totals ?? emptyTotals)}<SourceTime source="Open-Meteo" date={data?.date} kind="model" model /></div>;
+      return <div key={dam.id} className="space-y-2 border-t border-border pt-3"><Link href={`/dam/${dam.id}`} className="inline-flex min-h-11 items-center text-given underline">{t.locale === "en" ? dam.nameEn : dam.nameTh}</Link>{tubes(data?.totals ?? emptyTotals)}<SourceTime source="Open-Meteo" date={data?.date} kind="model" model /></div>;
     })}</section>
   </section>;
 }

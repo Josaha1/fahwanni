@@ -21,6 +21,7 @@ const paths = [
   "/map",
   "/rain",
   "/water",
+  "/dam/200101",
   "/water/dam/200101",
   "/api/flood-now",
   "/api/rain-dams?ids=200101,200102,200103",
@@ -55,10 +56,10 @@ const paths = [
 const results = await Promise.all(paths.map(async (path) => {
   const started = performance.now();
   try {
-    const response = await fetch(new URL(path, base), { cache: "no-store" });
+    const response = await fetch(new URL(path, base), { cache: "no-store", redirect: path === "/water/dam/200101" ? "manual" : "follow" });
     const bytes = (await response.arrayBuffer()).byteLength;
     const vercelId = response.headers.get("x-vercel-id");
-    return { path, status: response.status, bytes, ms: Math.round(performance.now() - started), region: vercelId?.split("::")[0] ?? "" };
+    return { path, status: response.status, location: response.headers.get("location"), bytes, ms: Math.round(performance.now() - started), region: vercelId?.split("::")[0] ?? "" };
   } catch (error) {
     return { path, status: "ERROR", bytes: 0, ms: Math.round(performance.now() - started), region: "", error: String(error) };
   }
@@ -66,6 +67,13 @@ const results = await Promise.all(paths.map(async (path) => {
 
 console.table(results.map(({ path, status, bytes, ms, region }) => ({ path, status, bytes, ms, region })));
 for (const result of results) {
+  if (result.path === "/water/dam/200101") {
+    if (result.status !== 308 || !result.location || new URL(result.location, base).href !== new URL("/dam/200101", base).href) {
+      console.error(`${result.path}: expected 308 Location /dam/200101, got ${result.status} ${result.location}`);
+      process.exitCode = 1;
+    }
+    continue;
+  }
   if (result.path === "/api/wind" && result.status === 503) {
     console.warn("Open-Meteo quota: /api/wind returned 503 on this fresh deploy");
     continue;
