@@ -5,7 +5,6 @@ import { useT } from "@/i18n/client";
 import { damBandColor, damBandWord } from "@/lib/dams/bands";
 import type { Dam } from "@/lib/dams/types";
 import { SourceTime } from "@/components/ui/source-time";
-import { Dam3DDialog } from "./dam-3d-dialog";
 
 export function damDetailsId(id: string) { return `dam-details-${id}`; }
 
@@ -37,7 +36,6 @@ export function DamRowHeader({ dam, km, expanded, onToggle, detailsId }: {
     <div id={detailsId ?? damDetailsId(dam.id)} hidden={!expanded} className="space-y-1 pb-2">
       <p>{t("น้ำไหลผ่านเขื่อน (ระบาย)")}: {flow(dam.releaseCms)}</p>
       <p>{t("น้ำไหลเข้า")}: {flow(dam.inflowCms)}</p>
-      <Dam3DDialog dam={dam} className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2 mr-3" />
       <Link className="inline-flex min-h-11 items-center font-semibold text-given underline underline-offset-2"
         href={`/map?mode=water&dam=${encodeURIComponent(dam.id)}`}>{t("ดูบนแผนที่")}</Link>
     </div>

@@ -18,7 +18,7 @@ import { globalPixel } from "@/lib/radar/summary";
 import type { RadarManifest } from "@/lib/radar/types";
 import type { RainRisk, ReportingRainStation } from "@/lib/rain-risk/tmd";
 import type { Place } from "@/lib/place";
-import { forceGlFromSearch, glTier, readRendererString, type GlTier } from "@/lib/three/gl-tier";
+import { forceGlFromSearch, glTier, readRendererString, type GlTier } from "@/lib/map/gl-tier";
 
 const RainMap = dynamic(() => import("./rain-map").then((module) => module.RainMap), { ssr: false });
 const validRain = (value: RainRisk) => Array.isArray(value.all);

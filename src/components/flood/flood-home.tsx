@@ -28,7 +28,7 @@ import { FloodEventList, type FloodEventsPayload } from "@/components/water/floo
 import { TmdWarningList } from "@/components/water/tmd-warnings";
 import type { PixelCounts } from "@/lib/flood/viirs";
 import { ThMap } from "@/components/visuals/th-map";
-import { NearMe3D, nearMeVisuals } from "./near-me-3d";
+import { NearMeTiles, nearMeVisuals } from "./near-me-tiles";
 import { rainGauge, streamRate, visualSummaryRain, visualSummarySatellite, visualSummaryStream, visualSummaryVillages } from "@/lib/visuals";
 import { eventProvinces, nearestRainStation, previousRelease, recentFloodEvents, riskBbox, warningRegions, type FloodNowPayload } from "./home-data";
 
@@ -86,7 +86,7 @@ function NearHome({ place, rain, dams, trend }: { place: Place; rain: Load<RainR
   const statuses = [satellite, risk, rain, dams];
   return <section className="placeholder-card !p-4 space-y-2" aria-label={t("ใกล้บ้านคุณ")}>
     <h2 className="text-lg font-semibold">{t("ใกล้บ้านคุณ")}</h2>
-    <NearMe3D {...nearby} summaries={summaries} />
+    <NearMeTiles {...nearby} summaries={summaries} />
     <SpeakButton text={summaries.join(" · ")} />
     <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
       {summaries.map((summary, index) => <div key={labels[index]} className="min-w-0">

@@ -43,7 +43,6 @@ import { reservoirKindWord, type ReservoirPoint } from "@/lib/dams/reservoirs";
 import type { FloodEvent } from "@/lib/water/flood-events";
 import { FLOOD_RISK_COLORS, FLOOD_RISK_LEVEL_WORDS, type FloodRiskPoint } from "@/lib/water/flood-risk";
 import { FloodEventItem, FLOOD_EVENT_WORDS } from "@/components/water/flood-events";
-import { Dam3DDialog } from "@/components/water/dam-3d-dialog";
 
 const rainKeys = ["ไม่มีฝน", "ฝนเบา", "ฝนปานกลาง", "ฝนหนัก", "ฝนหนักมาก"] as const;
 
@@ -242,7 +241,6 @@ export function PointCard({ probe, favourites, onClose, frame, wind, windHour, w
           <p className="map-muted text-xs">{dam.inflowMcmDay === null ? "–" : t("{value} ล้าน ลบ.ม./วัน", { value: daily.format(dam.inflowMcmDay) })}</p>
         </div>
       </div>
-      <Dam3DDialog dam={dam} damsHistory={damsHistory} className="map-chip w-full" />
       <button type="button" className="map-chip w-full" aria-pressed={pathActive} aria-busy={pathLoading} onClick={onTogglePath}>
         {t(pathActive ? "ซ่อนทิศทางน้ำ" : "ดูทิศทางน้ำท้ายเขื่อน")}
       </button>

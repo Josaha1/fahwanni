@@ -5,7 +5,7 @@ import { translator } from "@/i18n/core";
 import { damSceneSummary } from "@/lib/chart-summaries";
 import fixture from "@/lib/dams/fixture-rid.json";
 import type { DamHistory } from "@/lib/dams/history";
-import { damSceneColors } from "@/lib/dams/model3d";
+import { damSceneColors } from "@/lib/dams/schematic";
 import { parseRidDams } from "@/lib/dams/rid";
 import { DamSection } from "./dam-section";
 

@@ -3,7 +3,7 @@
 import { useT } from "@/i18n/client";
 import { damSceneSummary } from "@/lib/chart-summaries";
 import type { DamHistory } from "@/lib/dams/history";
-import { damSceneColors, waterLevel } from "@/lib/dams/model3d";
+import { damSceneColors, waterLevel } from "@/lib/dams/schematic";
 import type { Dam } from "@/lib/dams/types";
 
 export function DamSection({ dam, history, theme }: {

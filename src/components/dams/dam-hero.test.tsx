@@ -13,7 +13,7 @@ const scrubber = vi.hoisted(() => ({ day: null as string | null, nullStates: 0 }
 vi.mock("react", async (original) => {
   const react = await original<typeof import("react")>();
   return { ...react, useState: (initial: unknown) => {
-    const isDay = initial === null && ++scrubber.nullStates === 2;
+    const isDay = initial === null && ++scrubber.nullStates === 1;
     const state = react.useState(isDay ? scrubber.day : initial);
     return isDay ? [state[0], (day: string) => { scrubber.day = day; }] : state;
   } };
@@ -28,7 +28,7 @@ const dam = { ...parseRidDams(fixture).dams[0], date: "2026-10-05", storagePct: 
 const history = { dataDate: dam.date, lastYear: { date: "2025-10-05", pct: { [dam.id]: 0 } }, year2554: { date: "2011-10-05", pct: { [dam.id]: 100 } } };
 const trend = { dates: ["2026-10-02", "2026-10-03", "2026-10-04"], pct: { [dam.id]: [80, null, 90] }, release: {}, inflow: {} };
 
-it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber across fallback modes", (locale) => {
+it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber with the SVG tank", (locale) => {
   const html = renderToStaticMarkup(<LocaleProvider locale={locale}><DamHero dam={dam} trend={trend} history={history} /></LocaleProvider>);
   const date = locale === "th" ? "5 ต.ค." : "5 Oct";
   const summary = `${visualSummaryTank(tankFill(dam.storagePct, 121), translator(locale))} · ${translator(locale)("ข้อมูลวันที่ {date}", { date })}`;
@@ -38,7 +38,6 @@ it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber 
   expect(html).toContain(`aria-valuetext="${date}"`);
   expect(html).toContain('data-scrub-day="2026-10-05"');
   expect(html).toContain('data-scrub-index="2"');
-  expect(html).not.toContain(`<li>${translator(locale)("100% เต็มความจุ")}</li>`);
   expect(html).toContain('fill="currentColor">100%</text>');
   expect(html).not.toMatch(/>[^<]*\d{4}-\d{2}-\d{2}/);
   expect(html).toContain('value="2"');
@@ -46,7 +45,7 @@ it.each(["th", "en"] as const)("shares one %s caption, day, source and scrubber 
   expect(html).toContain('data-level="year2554"');
   expect(html).toContain(locale === "th" ? "กรมชลประทาน" : "Royal Irrigation Department");
   const state = JSON.parse(html.match(/data-scene-state="([^"]+)"/)![1].replaceAll("&quot;", '"'));
-  expect(state).toMatchObject({ mode: "svg", day: dam.date, pct: 110, particles: { release: 0, inflow: 0 } });
+  expect(state).toMatchObject({ mode: "svg", day: dam.date, pct: 110 });
   expect(state.ghosts).toHaveLength(2);
 });
 
@@ -79,7 +78,6 @@ it.each(["th", "en"] as const)("keeps latest-day staleness but removes it during
   expect(html).not.toContain(old);
   expect(html).not.toContain("text-amber");
   expect(html).not.toMatch(/>[^<]*\d{4}-\d{2}-\d{2}/);
-  expect(html).not.toContain(`<li>${t("100% เต็มความจุ")}</li>`);
   expect(html).toContain('fill="currentColor">100%</text>');
   expect(html).toContain('value="0"');
   changeDay!(dam.date);

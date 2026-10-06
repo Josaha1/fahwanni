@@ -2,7 +2,6 @@ import { damBand, damBandColor } from "./bands";
 import type { Dam, DamBand } from "./types";
 import type { DamHistory } from "./history";
 import { trendDates, type DamTrend } from "./trend";
-import { streamRate } from "@/lib/visuals";
 
 /** V-shaped schematic valley (volume ∝ height²), not measured bathymetry. */
 export function waterLevel(pct: number): number {
@@ -46,11 +45,3 @@ export function damGhosts(dam: Dam, history?: DamHistory | null) {
   });
 }
 
-/** Fixed particle budget; density encodes reported cms, never a simulated flow speed. */
-export function damStreams(dam: Dam) {
-  const count = (cms: number | null) => {
-    const rate = streamRate(cms, "cms", 1000);
-    return rate.state === "data" ? Math.round(rate.ratio * 96) : 0;
-  };
-  return { release: count(dam.releaseCms), inflow: count(dam.inflowCms) };
-}

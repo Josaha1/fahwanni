@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { damBandColor } from "./bands";
-import { damGhosts, damSceneColors, damStreams, reportedDamDays, waterLevel } from "./model3d";
+import { damGhosts, damSceneColors, reportedDamDays, waterLevel } from "./schematic";
 import type { DamBand } from "./types";
 import fixture from "./fixture-rid.json";
 import { parseRidDams } from "./rid";
@@ -61,10 +61,3 @@ it("keeps ghost comparisons tied to their report day and omits invalid values", 
   expect(damGhosts(dam, { ...history, lastYear: null, year2554: { date: "2011-10-05", pct: { [dam.id]: NaN } } })).toEqual([]);
 });
 
-it("uses proportional capped stream budgets and never substitutes missing or negative cms", () => {
-  expect(damStreams({ ...dam, releaseCms: 500, inflowCms: 250 })).toEqual({ release: 48, inflow: 24 });
-  expect(damStreams({ ...dam, releaseCms: 5000, inflowCms: 1000 })).toEqual({ release: 96, inflow: 96 });
-  for (const cms of [null, 0, -1, NaN, Infinity]) {
-    expect(damStreams({ ...dam, releaseCms: cms, inflowCms: cms })).toEqual({ release: 0, inflow: 0 });
-  }
-});

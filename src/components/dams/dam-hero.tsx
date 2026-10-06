@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useState } from "react";
 import { VisualTransition } from "@/components/visual-transition";
 import { useLite } from "@/hooks/use-lite";
 import { useT } from "@/i18n/client";
 import { TimeScrubber } from "@/components/time-scrubber";
 import { SourceTime } from "@/components/ui/source-time";
-import type { Dam3D } from "@/components/water/dam-3d";
-import { damGhosts, damStreams, reportedDamDays } from "@/lib/dams/model3d";
+import { damGhosts, reportedDamDays } from "@/lib/dams/schematic";
 import type { DamHistory } from "@/lib/dams/history";
 import type { DamTrend } from "@/lib/dams/trend";
 import type { Dam } from "@/lib/dams/types";
-import type { GlTier } from "@/lib/three/gl-tier";
-import { writeSceneState } from "@/lib/three/scene-state";
 import { tankFill, visualSummaryTank } from "@/lib/visuals";
 import { sourceTimeMs } from "@/lib/freshness";
 
@@ -34,20 +31,13 @@ export function DamTank({ dam, history, summary }: Props & { summary: string }) 
 
 export function DamHero({ dam, trend, history }: Props) {
   const t = useT();
-  const { lite, reducedMotion } = useLite();
-  const [Scene, setScene] = useState<ComponentType<React.ComponentProps<typeof Dam3D>> | null>(null);
-  const [tier, setTier] = useState<GlTier>("svg");
-  const [failed, setFailed] = useState(false);
+  const { reducedMotion } = useLite();
   const [day, setDay] = useState<string | null>(null);
-  const [terrain, setTerrain] = useState(false);
-  const host = useRef<HTMLDivElement>(null);
   const days = reportedDamDays(dam, trend);
   const found = days.findIndex((entry) => entry.date === (day ?? dam.date));
   const index = found < 0 ? days.length - 1 : found;
   const selected = days[index];
   const ghosts = damGhosts(selected, history);
-  const showScene = !lite && !reducedMotion && !failed && Scene !== null;
-  const mode = showScene ? tier : "svg";
   const dateFormat = new Intl.DateTimeFormat(t.intl, { day: "numeric", month: "short", timeZone: "Asia/Bangkok" });
   const dateLabel = (date: string) => {
     const at = sourceTimeMs(date);
@@ -56,29 +46,12 @@ export function DamHero({ dam, trend, history }: Props) {
   const selectedDate = dateLabel(selected.date);
   const summary = `${visualSummaryTank(tankFill(selected.storagePct, 121), t)} · ${t("ข้อมูลวันที่ {date}", { date: selectedDate })}`;
 
-  useEffect(() => {
-    if (lite || reducedMotion || failed) return;
-    let active = true;
-    void import("@/components/water/dam-3d").then((module) => {
-      if (active) setScene(() => module.Dam3D);
-    }).catch(() => { if (active) setFailed(true); });
-    return () => { active = false; };
-  }, [lite, reducedMotion, failed]);
-
-  useEffect(() => {
-    if (host.current) writeSceneState(host.current, { mode, day: selected.date, pct: selected.storagePct,
-      ghosts, particles: mode === "full" ? damStreams(selected) : { release: 0, inflow: 0 } });
-  }, [mode, selected, ghosts]);
-
   const number = new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 });
-  return <div ref={host} className="space-y-2" data-scene-state={JSON.stringify({ mode, day: selected.date,
-    pct: selected.storagePct, ghosts, particles: mode === "full" ? damStreams(selected) : { release: 0, inflow: 0 } })}>
-    <VisualTransition name={`dam-${dam.id}`}><div>{showScene ? <Scene dam={selected} history={history} theme="light" reducedMotion={reducedMotion}
-      detail summary={summary} onTierChange={setTier} onTerrainLoaded={() => setTerrain(true)}
-      onFallback={() => { setFailed(true); setTier("svg"); }} /> : <DamTank dam={selected} history={history} summary={summary} />}</div></VisualTransition>
+  return <div className="space-y-2" data-scene-state={JSON.stringify({ mode: "svg", day: selected.date,
+    pct: selected.storagePct, ghosts })}>
+    <VisualTransition name={`dam-${dam.id}`}><div><DamTank dam={selected} history={history} summary={summary} /></div></VisualTransition>
     {ghosts.length > 0 && <ul className="flex flex-wrap gap-3 text-xs">{ghosts.map(({ key, pct, date }) => <li key={key}
       style={{ color: key === "lastYear" ? "#64748b" : "#e11d48" }}>{t(key === "lastYear" ? "ปีที่แล้ว {pct}%" : "ปี 2554 {pct}%", { pct: number.format(pct) })} · {dateLabel(date)}</li>)}</ul>}
-    {mode !== "svg" && terrain && <p className="text-muted text-xs">{t("ภูมิประเทศขยายความสูง ×{n}", { n: 4 })} · AWS / Mapzen</p>}
     <TimeScrubber days={days.map((entry) => entry.date)} day={selected.date} onChange={setDay}
       label={t("การระบาย ไหลเข้า และปริมาณน้ำในเขื่อน 7 วัน")} reducedMotion={reducedMotion} />
     <p className="text-muted text-xs">{summary}</p>

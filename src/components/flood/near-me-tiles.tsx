@@ -1,12 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef } from "react";
-import { TiltButton } from "@/components/tilt-button";
-import { useLite } from "@/hooks/use-lite";
-import { useT } from "@/i18n/client";
-import { getSceneHost } from "@/lib/three/scene-host";
+import { useId } from "react";
 import { provinceBins, rainGauge, satelliteRing, streamRate, type SatelliteSample } from "@/lib/visuals";
-import { writeSceneState } from "@/lib/three/scene-state";
 import type { PixelCounts } from "@/lib/flood/viirs";
 import type { FloodRiskPoint } from "@/lib/water/flood-risk";
 import type { Position } from "@/lib/storms/normalize";
@@ -31,32 +26,11 @@ export function nearMeVisuals(props: NearMeProps) {
   return { ring, gauge, rain, release, state };
 }
 
-export function NearMe3D(props: NearMeProps) {
-  const t = useT();
-  const { lite, reducedMotion } = useLite();
-  const root = useRef<HTMLDivElement>(null);
+export function NearMeTiles(props: NearMeProps) {
   const id = useId().replaceAll(":", "");
-  // Source hooks and the caller recreate objects; only changed values should restart the terrain load.
-  const sceneKey = JSON.stringify({ place: { lat: props.place.lat, lon: props.place.lon }, date: props.date,
-    counts: props.counts, samples: props.samples, villages: props.villages,
-    station: props.station, dam: props.dam, summaries: props.summaries });
-  const sceneProps = useMemo(() => JSON.parse(sceneKey) as NearMeProps, [sceneKey]);
-  const data = useMemo(() => nearMeVisuals(sceneProps), [sceneProps]);
-  useEffect(() => {
-    const element = root.current!;
-    writeSceneState(element, { mode: "svg", terrain: false, ...data.state });
-    let active = true;
-    let dispose: (() => void) | undefined;
-    void getSceneHost({ lite, reducedMotion }).then(async (host) => {
-      if (!active || host.tier === "svg") return;
-      const { attachNearMe } = await import("./near-me-scene");
-      if (active) dispose = attachNearMe(host, element, sceneProps, data);
-    }).catch(() => { /* Keep the SVGs and the same summaries when WebGL is unavailable. */ });
-    return () => { active = false; dispose?.(); };
-  }, [sceneProps, data, lite, reducedMotion]);
-
+  const data = nearMeVisuals(props);
   const points = "points" in data.ring ? data.ring.points : [];
-  return <div ref={root} data-near-me-view="" data-tilt-state="drag" className="relative h-[180px]" style={{ touchAction: "pan-y" }}
+  return <div data-near-me-view="" className="relative h-[180px]" style={{ touchAction: "pan-y" }}
     data-scene-state={JSON.stringify({ mode: "svg", terrain: false, ...data.state })}>
     <div data-near-me-fallback="" className="grid h-full grid-cols-2 gap-2">
       <svg role="img" aria-label={props.summaries[0]} viewBox="0 0 160 80" className="h-full w-full rounded-lg border border-[var(--border)]">
@@ -85,7 +59,5 @@ export function NearMe3D(props: NearMeProps) {
         {data.release.state === "data" ? data.release.ratio > 0 && <path d="M76 60Q110 52 137 66" fill="none" stroke="#38bdf8" strokeWidth={data.release.ratio * 10} /> : <text x="125" y="44" textAnchor="middle" fill="currentColor">—</text>}
       </svg>
     </div>
-    <div data-tilt-button-wrap="" className="absolute bottom-1 right-1"><TiltButton /></div>
-    <span data-terrain-label="" hidden className="text-muted absolute left-2 top-1 text-xs">{t("ภูมิประเทศขยายความสูง ×{n}", { n: 4 })} · AWS / Mapzen</span>
   </div>;
 }

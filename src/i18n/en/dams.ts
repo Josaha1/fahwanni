@@ -1,8 +1,6 @@
 export const dams: Record<string, string> = {
   "ไม่มีรายงาน": "No report",
-  "100% เต็มความจุ": "100% full capacity",
   "เส้นประ = เต็มความจุ 100% · ลูกศร = ไหลเข้า/ระบาย": "Dashed line = 100% full capacity · Arrows = inflow/release",
-  "ภูมิประเทศขยายความสูง ×{n}": "Terrain height exaggerated ×{n}",
   "การระบายน้ำจากเขื่อน": "Dam releases",
   "ภาพรวมประเทศ": "National overview",
   "ระบายรวมวันนี้ vs เมื่อวาน": "Total release today vs yesterday",

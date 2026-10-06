@@ -3,7 +3,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/i18n/client";
 import { ThMap } from "./th-map";
 import { floodPoints, pathRings, provinceColor, provinceColors, regionOutline, thRegionOutlines, type ThMapData } from "./th-map-data";
-import { provinceGeometry } from "./th-map-scene";
 import { regionByProvince } from "@/lib/flood/viirs";
 import { thProvinces } from "@/lib/visuals/th-provinces";
 
@@ -38,12 +37,4 @@ it("removes shared internal edges from regional warnings", () => {
     .reduce((sum, entry) => sum + pathRings(entry.d).reduce((n, ring) => n + ring.length, 0), 0);
   expect(outlineEdges.length).toBeLessThan(allEdges);
   expect(new Set(outlineEdges.map((edge) => edge[1])).size).toBe(outlineEdges.length);
-});
-it("all 77 provinces have a constant two-unit slab thickness and nonempty triangles", () => {
-  for (const province of thProvinces) {
-    const geometry = provinceGeometry(province.d); geometry.computeBoundingBox();
-    expect(geometry.getAttribute("position").count, province.id).toBeGreaterThan(0);
-    expect(geometry.boundingBox!.max.z - geometry.boundingBox!.min.z).toBe(2);
-    geometry.dispose();
-  }
 });

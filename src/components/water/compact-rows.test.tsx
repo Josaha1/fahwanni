@@ -29,13 +29,13 @@ describe("compact water rows", () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it.each(["th", "en"] as const)("offers the dam dialog in %s without fetching history or rendering 3D on first load", (locale) => {
+  it.each(["th", "en"] as const)("keeps the %s dam map link without a 3D dialog or history fetch", (locale) => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     try {
       const html = render(locale, <DamRowHeader dam={dam} expanded onToggle={() => {}} />);
-      expect(html).toContain('aria-haspopup="dialog"');
-      expect(html).toContain(locale === "th" ? "ดูแบบ 3 มิติ" : "View in 3D");
-      expect(html).toContain("<dialog");
+      expect(html).not.toContain('aria-haspopup="dialog"');
+      expect(html).toContain(`/map?mode=water&amp;dam=${dam.id}`);
+      expect(html).not.toContain("<dialog");
       expect(html).not.toContain("<canvas");
       expect(html).not.toContain("<svg");
       expect(fetchSpy).not.toHaveBeenCalled();

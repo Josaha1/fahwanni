@@ -1,40 +1,21 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef } from "react";
-import { useLite } from "@/hooks/use-lite";
+import { useId, useMemo } from "react";
 import { useT } from "@/i18n/client";
 import { provinces } from "@/lib/provinces";
-import { getSceneHost } from "@/lib/three/scene-host";
-import { writeSceneState } from "@/lib/three/scene-state";
 import { thAttribution, thProvinces, thViewBox } from "@/lib/visuals/th-provinces";
 import { provinceBins, visualSummaryProvince } from "@/lib/visuals";
 import { floodPoints, noDataColor, provinceColor, provinceColors, thRegionOutlines, visualSummaryThailand, type ThMapData } from "./th-map-data";
 
 export function ThMap({ onSelect, ...props }: ThMapData & { onSelect: (id: string) => void }) {
   const t = useT();
-  const { lite, reducedMotion } = useLite();
-  const root = useRef<HTMLDivElement>(null);
-  const select = useRef(onSelect);
-  useEffect(() => { select.current = onSelect; }, [onSelect]);
   const id = useId().replaceAll(":", "");
   const key = JSON.stringify(props);
   const data = useMemo(() => JSON.parse(key) as ThMapData, [key]);
   const summary = visualSummaryThailand(data, t);
   const state = useMemo(() => ({ provinces: 77, points: floodPoints(data.samples).length, warnedRegions: data.warnedRegions }), [data]);
-  useEffect(() => {
-    const element = root.current!;
-    writeSceneState(element, { mode: "svg", ...state });
-    let active = true;
-    let dispose: (() => void) | undefined;
-    void getSceneHost({ lite, reducedMotion }).then(async (host) => {
-      if (!active || host.tier === "svg") return;
-      const { attachThMap } = await import("./th-map-scene");
-      if (active) dispose = attachThMap(host, element, data, (province) => select.current(province));
-    }).catch(() => { /* Keep the province SVG usable when WebGL initialization fails. */ });
-    return () => { active = false; dispose?.(); };
-  }, [data, state, lite, reducedMotion]);
   return <div className="space-y-1">
-    <div ref={root} data-th-map="" aria-label={summary} className="relative h-[360px]" style={{ touchAction: "pan-y" }} data-scene-state={JSON.stringify({ mode: "svg", ...state })}>
+    <div data-th-map="" aria-label={summary} className="relative h-[360px]" style={{ touchAction: "pan-y" }} data-scene-state={JSON.stringify({ mode: "svg", ...state })}>
       <svg data-th-map-fallback="" viewBox={thViewBox} aria-label={summary} className="h-full w-full">
         <defs><pattern id={`event-${id}`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" x2="0" y2="6" stroke="currentColor" strokeWidth="3" /></pattern></defs>
         {thProvinces.map((shape) => {

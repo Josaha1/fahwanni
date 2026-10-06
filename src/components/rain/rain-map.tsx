@@ -9,7 +9,7 @@ import { rainGauge, visualSummaryRain } from "@/lib/visuals";
 import { useT } from "@/i18n/client";
 import type { RadarManifest } from "@/lib/radar/types";
 import type { ReportingRainStation } from "@/lib/rain-risk/tmd";
-import type { GlTier } from "@/lib/three/gl-tier";
+import type { GlTier } from "@/lib/map/gl-tier";
 import type { Position } from "@/lib/storms/normalize";
 
 export type RainMapProps = { place: Position; radar: RadarManifest | null; stations: ReportingRainStation[]; activeIndex: number; tier: GlTier; onTier: (tier: GlTier) => void; onReady: (ready: boolean) => void };
