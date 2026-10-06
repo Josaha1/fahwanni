@@ -2,11 +2,19 @@
 
 :root {
   color-scheme: light;
-  --background: #F7FBFF;
-  --foreground: #2D3A5A;
-  --card: #FFFFFF;
-  --border: #DCE7F4;
-  --muted: #7A86A3;
+  --water: #0e7490;
+  --release: #b45309;
+  --warn: #be123c;
+  --model: #6d28d9;
+  --nodata: #94a3b8;
+  --map-land: #e2e8f0;
+  --map-edge: #cbd5e1;
+  --sheet: #ffffff;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: var(--sheet);
+  --border: var(--map-edge);
+  --muted: #475569;
   --given: #D6457F;
   --due: #F7B6CE;
   --missed: #D64550;
@@ -18,8 +26,8 @@
   --sky: #DDEEFF;
   --pink-soft: #FDE2EC;
   --blue: #5FA8E8;
-  --zone-ok: #BDEBD3;
-  --zone-ok-ink: #1F6B47;
+  --zone-ok: #e2e8f0;
+  --zone-ok-ink: #334155;
   --zone-warn: #FFE6A6;
   --zone-warn-ink: #E0A21B;
   --zone-alert: #FFD3CC;
@@ -32,8 +40,8 @@
   --heat-danger-ink: #912C32;
   --pm25-very-good: #DDF3F5;
   --pm25-very-good-ink: #14566A;
-  --pm25-good: #E3F5E9;
-  --pm25-good-ink: #165B35;
+  --pm25-good: #e2e8f0;
+  --pm25-good-ink: #334155;
   --pm25-moderate: #FFF3C6;
   --pm25-moderate-ink: #665000;
   --pm25-starting-to-affect: #FFE6CF;
@@ -46,11 +54,19 @@
 
 [data-theme="dark"], [data-theme="night"] {
   color-scheme: dark;
-  --background: #1F2740;
-  --card: #2C3656;
-  --foreground: #EAF1FF;
-  --muted: #A9B4D0;
-  --border: #3A4670;
+  --water: #22d3ee;
+  --release: #fbbf24;
+  --warn: #fb7185;
+  --model: #a78bfa;
+  --nodata: #64748b;
+  --map-land: #1e293b;
+  --map-edge: #334155;
+  --sheet: #1e293b;
+  --background: #0f172a;
+  --card: var(--sheet);
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --border: var(--map-edge);
   --given: #F48FB5;
   --on-accent: #1F2740;
   --due: #F7B6CE;
@@ -59,8 +75,8 @@
   --hero: #161D33;
   --sky: #2C3A63;
   --pink-soft: #4A3050;
-  --zone-ok: #2F6B55;
-  --zone-ok-ink: #E2FFED;
+  --zone-ok: #334155;
+  --zone-ok-ink: #e2e8f0;
   --zone-warn: #6B5A2A;
   --zone-warn-ink: #FFE5A3;
   --zone-alert: #6B3A3F;
@@ -73,8 +89,8 @@
   --heat-danger-ink: #FFE0DF;
   --pm25-very-good: #244D5B;
   --pm25-very-good-ink: #DDF6FF;
-  --pm25-good: #254C3A;
-  --pm25-good-ink: #D8F8E3;
+  --pm25-good: #334155;
+  --pm25-good-ink: #e2e8f0;
   --pm25-moderate: #564920;
   --pm25-moderate-ink: #FFF0B3;
   --pm25-starting-to-affect: #613D27;
@@ -84,15 +100,19 @@
 }
 
 [data-theme="night"] {
-  --background: #1B1F33;
-  --card: #2A2F4A;
-  --foreground: #FFE3C8;
-  --muted: #D9B99A;
   --given: #FFB08A;
   --on-accent: #1B1F33;
 }
 
 @theme inline {
+  --color-water: var(--water);
+  --color-release: var(--release);
+  --color-warn: var(--warn);
+  --color-model: var(--model);
+  --color-nodata: var(--nodata);
+  --color-map-land: var(--map-land);
+  --color-map-edge: var(--map-edge);
+  --color-sheet: var(--sheet);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -111,17 +131,16 @@
   --color-zone-warn-ink: var(--zone-warn-ink);
   --color-zone-alert: var(--zone-alert);
   --color-zone-alert-ink: var(--zone-alert-ink);
-  --font-sans: var(--font-anuphan);
+  --font-sans: var(--font-ibm-plex-sans-thai);
 }
 
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-anuphan), sans-serif;
+  font-family: var(--font-ibm-plex-sans-thai), sans-serif;
   font-size: 17px;
   line-height: 1.6;
-  font-variant-numeric: tabular-nums;
   background-image: radial-gradient(#E3EDF8 1px, transparent 1.2px);
   background-position: 0 0;
   background-size: 18px 18px;
@@ -129,7 +148,7 @@ body {
 
 :is([data-theme="dark"], [data-theme="night"]) body { background-image: none; }
 
-h1, h2 { font-family: var(--font-mitr), sans-serif; font-weight: 600; line-height: 1.4; }
+h1, h2 { font-family: var(--font-ibm-plex-sans-thai), sans-serif; font-weight: 600; line-height: 1.4; }
 
 .emoji { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -0.3em; }
 .sticker { filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 4px 5px rgba(45,58,90,.22)); }

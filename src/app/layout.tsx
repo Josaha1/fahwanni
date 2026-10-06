@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
-import { Anuphan, Mitr } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 import { Toaster } from "sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
@@ -29,16 +29,9 @@ const themeScript = `(() => {
   } catch { /* Storage may be unavailable in private browsing. */ }
 })();`;
 
-const anuphan = Anuphan({
-  variable: "--font-anuphan",
+const ibmPlexSansThai = IBM_Plex_Sans_Thai({
+  variable: "--font-ibm-plex-sans-thai",
   weight: ["400", "500", "600", "700"],
-  subsets: ["thai", "latin"],
-  display: "swap",
-});
-
-const mitr = Mitr({
-  variable: "--font-mitr",
-  weight: ["500", "600"],
   subsets: ["thai", "latin"],
   display: "swap",
 });
@@ -54,8 +47,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7FBFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#1F2740" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
 };
 
@@ -64,7 +57,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} suppressHydrationWarning>
       <head><link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" /></head>
-      <body className={`${anuphan.variable} ${mitr.variable} antialiased`}>
+      <body className={`${ibmPlexSansThai.variable} antialiased`}>
         <Script id="fah-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeController />
         <LocaleProvider locale={locale}><RouteTransition>{children}</RouteTransition><BottomNav /></LocaleProvider>
