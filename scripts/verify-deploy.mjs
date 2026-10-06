@@ -26,6 +26,8 @@ const paths = [
   "/dam/200101",
   "/river/chao-phraya",
   "/province/phra-nakhon-si-ayutthaya",
+  "/embed/dam/200101",
+  "/embed/province/phra-nakhon-si-ayutthaya",
   "/alerts",
   "/water/dam/200101",
   "/api/flood-now",

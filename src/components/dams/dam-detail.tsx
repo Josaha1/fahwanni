@@ -9,6 +9,8 @@ import { useFollowed } from "@/hooks/use-followed";
 import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { ShareButton } from "@/components/share-button";
+import { damSummaryCard } from "@/components/share/summary-card";
+import { ShareExtras } from "@/components/share/share-extras";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import { useWaterSource } from "@/hooks/use-water-source";
 import { useLite } from "@/hooks/use-lite";
@@ -91,7 +93,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
       <div className="dam-actions">{riverSystem && <Link className="dam-river-link" href={`/river/${riverSystem.id}`}>{t("ดูทั้งลุ่มน้ำ")} ▸</Link>}<button type="button" disabled={!dam} onClick={async () => {
         try { await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`); toast.success(t("คัดลอกแล้ว")); }
         catch { toast.error(t("คัดลอกไม่สำเร็จ")); }
-      }}>{t("คัดลอกพร้อมที่มา")}</button><ShareButton text={shareText} /></div>
+      }}>{t("คัดลอกพร้อมที่มา")}</button><ShareButton card={damSummaryCard(registered, dam, trend.data, t)} imageLabel={t("แชร์ภาพสรุปเขื่อน")} /><ShareExtras path={`/dam/${registered.id}`} title={name} /></div>
       {polygon && !lite && !reducedMotion && <p className="text-muted text-xs">{t("รูปอ่างจาก OpenStreetMap ระบายสีตาม % ความจุ ไม่ใช่ระดับน้ำจริง")} · © OpenStreetMap contributors (ODbL)</p>}
       <section><h2>{t("เก็บกัก 7 วัน (% ความจุ)")}</h2>
         {trend.data && date ? <DamTrendChart trend={trend.data} id={registered.id} date={date} storageOnly showDetails={false} /> : status(trend.status === "loading")}

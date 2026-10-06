@@ -11,6 +11,8 @@ import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import { ShareButton } from "@/components/share-button";
+import { provinceSummaryCard } from "@/components/share/summary-card";
+import { ShareExtras } from "@/components/share/share-extras";
 import { useFloodReplay } from "@/components/map/use-flood-replay";
 import { cloudPercent, waterPoints } from "@/components/sheet/home-data";
 import { TmdWarningList } from "@/components/water/tmd-warnings";
@@ -106,7 +108,7 @@ export function ProvinceDetail({ province, bbox }: { province: Province; bbox: B
       <SourceTime source="TMD" time={rain.data?.observedAt} kind="rain24h" />
     </section>
     <section><h2>{t("ฝนคาดการณ์สะสม 3 วัน ณ เมืองจังหวัด")}</h2><p className="province-model">{number(modelData?.totals[1])} {t("มม.")}</p><SourceTime source="Open-Meteo (CC BY 4.0)" date={modelData?.date} kind="model" /></section>
-    <div className="dam-actions"><ShareButton text={shareText} imageLabel={t("แชร์ภาพสรุปจังหวัด")} /><button type="button" onClick={async () => {
+    <div className="dam-actions"><ShareButton card={provinceSummaryCard(province, counts, flood.data?.date, dams.data?.dams, t)} imageLabel={t("แชร์ภาพสรุปจังหวัด")} /><ShareExtras path={`/province/${province.id}`} title={name} /><button type="button" onClick={async () => {
       try { await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`); toast.success(t("คัดลอกแล้ว")); }
       catch { toast.error(t("คัดลอกไม่สำเร็จ")); }
     }}>{t("คัดลอกพร้อมที่มา")}</button></div>

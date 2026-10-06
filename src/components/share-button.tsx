@@ -8,33 +8,41 @@ import type { Place } from "@/lib/place";
 import { buildFloodShareText, buildShareText, type FloodShareSummary } from "@/lib/share";
 import type { WeatherSnapshot } from "@/lib/weather/types";
 import { Menu } from "./ui/menu";
+import { lineShareUrl, summaryCardText, type SummaryCard } from "./share/summary-card";
 
-type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; flood?: never; text?: never }
-  | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never; text?: never }
-  | { text: string; flood?: never; snapshot?: never; air?: never; place?: never };
+type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; flood?: never; text?: never; card?: never }
+  | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never; text?: never; card?: never }
+  | { text: string; flood?: never; snapshot?: never; air?: never; place?: never; card?: never }
+  | { card: SummaryCard; text?: never; flood?: never; snapshot?: never; air?: never; place?: never };
 
-export function ShareButton({ snapshot, air, place, flood, text, imageLabel }: ShareProps & { imageLabel?: string }) {
+export function ShareButton({ snapshot, air, place, flood, text, card, imageLabel }: ShareProps & { imageLabel?: string }) {
   const t = useT();
   const [making, setMaking] = useState(false);
 
   async function shareImage() {
     setMaking(true);
     try {
-      const blob = text !== undefined
+      const pageUrl = card ? new URL(card.path, window.location.origin).href : window.location.href;
+      const blob = card
+        ? await (await import("./share/render-summary-image")).renderSummaryImage(summaryCardText(card, pageUrl, t), t.locale)
+        : text !== undefined
         ? await (await import("./share/render-summary-image")).renderSummaryImage(text, t.locale)
         : flood
         ? await (await import("./share/render-summary-image")).renderSummaryImage(buildFloodShareText(flood, t), t.locale)
         : await (await import("./share/render-share-image")).renderShareImage(snapshot!, air, place!, t);
       const file = new File([blob], "fah-wanni.png", { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ files: [file] }); } catch { /* dismissed */ }
-      } else {
-        const url = URL.createObjectURL(blob);
-        const link = Object.assign(document.createElement("a"), { href: url, download: "fah-wanni.png" });
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 10_000);
-        toast.success(t("บันทึกรูปแล้ว"));
+      const payload = { files: [file], url: pageUrl };
+      if (navigator.share && navigator.canShare?.(payload)) {
+        try { await navigator.share(payload); return; }
+        catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+        }
       }
+      const url = URL.createObjectURL(blob);
+      const link = Object.assign(document.createElement("a"), { href: url, download: "fah-wanni.png" });
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      toast.success(t("บันทึกรูปแล้ว"));
     } catch {
       toast.error(t("สร้างรูปไม่สำเร็จ"));
     } finally {
@@ -43,6 +51,7 @@ export function ShareButton({ snapshot, air, place, flood, text, imageLabel }: S
   }
 
   function shareText() {
+    if (card) return summaryCardText(card, new URL(card.path, window.location.origin).href, t);
     return `${text ?? (flood ? buildFloodShareText(flood, t) : buildShareText(snapshot!, air, place!, t.locale, t))}\n${window.location.href}`;
   }
 
@@ -63,7 +72,7 @@ export function ShareButton({ snapshot, air, place, flood, text, imageLabel }: S
 
   function shareLine() {
     const link = Object.assign(document.createElement("a"), {
-      href: `https://line.me/R/share?text=${encodeURIComponent(shareText())}`,
+      href: lineShareUrl(card ? new URL(card.path, window.location.origin).href : window.location.href),
       target: "_blank",
       rel: "noopener noreferrer",
     });

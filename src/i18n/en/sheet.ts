@@ -1,4 +1,11 @@
 export const sheet = {
+  "แชร์ภาพสรุปเขื่อน": "Share dam summary",
+  "แชร์ไป LINE": "Share to LINE",
+  "ฝังในเว็บอื่น": "Embed on another website",
+  "โค้ด iframe": "Iframe code",
+  "คัดลอกโค้ด": "Copy code",
+  "ดูหน้าเต็ม": "View full page",
+  "เขื่อนต้นน้ำที่ระบายมากสุด": "Upstream dam with the highest release",
   "เปลี่ยนตั้งแต่ครั้งก่อน": "Changed since last visit",
   "ประกาศเตือนใหม่": "New warning",
   "ประกาศ": "warnings",
