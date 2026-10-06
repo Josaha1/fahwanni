@@ -1,4 +1,4 @@
-export const APP_VERSION = "3";
+export const APP_VERSION = "4";
 
 /**
  * Reload when the server runs a different build than the one this page was loaded from,

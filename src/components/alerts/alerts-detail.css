@@ -1,0 +1,6 @@
+.alerts-sheet { margin-top: 0; }
+.alerts-rows { display: grid; }
+.alerts-rows a { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 56px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.alerts-rows i { width: 10px; height: 10px; border-radius: 50%; }
+.alerts-text { display: grid; gap: 3px; min-width: 0; font-size: 13px; }
+.alerts-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

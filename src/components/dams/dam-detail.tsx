@@ -78,7 +78,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
       <section><h2>{t("น้ำที่ระบายไหลผ่าน (ตามแม่น้ำ โดยประมาณ)")}</h2>
         <div className="dam-downstream min-w-0 max-w-full overflow-x-auto">{[...stops].sort((a, b) => a.km - b.km).map((stop) => {
           const province = provinces.find((entry) => entry.id === stop.id);
-          return <Link key={stop.id} href={`/?province=${stop.id}`}><i aria-hidden="true" />{province ? t.locale === "en" ? province.en : province.th : stop.id}<small>{t("{km} กม.", { km: number.format(stop.km) })}</small></Link>;
+          return <Link key={stop.id} href={`/province/${stop.id}`}><i aria-hidden="true" />{province ? t.locale === "en" ? province.en : province.th : stop.id}<small>{t("{km} กม.", { km: number.format(stop.km) })}</small></Link>;
         })}</div>
         {!stops.length && <p className="text-muted text-xs">{t("ไม่พบข้อมูลจังหวัดท้ายน้ำ")}</p>}
         <SourceTime source="HydroRIVERS (CC BY 4.0)" date={downstream.generatedAt} kind="daily" nowMs={sourceTimeMs(downstream.generatedAt) ?? undefined} />

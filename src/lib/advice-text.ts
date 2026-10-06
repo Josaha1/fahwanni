@@ -19,7 +19,7 @@ export function adviceText(advice: Advice, t: T): string {
     case "laundry-ok": return t("วันนี้ตากผ้าได้");
     case "laundry-no": return t("ไม่ควรตากผ้า อาจมีฝนหรืออากาศชื้น");
     case "exercise-ok": return t("วันนี้เหมาะกับการออกกำลังกายกลางแจ้ง");
-    case "exercise-no": return t("เลี่ยงออกกำลังกายกลางแจ้ง อากาศอาจไม่ปลอดภัย");
+    case "exercise-no": return t("เลี่ยงออกกำลังกายกลางแจ้ง อากาศอาจกระทบสุขภาพ");
     case "flood": return t("ฝนตกหนักต่อเนื่อง ระวังน้ำท่วมขัง");
     case "pm25":
       if (advice.params?.band === "affects-health") return t("ฝุ่น PM2.5 สูงมาก เลี่ยงกิจกรรมกลางแจ้งและใส่หน้ากาก N95");

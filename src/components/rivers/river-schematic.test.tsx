@@ -60,7 +60,7 @@ it.each(riverSystems)("gives every $id node a title and the correct drill-down d
   expect(nodeGroups.map((match) => match[1])).toEqual(system.nodes.map((node) => node.id));
   for (const node of system.nodes) {
     if (node.damId) expect(html).toContain(`href="/dam/${node.damId}"`);
-    else if (node.kind === "province") expect(html).toContain(`href="/?province=${node.provinceId}"`);
+    else if (node.kind === "province") expect(html).toContain(`href="/province/${node.provinceId}"`);
   }
   expect(html).not.toMatch(/[ก-๙]/);
   expect(html).toContain('width="100%"');

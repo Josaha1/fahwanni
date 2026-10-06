@@ -5,6 +5,7 @@ import { advice } from "./advice";
 import { flood } from "./flood";
 import { rain } from "./rain";
 import { dams } from "./dams";
+import { provinces } from "./provinces";
 
 /** English strings keyed by Thai source text. */
-export const en: Record<string, string> = { ...sheet, ...common, ...weather, ...advice, ...flood, ...dams, ...rain };
+export const en: Record<string, string> = { ...sheet, ...common, ...weather, ...advice, ...flood, ...dams, ...rain, ...provinces };

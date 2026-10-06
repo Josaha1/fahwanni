@@ -13,7 +13,7 @@ type ShareProps = { snapshot: WeatherSnapshot; air?: AirSnapshot; place: Place; 
   | { flood: FloodShareSummary; snapshot?: never; air?: never; place?: never; text?: never }
   | { text: string; flood?: never; snapshot?: never; air?: never; place?: never };
 
-export function ShareButton({ snapshot, air, place, flood, text }: ShareProps) {
+export function ShareButton({ snapshot, air, place, flood, text, imageLabel }: ShareProps & { imageLabel?: string }) {
   const t = useT();
   const [making, setMaking] = useState(false);
 
@@ -69,6 +69,8 @@ export function ShareButton({ snapshot, air, place, flood, text }: ShareProps) {
     });
     link.click();
   }
+
+  if (imageLabel) return <button type="button" disabled={making} onClick={() => void shareImage()}>{making ? t("กำลังสร้างรูป…") : imageLabel}</button>;
 
   return (
     <Menu label={t("แชร์")} items={[

@@ -178,11 +178,8 @@ function MapScreen({ container, urlView, homeLens, damDetail }: { container: Ref
   const { device, reducedMotion, lite, liteOverride, automaticLite, toggleLite } = useLite();
   const [buildings3dOn, setBuildings3dOn] = useState(false);
   const openProvince = useCallback((id: string) => {
-    if (homeLens && !damDetail) {
-      window.history.replaceState(null, "", `/?province=${encodeURIComponent(id)}`);
-      window.dispatchEvent(new Event("popstate"));
-    } else router.push(`/?province=${encodeURIComponent(id)}`);
-  }, [router, homeLens, damDetail]);
+    router.push(`/province/${encodeURIComponent(id)}`);
+  }, [router]);
   const { probe, select, close, probeCenter } = useProbe(mapInstance, { points: !water, onRoute: focusRoute, onProvince: water ? openProvince : undefined });
   if (lite && buildings3dOn) setBuildings3dOn(false);
   const [playSpeed, setPlaySpeed] = useState<PlaySpeed>(() => {

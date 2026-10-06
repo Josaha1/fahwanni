@@ -16,7 +16,7 @@ self.fahRoute = function fahRoute(request, origin) {
   if (/^\/anim\/(?:[a-z]+-(?:day|night)|typhoon-calm)\.webp$/.test(url.pathname)) return "static";
   if (/^\/icon[^/]*\.png$/.test(url.pathname) || url.pathname === "/apple-touch-icon.png" || url.pathname === "/manifest.webmanifest") return "static";
   const rsc = url.searchParams.has("_rsc") || (request.headers && request.headers.get("RSC"));
-  if ((url.pathname === "/" || url.pathname === "/map" || url.pathname === "/water") && request.mode === "navigate" && !rsc) return "page";
+  if ((url.pathname === "/" || url.pathname === "/map" || url.pathname === "/water" || url.pathname === "/alerts" || /^\/province\/[a-z-]+$/.test(url.pathname)) && request.mode === "navigate" && !rsc) return "page";
   return null;
 };
 

@@ -72,7 +72,7 @@ export function RiverSchematic({ system, dams, gauges, animate = false }: {
           </g>;
         })}
       </g>;
-      const href = node.damId ? `/dam/${node.damId}` : node.kind === "province" ? `/?province=${node.provinceId}` : null;
+      const href = node.damId ? `/dam/${node.damId}` : node.kind === "province" ? `/province/${node.provinceId}` : null;
       return href ? <a key={node.id} href={href} aria-label={title}>{content}</a> : <g key={node.id}>{content}</g>;
     })}
   </svg>;

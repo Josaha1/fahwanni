@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLite } from "@/hooks/use-lite";
@@ -47,6 +48,7 @@ export function MapHome() {
 
 export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted: boolean }) {
   const t = useT();
+  const router = useRouter();
   const { place, setPlace } = useLastPlace();
   const [lens, setLens] = useState<"flood" | "dams" | "rain">("flood");
   const [detent, setDetent] = useState<Detent>(() => fallback ? "half" : "peek");
@@ -61,7 +63,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
   const { news, items, watch, markRead } = useHomeNews(damList, lens === "rain");
   const dialog = useRef<HTMLDialogElement>(null);
   const bell = useRef<HTMLButtonElement>(null);
-  const highRelease = damList.filter((dam) => dam.releaseCms !== null && dam.releaseCms >= 100);
+  const highRelease = damList.filter((dam) => dam.storagePct > 80 || (dam.releaseCms !== null && dam.releaseCms >= 100));
   const [nowMs] = useState(() => Date.now());
   const recent = recentFloodEvents(events.data?.items ?? [], nowMs);
   const alertCount = highRelease.length + recent.length + (warnings.data?.items.length ?? 0);
@@ -75,12 +77,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
   const source = (name: string, date: string | null | undefined, kind: "daily" | "satellite" | "rain24h" = "daily") =>
     <SourceTime source={name} date={date} kind={kind} className="home-source" />;
   const provinceName = (id: string) => { const province = provinces.find((item) => item.id === id); return province ? t.locale === "en" ? province.en : province.th : id; };
-  const selectProvince = (id: string) => {
-    const province = provinces.find((item) => item.id === id);
-    if (province) setPlace({ ...place, id, name: province.th, admin: province.en, lat: province.lat, lon: province.lon, source: "province" });
-    setDetent("half");
-    window.history.replaceState(null, "", `/?province=${encodeURIComponent(id)}`);
-  };
+  const selectProvince = (id: string) => router.push(`/province/${encodeURIComponent(id)}`);
   useEffect(() => {
     const update = () => {
       const id = new URLSearchParams(window.location.search).get("province");
@@ -100,7 +97,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       : mounted && <MapView homeLens={lens} />}
     <header className="home-top">
       <div className="home-search"><MapSearchPill placeName={t.locale === "en" ? place.admin ?? place.name : place.name} />
-        <button ref={bell} className="home-bell" aria-label={t("แจ้งเตือน {n} รายการ", { n: alertCount })} aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>
+        <button ref={bell} className="home-bell" aria-label={t("แจ้งเตือน {n} รายการ", { n: alertCount })} onClick={() => router.push("/alerts")}>
           <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M5 17h14l-2-4V9a5 5 0 0 0-10 0v4l-2 4Zm5 3h4" /></svg>
           <b>{alertCount}</b>{news.length > 0 && <i aria-label={t("มีข้อมูลใหม่")} />}
         </button>
@@ -116,13 +113,13 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       <div className="home-status-sources">{source("NASA VIIRS", flood.data?.date, "satellite")}{source("กรมชลประทาน", dams.data?.dataDate)}</div>
       <div className="home-tiles">
         <button className="home-tile" onClick={() => setDetent("half")}><span>{t("ใกล้ฉัน")} · {place.name}</span><strong>{t("พบน้ำ {n} จุด", { n: near && near.sampled > near.noData + near.insufficientData ? number(waterPoints(near)) : "—" })}</strong><small>{t("เมฆ {n}%", { n: number(cloudPercent(near)) })}</small>{source("NASA VIIRS", flood.data?.date, "satellite")}</button>
-        <button className="home-tile" onClick={() => dialog.current?.showModal()}><span>{t("ประกาศเตือน")}</span><strong>{warnings.data ? warnings.data.items.length ? t("{n} ประกาศ", { n: warnings.data.items.length }) : t("ไม่มีประกาศเตือนภัย") : "—"}</strong>{source("กรมอุตุนิยมวิทยา", warningTime)}</button>
+        <button className="home-tile" onClick={() => router.push("/alerts")}><span>{t("ประกาศเตือน")}</span><strong>{warnings.data ? warnings.data.items.length ? t("{n} ประกาศ", { n: warnings.data.items.length }) : t("ไม่มีประกาศเตือนภัย") : "—"}</strong>{source("กรมอุตุนิยมวิทยา", warningTime)}</button>
         <button className="home-tile" onClick={() => { setLens("rain"); setDetent("half"); }}><span>{t("ฝน 24 ชม.")}</span><strong>{rainList[0] ? `${number(rainList[0].rainMm)} ${t("มม.")}` : "—"}</strong><small>{rainList[0]?.nameTh}</small>{source("กรมอุตุนิยมวิทยา", rain.data?.observedAt, "rain24h")}</button>
       </div>
       {detent !== "peek" && <>
         <h2>{t(lens === "dams" ? "เขื่อนที่ระบายมากสุด" : lens === "rain" ? "ฝนมากสุด 24 ชม." : "จังหวัดที่ดาวเทียมพบน้ำ")}</h2>
         <div className="home-rows">
-          {lens === "flood" && flooded.slice(0, 10).map(([id, counts]) => <Link key={id} href={`/?province=${id}`} onClick={(event) => { event.preventDefault(); selectProvince(id); }} className="home-row" aria-current={place.id === id ? "true" : undefined}>
+          {lens === "flood" && flooded.slice(0, 10).map(([id, counts]) => <Link key={id} href={`/province/${id}`} className="home-row" aria-current={place.id === id ? "true" : undefined}>
             <span>{provinceName(id)}</span><span className="home-bar"><i style={{ width: `${100 * waterPoints(counts) / Math.max(1, waterPoints(flooded[0][1]))}%` }} /></span><span>{t("{n} จุด", { n: number(waterPoints(counts)) })}<small>{t("เมฆ {n}%", { n: number(cloudPercent(counts)) })}</small></span></Link>)}
           {lens === "dams" && releaseList.slice(0, 10).map((dam) => <Link key={dam.id} href={`/dam/${dam.id}`} className="home-row"><span>{dam.nameTh}</span><span className="home-bar release"><i style={{ width: `${Math.min(100, dam.storagePct)}%` }} /></span><span>{number(dam.storagePct)}%<small>{number(dam.releaseCms)} {t("ลบ.ม./วิ")}</small></span></Link>)}
           {lens === "rain" && rainList.slice(0, 10).map((station) => <Link key={station.id} href="/rain" className="home-row"><span>{station.nameTh}</span><span className="home-bar"><i style={{ width: `${100 * station.rainMm / Math.max(1, rainList[0].rainMm)}%` }} /></span><span>{number(station.rainMm)} {t("มม.")}</span></Link>)}
@@ -139,6 +136,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
         <p className="home-source">{t("เข้า / ระบาย: ลบ.ม./วินาที · — = ไม่รายงาน")}</p>
         <button className="home-action" disabled={!dams.data} onClick={async () => { try { await navigator.clipboard.writeText(damClipboard(tableList)); toast.success(t("คัดลอกแล้ว")); } catch { toast.error(t("คัดลอกไม่สำเร็จ")); } }}>{t("คัดลอกพร้อมที่มา")}</button>
       </>}
+      <button className="home-action" onClick={() => dialog.current?.showModal()}>{t("มีอะไรใหม่")} · {t("ติดตาม")}</button>
       <div className="home-depth" role="group" aria-label={t("ระดับรายละเอียด")}><span>{t("ดูแบบ")}</span>{([ ["peek", "ทั่วไป"], ["half", "อาสา"], ["full", "เจ้าหน้าที่"] ] as const).map(([key, label]) => <button key={key} aria-pressed={detent === key} onClick={() => setDetent(key)}>{t(label)}</button>)}</div>
       <div className="home-emergency" aria-label={t("เบอร์ฉุกเฉิน")}>{[["1784", "ปภ. 1784"], ["1669", "เจ็บป่วย 1669"], ["191", "เหตุด่วน 191"]].map(([phone, label]) => <a href={`tel:${phone}`} key={phone}>{t(label)}</a>)}</div>
     </BottomSheet>

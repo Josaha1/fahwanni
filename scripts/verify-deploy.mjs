@@ -23,6 +23,8 @@ const paths = [
   "/water",
   "/dam/200101",
   "/river/chao-phraya",
+  "/province/phra-nakhon-si-ayutthaya",
+  "/alerts",
   "/water/dam/200101",
   "/api/flood-now",
   "/api/rain-dams?ids=200101,200102,200103",

@@ -14,9 +14,9 @@ export const advice: Record<string, string> = {
   "วันนี้ตากผ้าได้": "Good weather for drying laundry today",
   "ไม่ควรตากผ้า อาจมีฝนหรืออากาศชื้น": "Avoid hanging laundry outside. Rain or humidity is possible",
   "วันนี้เหมาะกับการออกกำลังกายกลางแจ้ง": "Good conditions for outdoor exercise today",
-  "เลี่ยงออกกำลังกายกลางแจ้ง อากาศอาจไม่ปลอดภัย": "Avoid outdoor exercise. Conditions may be unsafe",
+  "เลี่ยงออกกำลังกายกลางแจ้ง อากาศอาจกระทบสุขภาพ": "Avoid outdoor exercise. Conditions may affect your health",
   "ฝนตกหนักต่อเนื่อง ระวังน้ำท่วมขัง": "Heavy rain may cause flooding. Watch for standing water",
   "ฝุ่น PM2.5 เริ่มสูง คนกลุ่มเสี่ยงควรลดกิจกรรมกลางแจ้ง": "PM2.5 is rising. Sensitive groups should limit outdoor activity",
-  "ฝุ่น PM2.5 เกินมาตรฐาน ใส่หน้ากาก N95": "PM2.5 is above the safe level. Wear an N95 mask",
+  "ฝุ่น PM2.5 เกินมาตรฐาน ใส่หน้ากาก N95": "PM2.5 is above the recommended limit. Wear an N95 mask",
   "ฝุ่น PM2.5 สูงมาก เลี่ยงกิจกรรมกลางแจ้งและใส่หน้ากาก N95": "PM2.5 is very high. Avoid outdoor activity and wear an N95 mask",
 };

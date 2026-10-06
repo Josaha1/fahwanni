@@ -5,7 +5,7 @@ import { useT } from "@/i18n/client";
 import { SourceTime } from "@/components/ui/source-time";
 import { warningKey, type TmdWarning } from "@/lib/tmd";
 
-export function TmdWarningList({ items, limit, onDismiss, onMap = false }: { items: TmdWarning[]; limit: number; onDismiss?: (key: string) => void; onMap?: boolean }) {
+export function TmdWarningList({ items, limit, onDismiss, onMap = false, showSource = true }: { items: TmdWarning[]; limit: number; onDismiss?: (key: string) => void; onMap?: boolean; showSource?: boolean }) {
   const t = useT();
   return <section className="space-y-2" aria-label={t("ประกาศเตือนภัยกรมอุตุฯ")}>
     <WarningHaptic ids={items.slice(0, limit).map(warningKey)} />
@@ -15,7 +15,7 @@ export function TmdWarningList({ items, limit, onDismiss, onMap = false }: { ite
           <span className="map-warning" aria-hidden="true">⚠</span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">{item.title}</p>
-            <p><SourceTime source="TMD" time={item.announcedAt} kind="daily" className={onMap ? "map-muted" : "text-muted"} /></p>
+            {showSource && <p><SourceTime source="TMD" time={item.announcedAt} kind="daily" className={onMap ? "map-muted" : "text-muted"} /></p>}
           </div>
           {onDismiss && <button type="button" className="map-icon-btn shrink-0" aria-label={t("ปิดประกาศ {title}", { title: item.title })} onClick={() => onDismiss(warningKey(item))}>✕</button>}
         </div>
