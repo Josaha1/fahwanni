@@ -1,6 +1,6 @@
 .map-home {
   --water: #22d3ee; --release: #f59e0b; --warn: #f43f5e; --foreground: #e8eef4;
-  --muted: #8fa1b2; --card: #1c2733; --border: #2a3846;
+  --muted: #8fa1b2; --card: #1c2733; --border: #2a3846; --background: #111a24;
   --map-panel: #141d27; --map-panel-border: #2a3846; --map-label: #e8eef4;
   position: relative; height: 100dvh; overflow: hidden; background: #111a24; color: var(--foreground);
   font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; color-scheme: dark;

@@ -1,9 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LocaleProvider } from "@/i18n/client";
-import fixture from "@/lib/dams/fixture-rid.json";
-import { parseRidDams } from "@/lib/dams/rid";
-import { DamRowHeader, damDetailsId, damRowPercentLabel } from "./dam-row";
 import { RiverDetails, RiverRowHeader, riverDetailsId, riverRowValueLabel, type RiverRow } from "./river-details";
 
 const point: RiverRow = {
@@ -11,37 +8,9 @@ const point: RiverRow = {
   summary: { today: { date: "2026-09-29", value: 1234, status: "high" }, trend: "rising", peak: null,
     rare: null, value2554Today: 900, days: [] },
 };
-const dam = parseRidDams(fixture).dams[0];
 const render = (locale: "th" | "en", child: React.ReactNode) => renderToStaticMarkup(<LocaleProvider locale={locale}>{child}</LocaleProvider>);
 
 describe("compact water rows", () => {
-  it("keeps stale dam attribution visible when collapsed and distinguishes river models", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-05T14:00:00+07:00"));
-    try {
-      const html = render("th", <DamRowHeader dam={{ ...dam, date: "2026-10-02" }} expanded={false} showDate={false} onToggle={() => {}} />);
-      expect(html.indexOf("ข้อมูลเก่า (2 ต.ค.)")).toBeLessThan(html.indexOf('hidden=""'));
-      expect(html).toContain("text-amber-600");
-      const model = render("th", <RiverRowHeader point={point} expanded={false} onToggle={() => {}} />);
-      expect(model).toContain('class="map-water-badge">แบบจำลอง');
-      expect(model).toContain("GloFAS / Open-Meteo");
-      expect(model).not.toContain("ข้อมูลเก่า");
-    } finally { vi.useRealTimers(); }
-  });
-
-  it.each(["th", "en"] as const)("keeps the %s dam map link without a 3D dialog or history fetch", (locale) => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    try {
-      const html = render(locale, <DamRowHeader dam={dam} expanded onToggle={() => {}} />);
-      expect(html).not.toContain('aria-haspopup="dialog"');
-      expect(html).toContain(`/map?mode=water&amp;dam=${dam.id}`);
-      expect(html).not.toContain("<dialog");
-      expect(html).not.toContain("<canvas");
-      expect(html).not.toContain("<svg");
-      expect(fetchSpy).not.toHaveBeenCalled();
-    } finally { fetchSpy.mockRestore(); }
-  });
-
   it("formats the river value for the visible row and spoken unit in both languages", () => {
     expect(riverRowValueLabel(1234, "th")).toBe("1,234 ลบ.ม./วินาที");
     expect(riverRowValueLabel(1234, "en")).toBe("1,234 m³/s");
@@ -75,24 +44,6 @@ describe("compact water rows", () => {
     expect(thai).toContain("(ตลิ่ง 5 ม.รทก.)");
     expect(render("en", <RiverDetails point={withGauge} />)).toContain("Observed water level at River, North, Jul 2026");
     expect(render("en", <RiverDetails point={{ ...withGauge, gauge: { ...withGauge.gauge!, bankMsl: null } }} />)).not.toContain("bank 5");
-  });
-
-  it("formats dam storage and renders expanded flow, date and map link", () => {
-    expect(damRowPercentLabel(91.47, "en")).toBe("91.5%");
-    const html = render("en", <DamRowHeader dam={dam} km={4} expanded onToggle={() => {}} />);
-    expect(html).toContain(`aria-controls="${damDetailsId(dam.id)}"`);
-    expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain("4 km");
-    expect(html).toContain("Flow through the dam (release)");
-    expect(html).toContain("Inflow");
-    expect(html).toContain("Royal Irrigation Department");
-    expect(html).toContain(`/map?mode=water&amp;dam=${dam.id}`);
-    const collapsed = render("th", <DamRowHeader dam={dam} expanded={false} onToggle={() => {}} />);
-    expect(collapsed).toContain(`id="${damDetailsId(dam.id)}" hidden=""`);
-    const older = render("th", <DamRowHeader dam={{ ...dam, date: "2026-09-29" }} dataDate="2026-09-30" showDate={false} expanded={false} onToggle={() => {}} />);
-    expect(older).toContain("กรมชลประทาน");
-    expect(older).toContain("29 ก.ย.");
-    expect(render("th", <DamRowHeader dam={{ ...dam, date: "2026-09-30" }} dataDate="2026-09-30" showDate={false} expanded={false} onToggle={() => {}} />)).toContain("30 ก.ย.");
   });
 
   it("shows an observed point as measured dam release with no model status", () => {

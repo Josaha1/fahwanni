@@ -8,6 +8,7 @@ import { ThemeController } from "@/components/theme-controller";
 import { RouteTransition } from "@/components/visual-transition";
 import "@/components/visual-transition.css";
 import { VersionWatcher } from "@/components/version-watcher";
+import { OfflineSupport } from "@/components/offline-support";
 import { LocaleProvider } from "@/i18n/client";
 import { getLocale } from "@/i18n/server";
 import { resolveTheme } from "@/lib/theme";
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <ThemeController />
         <LocaleProvider locale={locale}><RouteTransition>{children}</RouteTransition></LocaleProvider>
         <VersionWatcher />
+        <OfflineSupport />
         <Toaster position="top-center" toastOptions={{ style: { background: "var(--card)", color: "var(--foreground)", borderColor: "var(--border)", fontFamily: "inherit" } }} />
         <SpeedInsights />
         {/* Page views only, no cookies and no personal data; it loads on Vercel deployments, not locally. */}

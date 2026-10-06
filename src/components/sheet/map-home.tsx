@@ -26,6 +26,10 @@ import { BottomSheet } from "./bottom-sheet";
 import type { Detent } from "./detents";
 import { cloudPercent, damClipboard, number, waterPoints } from "./home-data";
 import { useHomeNews } from "./use-home-news";
+import { SettingsSheet } from "@/components/settings-sheet";
+import { SpeakButton } from "@/components/speak-button";
+
+const provinceHref = (th: string) => { const match = provinces.find((province) => province.th === th); return match ? `/province/${match.id}` : "/alerts"; };
 import "./map-home.css";
 
 const MapView = dynamic(() => import("@/components/map/map-view").then((module) => module.MapView), { ssr: false });
@@ -51,6 +55,11 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
   const router = useRouter();
   const { place, setPlace } = useLastPlace();
   const [lens, setLens] = useState<"flood" | "dams" | "rain">("flood");
+  // Old /water and /rain links redirect here with ?lens=; read it after mount to keep SSR markup stable.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("lens");
+    if (requested === "dams" || requested === "rain" || requested === "flood") queueMicrotask(() => setLens(requested));
+  }, []);
   const [detent, setDetent] = useState<Detent>(() => fallback ? "half" : "peek");
   const [wasFallback, setWasFallback] = useState(fallback);
   if (wasFallback !== fallback) { setWasFallback(fallback); if (fallback) setDetent("half"); }
@@ -101,6 +110,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
           <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M5 17h14l-2-4V9a5 5 0 0 0-10 0v4l-2 4Zm5 3h4" /></svg>
           <b>{alertCount}</b>{news.length > 0 && <i aria-label={t("มีข้อมูลใหม่")} />}
         </button>
+        <SettingsSheet />
       </div>
       <div className="home-lenses" role="group" aria-label={t("ชั้นข้อมูล")}>
         {([ ["flood", "ท่วม"], ["dams", "เขื่อน"], ["rain", "ฝน"] ] as const).map(([key, label]) => <button key={key} aria-pressed={lens === key} onClick={() => setLens(key)}>{t(label)}</button>)}
@@ -111,6 +121,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
     <BottomSheet detent={detent} onChange={setDetent} reducedMotion={fallback}>
       <div className="home-status" aria-live="polite"><span className="water">{t("ดาวเทียมพบน้ำ {n} จังหวัด", { n: flood.data ? flooded.length : "—" })}</span><span className="release">{t("{n} เขื่อน > 80%", { n: dams.data ? damList.filter((dam) => dam.storagePct > 80).length : "—" })}</span></div>
       <div className="home-status-sources">{source("NASA VIIRS", flood.data?.date, "satellite")}{source("กรมชลประทาน", dams.data?.dataDate)}</div>
+      {flood.data && dams.data && <SpeakButton text={`${t("ดาวเทียมพบน้ำ {n} จังหวัด", { n: flooded.length })} · ${t("{n} เขื่อน > 80%", { n: damList.filter((dam) => dam.storagePct > 80).length })}`} />}
       <div className="home-tiles">
         <button className="home-tile" onClick={() => setDetent("half")}><span>{t("ใกล้ฉัน")} · {place.name}</span><strong>{t("พบน้ำ {n} จุด", { n: near && near.sampled > near.noData + near.insufficientData ? number(waterPoints(near)) : "—" })}</strong><small>{t("เมฆ {n}%", { n: number(cloudPercent(near)) })}</small>{source("NASA VIIRS", flood.data?.date, "satellite")}</button>
         <button className="home-tile" onClick={() => router.push("/alerts")}><span>{t("ประกาศเตือน")}</span><strong>{warnings.data ? warnings.data.items.length ? t("{n} ประกาศ", { n: warnings.data.items.length }) : t("ไม่มีประกาศเตือนภัย") : "—"}</strong>{source("กรมอุตุนิยมวิทยา", warningTime)}</button>
@@ -122,7 +133,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
           {lens === "flood" && flooded.slice(0, 10).map(([id, counts]) => <Link key={id} href={`/province/${id}`} className="home-row" aria-current={place.id === id ? "true" : undefined}>
             <span>{provinceName(id)}</span><span className="home-bar"><i style={{ width: `${100 * waterPoints(counts) / Math.max(1, waterPoints(flooded[0][1]))}%` }} /></span><span>{t("{n} จุด", { n: number(waterPoints(counts)) })}<small>{t("เมฆ {n}%", { n: number(cloudPercent(counts)) })}</small></span></Link>)}
           {lens === "dams" && releaseList.slice(0, 10).map((dam) => <Link key={dam.id} href={`/dam/${dam.id}`} className="home-row"><span>{dam.nameTh}</span><span className="home-bar release"><i style={{ width: `${Math.min(100, dam.storagePct)}%` }} /></span><span>{number(dam.storagePct)}%<small>{number(dam.releaseCms)} {t("ลบ.ม./วิ")}</small></span></Link>)}
-          {lens === "rain" && rainList.slice(0, 10).map((station) => <Link key={station.id} href="/rain" className="home-row"><span>{station.nameTh}</span><span className="home-bar"><i style={{ width: `${100 * station.rainMm / Math.max(1, rainList[0].rainMm)}%` }} /></span><span>{number(station.rainMm)} {t("มม.")}</span></Link>)}
+          {lens === "rain" && rainList.slice(0, 10).map((station) => <Link key={station.id} href={provinceHref(station.provinceTh)} className="home-row"><span>{station.nameTh}</span><span className="home-bar"><i style={{ width: `${100 * station.rainMm / Math.max(1, rainList[0].rainMm)}%` }} /></span><span>{number(station.rainMm)} {t("มม.")}</span></Link>)}
         </div>
         {lens === "flood" && <p className="home-source">{t("จุดตรวจจากดาวเทียม ไม่ใช่ขนาดพื้นที่")} · {source("NASA VIIRS", flood.data?.date, "satellite")}{!flood.data && ` · ${loading}`}</p>}
         {lens === "dams" && <p className="home-source">{source("กรมชลประทาน", dams.data?.dataDate)}</p>}

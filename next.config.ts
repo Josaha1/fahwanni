@@ -6,7 +6,13 @@ const buildId = `${APP_VERSION}-${process.env.VERCEL_GIT_COMMIT_SHA ?? `local-${
 
 const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: buildId },
-  redirects: async () => [{ source: "/water/dam/:id", destination: "/dam/:id", permanent: true }],
+  redirects: async () => [
+    { source: "/water/dam/:id", destination: "/dam/:id", permanent: true },
+    // The map-first home replaced these pages; query strings (map position, layers) pass through.
+    { source: "/water", destination: "/?lens=dams", permanent: true },
+    { source: "/rain", destination: "/?lens=rain", permanent: true },
+    { source: "/map", destination: "/", permanent: true },
+  ],
 };
 
 export default nextConfig;
