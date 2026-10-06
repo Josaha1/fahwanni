@@ -21,7 +21,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/hooks/use-lite", () => ({ useLite: () => ({ lite: state.lite, reducedMotion: state.lite,
   device: { reducedMotion: state.lite, saveData: false } }) }));
 vi.mock("@/hooks/use-water-source", () => ({ useWaterSource: (url: string) => state.sources.get(url.split("?")[0]) ?? { status: "error", data: null } }));
-vi.mock("@/hooks/use-favourites", () => ({
+vi.mock("@/hooks/use-favourites", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/hooks/use-favourites")>(),
   useLastPlace: () => ({ place: { id: "bangkok", name: "กรุงเทพมหานคร", lat: 13.7, lon: 100.5 }, setPlace: vi.fn() }),
   useFavourites: () => ({ favourites: [], remove: vi.fn() }),
 }));

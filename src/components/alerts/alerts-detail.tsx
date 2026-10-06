@@ -7,7 +7,9 @@ import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
 import { FLOOD_EVENT_WORDS } from "@/components/water/flood-events";
-import { validDams, validEvents, validWarnings } from "@/components/provinces/data";
+import { validDams, validEvents, validFlood, validWarnings } from "@/components/provinces/data";
+import { useFollowed } from "@/hooks/use-followed";
+import { FollowedChanges } from "./followed-changes";
 import { alertRows } from "./alert-data";
 import "../dams/dam-detail.css";
 import "./alerts-detail.css";
@@ -17,10 +19,13 @@ export function AlertsDetail() {
   const warnings = useWaterSource("/api/tmd-warnings", validWarnings);
   const events = useWaterSource("/api/flood-events", validEvents);
   const dams = useWaterSource("/api/dams", validDams);
+  const flood = useWaterSource("/api/flood-now", validFlood);
+  const changes = useFollowed({ dams: dams.data, flood: flood.data, warnings: warnings.data, warningDate: warnings.cachedAt ?? warnings.loadedAt });
   const rows = alertRows(warnings.data, events.data, dams.data);
   const number = (value: number | null) => value === null ? "—" : new Intl.NumberFormat(t.intl, { maximumFractionDigits: 1 }).format(value);
   return <main className="dam-page"><div className="dam-sheet alerts-sheet">
     <header><MapBackLink /><h1>{t("แจ้งเตือน")}</h1></header>
+    <FollowedChanges changes={changes} />
     {warnings.data?.items.length === 0 && <p className="text-muted text-xs">{t("ไม่มีประกาศเตือนภัย")} · <SourceTime source="TMD" time={warnings.loadedAt} kind="daily" /></p>}
     {[{ source: "TMD", load: warnings }, { source: "GLIDE / GDACS", load: events }, { source: "กรมชลประทาน", load: dams }].filter(({ load }) => load.status !== "ready").map(({ source, load }) => <p key={source} className="text-muted text-xs" role="status">{t(source)} · {t(load.status === "loading" ? "กำลังโหลดข้อมูลส่วนนี้…" : "ข้อมูลส่วนนี้ไม่พร้อมใช้งาน")}</p>)}
     <ol className="alerts-rows">{rows.map((row) => {

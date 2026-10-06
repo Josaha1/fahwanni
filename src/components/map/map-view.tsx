@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { FOCUS, isOn } from "@/lib/features";
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState, type RefObject, type CSSProperties } from "react";
 import { toast } from "sonner";
-import { useFavourites, useLastPlace } from "@/hooks/use-favourites";
+import { useFavourites, useLastPlace, useWaterWatch } from "@/hooks/use-favourites";
 import { useT } from "@/i18n/client";
 import { formatFullDate, formatTime } from "@/lib/format";
 import { lastRadarFrames, minutesSinceNewest, radarAgeLabel } from "@/lib/radar/frames";
@@ -64,7 +64,7 @@ import { floodDate, thermalAnomaliesDefault } from "@/lib/map/gibs";
 import { useDamPathLayer } from "./layers/use-dam-path-layer";
 import { FocusChip } from "./ui/focus-chip";
 import { loadDamPaths, type DamPath, type Downstream } from "@/lib/dams/paths";
-import { readWatch, refreshWatch, toggleWatch, writeWatch } from "@/lib/water/watchlist";
+import { refreshWatch, toggleWatch } from "@/lib/water/watchlist";
 import type { Dam } from "@/lib/dams/types";
 import { useTerrainLayer } from "./layers/use-terrain-layer";
 import { useBuildings3dLayer } from "./layers/use-buildings-3d-layer";
@@ -134,14 +134,13 @@ function MapScreen({ container, urlView, homeLens, damDetail }: { container: Ref
   const placeName = place.source === "gps" ? t("ตำแหน่งปัจจุบัน") : t.locale === "en" && place.source === "province" ? place.admin ?? place.name : place.name;
   const { map: mapInstance, theme, status, retry } = useMapContext();
   const { manifest, wind, dams, damsStatus, loadDams, damsTrend, loadDamsTrend, damsHistory, loadDamsHistory, rainRisk, rainRiskStatus, loadRainRisk, rivers, riversStatus, loadRivers, tmdWarnings, tmdWarningsStatus, loadTmdWarnings, storms, quakes } = useMapData(!homeLens || homeLens === "rain");
-  const [watch, setWatch] = useState(readWatch);
+  const { watch, update: setWatch } = useWaterWatch();
   const toggleDamWatch = (dam: Dam) => setWatch((current) => toggleWatch(current, { kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }));
   const toggleRiverWatch = (id: string) => {
     const point = rivers?.points.find((item) => item.id === id);
     const watched = point ? riverWatchValue(point) : null;
     if (watched) setWatch((current) => toggleWatch(current, { kind: "river", id, unit: "cms", ...watched }));
   };
-  useEffect(() => { writeWatch(watch); }, [watch]);
   const [mapState, dispatch] = useReducer(mapReducer, urlView, (view) => initialMapState({ mode: homeLens ? "water" : view.mode,
     primary: view.layer, overlays: view.ov, timeMs: view.t, waterDay: view.wd, allRoutes: view.routes, focus: view.dam ? { kind: "damRoute", damId: view.dam } : null }));
   const { mode, timeMs, playing, primary, rainOn, overlays, waterDay, allRoutes } = mapState;
@@ -376,7 +375,7 @@ function MapScreen({ container, urlView, homeLens, damDetail }: { container: Ref
       if (active) setWatch((current) => refreshWatch(current, dams.dams.map((dam) => ({ kind: "dam", id: dam.id, value: dam.storagePct, unit: "pct", date: dam.date }))));
     });
     return () => { active = false; };
-  }, [water, damsStatus, dams]);
+  }, [water, damsStatus, dams, setWatch]);
 
   useEffect(() => {
     if (!water || rainRiskStatus !== "idle") return;
@@ -404,7 +403,7 @@ function MapScreen({ container, urlView, homeLens, damDetail }: { container: Ref
       })));
     });
     return () => { active = false; };
-  }, [water, riversStatus, rivers]);
+  }, [water, riversStatus, rivers, setWatch]);
 
   useEffect(() => {
     if (water && tmdWarningsStatus === "idle") loadTmdWarnings().catch(() => {});

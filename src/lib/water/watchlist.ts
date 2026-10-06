@@ -1,22 +1,23 @@
 const KEY = "fah-water-watch";
 const LEGACY_KEY = "fah-dam-watch";
 
-export type WatchKey = `${"dam" | "river"}:${string}`;
-export type WatchItem = { kind: "dam" | "river"; id: string; value: number; unit: "pct" | "cms"; date: string };
-export type WaterWatch = Record<WatchKey, { value: number; unit: "pct" | "cms"; date: string; prevValue?: number; prevDate?: string }>;
+export type WatchKey = `${"dam" | "river" | "province"}:${string}`;
+export type WatchItem = { kind: "dam" | "river" | "province"; id: string; value: number; unit: "pct" | "cms" | "points"; date: string };
+export type WaterWatch = Record<WatchKey, { value: number; unit: "pct" | "cms" | "points"; date: string; prevValue?: number; prevDate?: string }>;
 
 function entries(value: unknown): [string, unknown][] {
   return value && typeof value === "object" && !Array.isArray(value) ? Object.entries(value) : [];
 }
 
-export function readWatch(): WaterWatch {
+export function readWatch(raw?: string | null): WaterWatch {
   try {
-    const stored = localStorage.getItem(KEY);
+    if (raw === null) return {};
+    const stored = raw === undefined ? localStorage.getItem(KEY) : raw;
     if (stored !== null) {
       return Object.fromEntries(entries(JSON.parse(stored)).filter(([key, entry]) => {
-        if (!/^(dam|river):.+$/.test(key) || !entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+        if (!/^(dam|river|province):.+$/.test(key) || !entry || typeof entry !== "object" || Array.isArray(entry)) return false;
         const item = entry as WaterWatch[WatchKey];
-        return Number.isFinite(item.value) && (item.unit === "pct" || item.unit === "cms") && typeof item.date === "string" &&
+        return Number.isFinite(item.value) && (item.unit === "pct" || item.unit === "cms" || item.unit === "points") && typeof item.date === "string" &&
           (item.prevValue === undefined || Number.isFinite(item.prevValue)) &&
           (item.prevDate === undefined || typeof item.prevDate === "string");
       })) as WaterWatch;
@@ -38,7 +39,12 @@ export function readWatch(): WaterWatch {
 }
 
 export function writeWatch(watch: WaterWatch): void {
-  try { localStorage.setItem(KEY, JSON.stringify(watch)); } catch { /* Keep the watch list for this visit. */ }
+  try {
+    const raw = JSON.stringify(watch);
+    if (localStorage.getItem(KEY) === raw) return;
+    localStorage.setItem(KEY, raw);
+    window.dispatchEvent(new Event(`${KEY}-change`));
+  } catch { /* Keep the watch list for this visit. */ }
 }
 
 export function toggleWatch(watch: WaterWatch, item: WatchItem): WaterWatch {

@@ -1,4 +1,8 @@
 export const sheet = {
+  "เปลี่ยนตั้งแต่ครั้งก่อน": "Changed since last visit",
+  "ประกาศเตือนใหม่": "New warning",
+  "ประกาศ": "warnings",
+  "เลิกติดตาม": "Unfollow",
   "ดูทั้งลุ่มน้ำ": "View river system",
   "ผังลุ่มน้ำ": "River systems",
   "ลุ่มน้ำ {name}": "{name} river system",

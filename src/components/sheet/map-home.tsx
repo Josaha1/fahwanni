@@ -26,6 +26,7 @@ import type { TmdWarnings } from "@/lib/tmd";
 import { BottomSheet } from "./bottom-sheet";
 import type { Detent } from "./detents";
 import { cloudPercent, damClipboard, number, waterPoints } from "./home-data";
+import { useFollowed } from "@/hooks/use-followed";
 import { useHomeNews } from "./use-home-news";
 import { SettingsSheet } from "@/components/settings-sheet";
 import { SpeakButton } from "@/components/speak-button";
@@ -69,6 +70,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
   const rain = useWaterSource("/api/rain-risk", validRain);
   const warnings = useWaterSource("/api/tmd-warnings", validWarnings);
   const events = useWaterSource("/api/flood-events", validEvents);
+  const followedChanges = useFollowed({ dams: dams.data, flood: flood.data, warnings: warnings.data, warningDate: warnings.cachedAt ?? warnings.loadedAt });
   const damList = dams.data?.dams ?? noDams;
   const { news, items, watch, markRead } = useHomeNews(damList, lens === "rain");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -109,7 +111,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
       <div className="home-search"><MapSearchPill placeName={t.locale === "en" ? place.admin ?? place.name : place.name} />
         <button ref={bell} className="home-bell" aria-label={t("แจ้งเตือน {n} รายการ", { n: alertCount })} onClick={() => router.push("/alerts")}>
           <svg aria-hidden="true" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M5 17h14l-2-4V9a5 5 0 0 0-10 0v4l-2 4Zm5 3h4" /></svg>
-          <b>{alertCount}</b>{news.length > 0 && <i aria-label={t("มีข้อมูลใหม่")} />}
+          <b>{alertCount}</b>{followedChanges.length > 0 && <i aria-label={t("มีข้อมูลใหม่")} />}
         </button>
         <SettingsSheet />
       </div>
@@ -160,7 +162,7 @@ export function HomeContent({ fallback, mounted }: { fallback: boolean; mounted:
         {recent.map((event) => <FloodEventItem key={event.id} event={event} muted="home-source" />)}
         {source("GLIDE / GDACS", events.data?.fetchedAt)}
         <h3>{t("มีอะไรใหม่")}</h3>{news.map((entry) => <p key={entry.key}>{t(entry.text, entry.params)}{source(entry.key.startsWith("dam:") ? "กรมชลประทาน" : "GloFAS / RID / HII", items.find((item) => item.key === entry.key)?.date)}</p>)}
-        <h3>{t("ติดตาม")}</h3>{Object.keys(watch).map((key) => <Link className="home-alert-row" key={key} href={key.startsWith("dam:") ? `/dam/${key.slice(4)}` : `/map?river=${key.slice(6)}`}>{items.find((item) => item.key === key)?.label ?? key}{source(key.startsWith("dam:") ? "กรมชลประทาน" : "GloFAS / RID / HII", items.find((item) => item.key === key)?.date ?? watch[key as keyof typeof watch].date)}</Link>)}
+        <h3>{t("ติดตาม")}</h3>{Object.keys(watch).map((key) => <Link className="home-alert-row" key={key} href={key.startsWith("dam:") ? `/dam/${key.slice(4)}` : key.startsWith("province:") ? `/province/${key.slice(9)}` : `/map?river=${key.slice(6)}`}>{items.find((item) => item.key === key)?.label ?? key}{source(key.startsWith("dam:") ? "กรมชลประทาน" : key.startsWith("province:") ? "NASA VIIRS" : "GloFAS / RID / HII", items.find((item) => item.key === key)?.date ?? watch[key as keyof typeof watch].date)}</Link>)}
         <FavouritesRow place={place} onSelect={(next) => { setPlace(next); dialog.current?.close(); }} />
       </div>
     </dialog>

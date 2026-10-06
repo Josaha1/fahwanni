@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { addFavourite, loadFavourites, moveFavourite, removeFavourite } from "@/lib/favourites";
+import { readWatch, toggleWatch, writeWatch, type WatchItem, type WaterWatch } from "@/lib/water/watchlist";
 import { roundCoord } from "@/lib/geo";
 import type { Place } from "@/lib/place";
 import { provinces } from "@/lib/provinces";
@@ -88,4 +89,13 @@ export function useLastPlace() {
   }
 
   return { place, setPlace: selectPlace };
+}
+
+export function useWaterWatch() {
+  const raw = useStoredValue("fah-water-watch");
+  const watch = useMemo(() => readWatch(raw), [raw]);
+  const update = useCallback((operation: (current: WaterWatch) => WaterWatch) => {
+    writeWatch(operation(readWatch()));
+  }, []);
+  return { watch, update, toggle: (item: WatchItem) => update((current) => toggleWatch(current, item)) };
 }

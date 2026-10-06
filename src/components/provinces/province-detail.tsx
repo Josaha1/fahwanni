@@ -5,6 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/i18n/client";
 import { useWaterSource } from "@/hooks/use-water-source";
+import { FollowButton } from "@/components/follow-button";
+import { useFollowed } from "@/hooks/use-followed";
 import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { MapBackLink } from "@/components/sheet/map-back-link";
@@ -29,6 +31,7 @@ export function ProvinceDetail({ province, bbox }: { province: Province; bbox: B
   const flood = useWaterSource("/api/flood-now", validFlood);
   const dams = useWaterSource("/api/dams", validDams);
   const warnings = useWaterSource("/api/tmd-warnings", validWarnings);
+  useFollowed({ dams: dams.data, flood: flood.data, warnings: warnings.data, warningDate: warnings.cachedAt ?? warnings.loadedAt });
   const rain = useWaterSource("/api/rain-risk", validRain);
   // Mounted only on the province route, so the home page never requests this model.
   const model = useWaterSource(`/api/wind?rain=1&lat=${province.lat}&lon=${province.lon}`, validModel);
@@ -67,6 +70,7 @@ export function ProvinceDetail({ province, bbox }: { province: Province; bbox: B
   ].join("\n");
   return <main className="dam-page province-page"><div className="dam-sheet province-sheet">
     <header><MapBackLink /><h1>{name}</h1></header>
+    <div className="dam-actions"><FollowButton item={{ kind: "province", id: province.id, value: points ?? 0, unit: "points", date: flood.data?.date ?? "" }} /></div>
     <section><ProvinceMap province={province} bbox={bbox} />
       <p className="province-big">{t("{n} จุด", { n: number(points) })}</p>
       <p>{t("ดาวเทียมพบน้ำ")} · {t("เมฆ {n}%", { n: number(cloud) })}</p>

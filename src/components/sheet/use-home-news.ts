@@ -14,11 +14,13 @@ export function useHomeNews(dams: Dam[], rainSelected: boolean) {
   const t = useT();
   const { place } = useLastPlace();
   const { favourites } = useFavourites();
-  const [seen, setSeen] = useState(readSeen);
-  const [watch, setWatch] = useState(readWatch);
+  // Saved state is read after mount so the first render matches the server (no hydration mismatch).
+  const [seen, setSeen] = useState<ReturnType<typeof readSeen>>(null);
+  const [watch, setWatch] = useState<ReturnType<typeof readWatch>>({});
   const [rivers, setRivers] = useState<RiversPayload | null>(null);
   useEffect(() => {
     const update = () => { setSeen(readSeen()); setWatch(readWatch()); };
+    queueMicrotask(update);
     window.addEventListener("fah-water-seen-change", update);
     window.addEventListener("fah-water-watch-change", update);
     window.addEventListener("storage", update);

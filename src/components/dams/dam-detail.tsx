@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useT } from "@/i18n/client";
+import { FollowButton } from "@/components/follow-button";
+import { useFollowed } from "@/hooks/use-followed";
 import { EmergencyStrip } from "@/components/emergency-strip";
 import { SourceTime } from "@/components/ui/source-time";
 import { ShareButton } from "@/components/share-button";
@@ -35,6 +37,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
   const trend = useWaterSource("/api/dams-trend", validTrend);
   const history = useWaterSource("/api/dams-history", validHistory);
   const geo = useWaterSource(`/data/dam-geo/${registered.id}.json`, validGeo);
+  useFollowed({ dams: dams.data, flood: null, warnings: null });
   const dam = dams.data?.dams.find((entry) => entry.id === registered.id);
   const riverSystem = riverSystemForDam(registered.id);
   const date = dam?.date ?? dams.data?.dataDate ?? undefined;
@@ -62,6 +65,7 @@ export function DamDetail({ registered }: { registered: RegisteredDam }) {
     {!lite && !reducedMotion && <div className="dam-map"><MapView key={registered.id} homeLens="dams" damDetail={{ registered, geo: polygon, pct: dam?.storagePct ?? null }} /></div>}
     <div className="dam-sheet">
       <header><MapBackLink /><h1>{name}{province && <small> · {t.locale === "en" ? province.en : province.th}</small>}</h1></header>
+      <div className="dam-actions"><FollowButton item={{ kind: "dam", id: registered.id, value: dam?.storagePct ?? 0, unit: "pct", date: dam?.date ?? "" }} /></div>
       {dam ? <DamHero dam={dam} trend={trend.data} /> : status(dams.status === "loading")}
       <section aria-label={t("ระบาย 7 วัน (ลบ.ม./วินาที)")}><h2>{t("ระบาย 7 วัน (ลบ.ม./วินาที)")}</h2>
         {trend.data && date ? <><DamReleaseBars trend={trend.data} id={registered.id} date={date} showDetails={false} /><DamChartDetails trend={trend.data} id={registered.id} date={date} /></> : status(trend.status === "loading")}
